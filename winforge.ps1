@@ -249,154 +249,6 @@ function Test-EncryptedConfig {
     catch { return $false }
 }
 
-function Convert-SecureConfig-BACKUP {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$FilePath,
-        [Parameter(Mandatory = $true)]
-        [bool]$IsEncrypting,
-        [Parameter(Mandatory = $true)]
-        [string]$Password
-    )
-
-    try {
-        # Verify file exists
-        if (-not (Test-Path $FilePath)) {
-            throw "File not found: $FilePath"
-        }
-
-        # Get file content
-        $configContent = Get-Content $FilePath -Raw
-
-        # Generate output path (keep .config extension)
-        $outputPath = $FilePath
-
-        if ($IsEncrypting) {
-            # Check if already encrypted
-            if (Test-EncryptedConfig -FilePath $FilePath) {
-                throw "File is already encrypted. Decrypt it first if you want to re-encrypt."
-            }
-
-            # Generate unique random salt
-            $salt = New-Object byte[] 32
-            $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
-            try {
-                $rng.GetBytes($salt)
-            }
-            finally {
-                $rng.Dispose()
-            }
-
-            # Create key and IV
-            $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($Password, $salt, 1000)
-            try {
-                $key = $rfc.GetBytes(32) # 256 bits
-                $iv = $rfc.GetBytes(16)  # 128 bits
-
-                # Convert content to bytes
-                $bytes = [System.Text.Encoding]::UTF8.GetBytes($configContent)
-
-                # Create AES encryption object
-                $aes = [System.Security.Cryptography.Aes]::Create()
-                try {
-                    $aes.Key = $key
-                    $aes.IV = $iv
-                    $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
-                    $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
-
-                    # Create encryptor and encrypt
-                    $encryptor = $aes.CreateEncryptor()
-                    try {
-                        $encrypted = $encryptor.TransformFinalBlock($bytes, 0, $bytes.Length)
-                    }
-                    finally {
-                        $encryptor.Dispose()
-                    }
-                    
-                    # Create final encrypted package with salt
-                    $package = @{
-                        Salt = [Convert]::ToBase64String($salt)
-                        Data = [Convert]::ToBase64String($encrypted)
-                        IV = [Convert]::ToBase64String($iv)
-                    } | ConvertTo-Json
-                    
-                    # Save encrypted content
-                    $package | Set-Content $outputPath
-                    Write-Host "File encrypted successfully to: $outputPath"
-                }
-                finally {
-                    $aes.Dispose()
-                    # Securely clear sensitive data from memory
-                    for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
-                    for ($i = 0; $i -lt $iv.Length; $i++) { $iv[$i] = 0 }
-                }
-            }
-            finally {
-                $rfc.Dispose()
-            }
-        }
-        else {
-            try {
-                Write-Host "Attempting to decrypt file..."
-                
-                # Parse the encrypted package
-                $package = Get-Content $FilePath -Raw | ConvertFrom-Json
-                $salt = [Convert]::FromBase64String($package.Salt)
-                $encrypted = [Convert]::FromBase64String($package.Data)
-                $iv = [Convert]::FromBase64String($package.IV)
-
-                # Recreate key from password and stored salt
-                $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($Password, $salt, 1000)
-                try {
-                    $key = $rfc.GetBytes(32)
-
-                    # Create AES decryption object
-                    $aes = [System.Security.Cryptography.Aes]::Create()
-                    try {
-                        $aes.Key = $key
-                        $aes.IV = $iv
-                        $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
-                        $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
-
-                        # Create decryptor and decrypt
-                        $decryptor = $aes.CreateDecryptor()
-                        try {
-                            $decrypted = $decryptor.TransformFinalBlock($encrypted, 0, $encrypted.Length)
-                        }
-                        catch {
-                            throw "Incorrect password. Please try again with the correct password."
-                        }
-                        finally {
-                            $decryptor.Dispose()
-                        }
-                        
-                        # Convert back to string
-                        $decryptedText = [System.Text.Encoding]::UTF8.GetString($decrypted)
-                        
-                        # Save decrypted content
-                        $decryptedText | Set-Content $outputPath -Encoding UTF8
-                        Write-Host "File decrypted successfully to: $outputPath"
-                    }
-                    finally {
-                        $aes.Dispose()
-                        # Securely clear sensitive data from memory
-                        for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
-                    }
-                }
-                finally {
-                    $rfc.Dispose()
-                }
-            }
-            catch {
-                throw $_.Exception.Message
-            }
-        }
-    }
-    catch {
-        throw "Error processing file: $($_.Exception.Message)"
-    }
-}
-
 function Convert-SecureConfig {
     param (
         [Parameter(Mandatory = $true)]
@@ -549,114 +401,6 @@ function Convert-SecureConfig {
     }
 }
 
-function Get-WinforgeConfig-BACKUP {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$Path
-    )
-    
-    try {
-        # Handle remote configurations
-        if ($Path -match '^https?://') {
-            # Check if URL is a Google Drive link before conversion
-            if ($Path -match "drive\.google\.com") {
-                $Path = Convert-GoogleDriveLink -Url $Path
-            }
-            Write-Log "Downloading configuration from: $Path"
-            $tempPath = Join-Path $env:TEMP "winforge.config"
-            $script:tempFiles += $tempPath
-            Invoke-WebRequest -Uri $Path -OutFile $tempPath
-            $Path = $tempPath
-        }
-        
-        Write-SystemMessage -Title "Configuration" -msg1 "Loading configuration file..."
-        
-        # Check if file exists
-        if (-not (Test-Path $Path)) {
-            throw "Configuration file not found: $Path"
-        }
-        
-        # Check if file is encrypted
-        $isEncrypted = Test-EncryptedConfig -FilePath $Path
-        if ($isEncrypted) {
-            Write-SystemMessage -msg1 "Configuration is encrypted. Please enter the password to decrypt it."
-            
-            $maxAttempts = 5
-            $attempt = 1
-            $decrypted = $false
-
-            while ($attempt -le $maxAttempts -and -not $decrypted) {
-                if ($attempt -gt 1) {
-                    Write-SystemMessage -msg1 "Incorrect password. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
-                }
-
-                $password = Read-Host -AsSecureString "Password"
-                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-                $passwordText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-                
-                # Check for empty/null password
-                if ([string]::IsNullOrWhiteSpace($passwordText)) {
-                    $attempt++
-                    Write-SystemMessage -msg1 "Password cannot be empty. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
-                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-                    Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
-                    continue
-                }
-                
-                try {
-                    # Decrypt the configuration
-                    $decryptedPath = Join-Path $env:TEMP "winforge_decrypted.config"
-                    $script:tempFiles += $decryptedPath
-                    
-                    # Suppress errors from Convert-SecureConfig and capture its success/failure
-                    $decryptResult = Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText 2>$null
-                    if ($decryptResult) {
-                        Write-SystemMessage -msg1 "Configuration decrypted successfully."
-                        $Path = $decryptedPath
-                        $decrypted = $true
-                    } else {
-                        $attempt++
-                    }
-                }
-                catch {
-                    $attempt++
-                    if ($attempt -gt $maxAttempts) {
-                        throw "Maximum password attempts reached. Exiting script."
-                    }
-                }
-                finally {
-                    # Clean up sensitive data
-                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-                    Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
-                }
-            }
-
-            if (-not $decrypted) {
-                throw "Failed to decrypt configuration after $maxAttempts attempts."
-            }
-        }
-        
-        # Load and validate XML
-        try {
-            [xml]$config = Get-Content -Path $Path
-            
-            # Validate against schema
-            if (-not (Test-ConfigSchema -Xml $config)) {
-                throw "Configuration failed schema validation"
-            }
-            
-            return $config.WinforgeConfig
-        }
-        catch [System.Xml.XmlException] {
-            throw "Invalid XML in configuration file: $($_.Exception.Message)"
-        }
-    }
-    catch {
-        Write-Log "Failed to load configuration: $($_.Exception.Message)" -Level Error
-        throw
-    }
-}
-
 function Get-WinforgeConfig {
     param (
         [Parameter(Mandatory = $true)]
@@ -770,7 +514,6 @@ function Get-WinforgeConfig {
 }
 
 
-
 function Remove-TempFiles {
     foreach ($file in $script:tempFiles) {
         if (Test-Path $file) {
@@ -878,7 +621,6 @@ function Set-SystemCheckpoint {
         return $false
     }
 }
-
 
 
 # Configuration Functions
@@ -1738,6 +1480,8 @@ function Set-ScheduledTasksConfiguration {
     }
 }
 
+# System Modification Functions
+
 # Function to test if a font is installed
 function Test-FontInstalled {
     param(
@@ -1865,6 +1609,7 @@ function Install-Fonts {
     }
 }
 
+# Function to configure the taskbar settings
 function Set-TaskbarConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -1993,6 +1738,7 @@ function Set-TaskbarConfiguration {
     }
 }
 
+# Function to configure the power settings
 function Set-PowerConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -2112,6 +1858,7 @@ function Set-PowerConfiguration {
     }
 }
 
+# Function to apply registry modifications
 function Set-RegistryEntries {
     param (
         [Parameter(Mandatory = $true)]
@@ -2181,6 +1928,8 @@ function Set-RegistryEntries {
         return $false
     }
 }
+
+# Function to configure Windows features
 function Set-WindowsFeaturesConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -2261,6 +2010,7 @@ function Set-WindowsFeaturesConfiguration {
     }
 }
 
+# Function to configure Google products
 function Set-GoogleConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -2415,6 +2165,7 @@ function Set-GoogleConfiguration {
     }
 }
 
+# Function to configure Microsoft Office
 function Set-OfficeConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -2503,6 +2254,7 @@ function Set-OfficeConfiguration {
     }
 }
 
+# Function to configure theme settings
 function Set-ThemeConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -2629,6 +2381,7 @@ public class Wallpaper
     }
 }
 
+# Function to apply system tweaks
 function Set-TweaksConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -2699,6 +2452,7 @@ function Set-TweaksConfiguration {
     }
 }
 
+# Function to configure network settings
 function Set-NetworkConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -2824,6 +2578,7 @@ function Set-NetworkConfiguration {
     }
 }
 
+# Function to perform file operations (copy, delete, etc.)
 function Set-FileOperations {
     param (
         [Parameter(Mandatory = $true)]
@@ -2937,6 +2692,7 @@ function Set-FileOperations {
     }
 }
 
+# Function to create shortcuts
 function Set-Shortcuts {
     param (
         [Parameter(Mandatory = $true)]
@@ -3044,6 +2800,8 @@ function Set-Shortcuts {
         return $false
     }
 }
+
+
 
 
 # Main Execution Block
