@@ -249,7 +249,7 @@ function Test-EncryptedConfig {
     catch { return $false }
 }
 
-function Convert-SecureConfig {
+function Convert-SecureConfig-BACKUP {
     param (
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
@@ -397,7 +397,7 @@ function Convert-SecureConfig {
     }
 }
 
-function Convert-SecureConfig2 {
+function Convert-SecureConfig {
     param (
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
@@ -549,7 +549,7 @@ function Convert-SecureConfig2 {
     }
 }
 
-function Get-WinforgeConfig {
+function Get-WinforgeConfig-BACKUP {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Path
@@ -657,7 +657,7 @@ function Get-WinforgeConfig {
     }
 }
 
-function Get-WinforgeConfig2 {
+function Get-WinforgeConfig {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Path
