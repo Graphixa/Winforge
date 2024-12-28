@@ -249,7 +249,7 @@ function Test-EncryptedConfig {
     catch { return $false }
 }
 
-function Convert-SecureConfig {
+function Convert-SecureConfig-BACKUP {
     param (
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
@@ -397,7 +397,159 @@ function Convert-SecureConfig {
     }
 }
 
-function Get-WinforgeConfig2 {
+function Convert-SecureConfig {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [Parameter(Mandatory = $true)]
+        [bool]$IsEncrypting,
+        [Parameter(Mandatory = $true)]
+        [string]$Password
+    )
+
+    try {
+        # Verify file exists
+        if (-not (Test-Path $FilePath)) {
+            throw "File not found: $FilePath"
+        }
+
+        # Get file content
+        $configContent = Get-Content $FilePath -Raw
+
+        # Generate output path (keep .config extension)
+        $outputPath = $FilePath
+
+        if ($IsEncrypting) {
+            # Check if already encrypted
+            if (Test-EncryptedConfig -FilePath $FilePath) {
+                throw "File is already encrypted. Decrypt it first if you want to re-encrypt."
+            }
+
+            # Generate unique random salt
+            $salt = New-Object byte[] 32
+            $rng  = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+            try {
+                $rng.GetBytes($salt)
+            }
+            finally {
+                $rng.Dispose()
+            }
+
+            # Create key and IV
+            $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($Password, $salt, 1000)
+            try {
+                $key = $rfc.GetBytes(32) # 256 bits
+                $iv  = $rfc.GetBytes(16) # 128 bits
+
+                # Convert content to bytes
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($configContent)
+
+                # Create AES encryption object
+                $aes = [System.Security.Cryptography.Aes]::Create()
+                try {
+                    $aes.Key     = $key
+                    $aes.IV      = $iv
+                    $aes.Mode    = [System.Security.Cryptography.CipherMode]::CBC
+                    $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+
+                    # Create encryptor and encrypt
+                    $encryptor = $aes.CreateEncryptor()
+                    try {
+                        $encrypted = $encryptor.TransformFinalBlock($bytes, 0, $bytes.Length)
+                    }
+                    finally {
+                        $encryptor.Dispose()
+                    }
+                    
+                    # Create final encrypted package with salt
+                    $package = @{
+                        Salt = [Convert]::ToBase64String($salt)
+                        Data = [Convert]::ToBase64String($encrypted)
+                        IV   = [Convert]::ToBase64String($iv)
+                    } | ConvertTo-Json
+                    
+                    # Save encrypted content
+                    $package | Set-Content $outputPath
+                    Write-Host "File encrypted successfully to: $outputPath"
+                    
+                    return $true  # Explicitly return $true on success
+                }
+                finally {
+                    $aes.Dispose()
+                    # Securely clear sensitive data from memory
+                    for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
+                    for ($i = 0; $i -lt $iv.Length;  $i++) { $iv[$i]  = 0 }
+                }
+            }
+            finally {
+                $rfc.Dispose()
+            }
+        }
+        else {
+            try {
+                Write-Host "Attempting to decrypt file..."
+                
+                # Parse the encrypted package
+                $package   = Get-Content $FilePath -Raw | ConvertFrom-Json
+                $salt      = [Convert]::FromBase64String($package.Salt)
+                $encrypted = [Convert]::FromBase64String($package.Data)
+                $iv        = [Convert]::FromBase64String($package.IV)
+
+                # Recreate key from password and stored salt
+                $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($Password, $salt, 1000)
+                try {
+                    $key = $rfc.GetBytes(32)
+
+                    # Create AES decryption object
+                    $aes = [System.Security.Cryptography.Aes]::Create()
+                    try {
+                        $aes.Key     = $key
+                        $aes.IV      = $iv
+                        $aes.Mode    = [System.Security.Cryptography.CipherMode]::CBC
+                        $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+
+                        # Create decryptor and decrypt
+                        $decryptor = $aes.CreateDecryptor()
+                        try {
+                            $decrypted = $decryptor.TransformFinalBlock($encrypted, 0, $encrypted.Length)
+                        }
+                        catch {
+                            throw "Incorrect password. Please try again with the correct password."
+                        }
+                        finally {
+                            $decryptor.Dispose()
+                        }
+                        
+                        # Convert back to string
+                        $decryptedText = [System.Text.Encoding]::UTF8.GetString($decrypted)
+                        
+                        # Save decrypted content
+                        $decryptedText | Set-Content $outputPath -Encoding UTF8
+                        Write-Host "File decrypted successfully to: $outputPath"
+
+                        return $true  # Explicitly return $true on success
+                    }
+                    finally {
+                        $aes.Dispose()
+                        # Securely clear sensitive data from memory
+                        for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
+                    }
+                }
+                finally {
+                    $rfc.Dispose()
+                }
+            }
+            catch {
+                throw $_.Exception.Message
+            }
+        }
+    }
+    catch {
+        throw "Error processing file: $($_.Exception.Message)"
+    }
+}
+
+function Get-WinforgeConfig-BACKUP {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Path
