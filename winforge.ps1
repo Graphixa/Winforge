@@ -408,6 +408,10 @@ function Get-WinforgeConfig {
     try {
         # Handle remote configurations
         if ($Path -match '^https?://') {
+            # Check if URL is a Google Drive link before conversion
+            if ($Path -match "drive\.google\.com") {
+                $Path = Convert-GoogleDriveLink -Url $Path
+            }
             Write-Log "Downloading configuration from: $Path"
             $tempPath = Join-Path $env:TEMP "winforge.config"
             $script:tempFiles += $tempPath
