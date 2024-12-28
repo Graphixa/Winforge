@@ -388,14 +388,14 @@ function Convert-SecureConfig {
                 }
             }
             catch {
-                Write-Error $_.Exception.Message
-                exit 1
+                # Instead of exit 1, throw the error
+                throw $_.Exception.Message
             }
         }
     }
     catch {
-        Write-Error "Error processing file: $($_.Exception.Message)"
-        exit 1
+        # Instead of exit 1, throw the error
+        throw "Error processing file: $($_.Exception.Message)"
     }
 }
 
