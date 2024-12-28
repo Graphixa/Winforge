@@ -388,13 +388,11 @@ function Convert-SecureConfig {
                 }
             }
             catch {
-                # Instead of exit 1, throw the error
                 throw $_.Exception.Message
             }
         }
     }
     catch {
-        # Instead of exit 1, throw the error
         throw "Error processing file: $($_.Exception.Message)"
     }
 }
@@ -458,21 +456,20 @@ function Get-WinforgeConfig {
                     $decryptedPath = Join-Path $env:TEMP "winforge_decrypted.config"
                     $script:tempFiles += $decryptedPath
                     
-                    if (Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText) {
+                    # Suppress errors from Convert-SecureConfig and capture its success/failure
+                    $decryptResult = Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText 2>$null
+                    if ($decryptResult) {
                         Write-SystemMessage -msg1 "Configuration decrypted successfully."
                         $Path = $decryptedPath
                         $decrypted = $true
+                    } else {
+                        $attempt++
                     }
                 }
                 catch {
-                    if ($_.Exception.Message -match "Padding is invalid|Bad Data|Length of the data to decrypt is invalid") {
-                        $attempt++
-                        if ($attempt -gt $maxAttempts) {
-                            throw "Maximum password attempts reached. Exiting script."
-                        }
-                    }
-                    else {
-                        throw  # Re-throw if it's not a password-related error
+                    $attempt++
+                    if ($attempt -gt $maxAttempts) {
+                        throw "Maximum password attempts reached. Exiting script."
                     }
                 }
                 finally {
@@ -480,6 +477,10 @@ function Get-WinforgeConfig {
                     [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
                     Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
                 }
+            }
+
+            if (-not $decrypted) {
+                throw "Failed to decrypt configuration after $maxAttempts attempts."
             }
         }
         
