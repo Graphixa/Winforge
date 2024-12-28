@@ -29,7 +29,7 @@ Download a copy of the script and run it locally, use the following command:
 
 ### Running the Script Remotely
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/WinforgeX/main/winforge.ps1))) -config "https://raw.githubusercontent.com/Graphixa/WinforgeX/main/config.ini"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.ps1))) -config "https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/test.config"
 ```
 
 ## INI File Setup
