@@ -7,16 +7,19 @@
 .DESCRIPTION
     WinforgeXML automates Windows system configuration using XML-based configuration files.
     Supports local and remote configurations with schema validation.
+
 .PARAMETER ConfigPath
-    Path to the XML configuration file (local path or URL)
+    Path to the configuration file (local .config file or URL)
 .PARAMETER LogPath
     Optional custom path for log file
+
 .EXAMPLE
-    .\winforge.ps1 -ConfigPath "config.xml"
+    .\winforge.ps1 -ConfigPath "fresh-install.config"
 .EXAMPLE
     .\winforge.ps1 -ConfigPath "https://example.com/myconfig.config" -LogPath "C:\Logs\winforge.log"
+
 .NOTES
-    Version: 1.0
+    Version: 1.3
 #>
 
 [CmdletBinding()]
@@ -38,7 +41,7 @@ $script:tempFiles = @()
 # Initialize Error Handling
 $ErrorActionPreference = "Stop"
 
-#region Helper Functions
+# Helper Functions
 function Write-Log {
     param (
         [Parameter(Mandatory = $true)]
@@ -134,18 +137,18 @@ function Test-AdminPrivileges {
     return $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Test-XmlSchema {
+function Test-ConfigSchema {
     param (
         [Parameter(Mandatory = $true)]
         [xml]$Xml
     )
     
     try {
-        Write-Log "Attempting to load schema from: $script:schemaPath"
+        Write-Log "Validating configuration schema..."
         
         # Download schema if it's a URL
         if ($script:schemaPath -match '^https?://') {
-            $tempSchemaPath = Join-Path $env:TEMP "schema.xsd"
+            $tempSchemaPath = Join-Path $env:TEMP "winforge_schema.xsd"
             Write-Log "Downloading schema to: $tempSchemaPath"
             Invoke-WebRequest -Uri $script:schemaPath -OutFile $tempSchemaPath
             $script:tempFiles += $tempSchemaPath
@@ -159,8 +162,9 @@ function Test-XmlSchema {
             throw "Schema file not found at: $schemaPath"
         }
 
-        # Load schema
+        # Load and validate schema
         $schemaReader = New-Object System.Xml.XmlTextReader $schemaPath
+        try {
         $schema = [System.Xml.Schema.XmlSchema]::Read($schemaReader, {
             param($sender, $e)
             Write-Log "Schema Load Error: $($e.Message)" -Level Error
@@ -170,32 +174,29 @@ function Test-XmlSchema {
             throw "Failed to load schema"
         }
 
-        # Add validation event handler
         $Xml.Schemas.Add($schema) | Out-Null
         
         $validationErrors = @()
         $Xml.Validate({
             param($sender, $e)
             $validationErrors += $e
-            Write-Log "XML Validation Error: $($e.Message)" -Level Error
+                Write-Log "Configuration Validation Error: $($e.Message)" -Level Error
             Write-Log "Line: $($e.Exception.LineNumber), Position: $($e.Exception.LinePosition)" -Level Error
         })
 
         if ($validationErrors.Count -gt 0) {
-            throw "XML validation failed with $($validationErrors.Count) errors"
+                throw "Configuration validation failed with $($validationErrors.Count) errors"
         }
 
         return $true
+        }
+        finally {
+            $schemaReader.Close()
+        }
     }
     catch {
         Write-Log "Schema validation error: $($_.Exception.Message)" -Level Error
-        if ($_.Exception.InnerException) {
-            Write-Log "Inner Exception: $($_.Exception.InnerException.Message)" -Level Error
-        }
         return $false
-    }
-    finally {
-        if ($schemaReader) { $schemaReader.Close() }
     }
 }
 
@@ -238,8 +239,167 @@ function Convert-GoogleDriveLink {
 }
 
 
+function Test-EncryptedConfig {
+    param ([string]$FilePath)
+    try {
+        $content = Get-Content $FilePath -Raw
+        $package = $content | ConvertFrom-Json
+        return ($null -ne $package.Salt -and $null -ne $package.Data -and $null -ne $package.IV)
+    }
+    catch { return $false }
+}
 
-function Get-XmlConfig {
+function Convert-SecureConfig {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [Parameter(Mandatory = $true)]
+        [bool]$IsEncrypting,
+        [Parameter(Mandatory = $true)]
+        [string]$Password
+    )
+
+    try {
+        # Verify file exists
+        if (-not (Test-Path $FilePath)) {
+            throw "File not found: $FilePath"
+        }
+
+        # Get file content
+        $configContent = Get-Content $FilePath -Raw
+
+        # Generate output path (keep .config extension)
+        $outputPath = $FilePath
+
+        if ($IsEncrypting) {
+            # Check if already encrypted
+            if (Test-EncryptedConfig -FilePath $FilePath) {
+                throw "File is already encrypted. Decrypt it first if you want to re-encrypt."
+            }
+
+            # Generate unique random salt
+            $salt = New-Object byte[] 32
+            $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+            try {
+                $rng.GetBytes($salt)
+            }
+            finally {
+                $rng.Dispose()
+            }
+
+            # Create key and IV
+            $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($Password, $salt, 1000)
+            try {
+                $key = $rfc.GetBytes(32) # 256 bits
+                $iv = $rfc.GetBytes(16)  # 128 bits
+
+                # Convert content to bytes
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($configContent)
+
+                # Create AES encryption object
+                $aes = [System.Security.Cryptography.Aes]::Create()
+                try {
+                    $aes.Key = $key
+                    $aes.IV = $iv
+                    $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+                    $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+
+                    # Create encryptor and encrypt
+                    $encryptor = $aes.CreateEncryptor()
+                    try {
+                        $encrypted = $encryptor.TransformFinalBlock($bytes, 0, $bytes.Length)
+                    }
+                    finally {
+                        $encryptor.Dispose()
+                    }
+                    
+                    # Create final encrypted package with salt
+                    $package = @{
+                        Salt = [Convert]::ToBase64String($salt)
+                        Data = [Convert]::ToBase64String($encrypted)
+                        IV = [Convert]::ToBase64String($iv)
+                    } | ConvertTo-Json
+                    
+                    # Save encrypted content
+                    $package | Set-Content $outputPath
+                    Write-Host "File encrypted successfully to: $outputPath"
+                }
+                finally {
+                    $aes.Dispose()
+                    # Securely clear sensitive data from memory
+                    for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
+                    for ($i = 0; $i -lt $iv.Length; $i++) { $iv[$i] = 0 }
+                }
+            }
+            finally {
+                $rfc.Dispose()
+            }
+        }
+        else {
+            try {
+                Write-Host "Attempting to decrypt file..."
+                
+                # Parse the encrypted package
+                $package = Get-Content $FilePath -Raw | ConvertFrom-Json
+                $salt = [Convert]::FromBase64String($package.Salt)
+                $encrypted = [Convert]::FromBase64String($package.Data)
+                $iv = [Convert]::FromBase64String($package.IV)
+
+                # Recreate key from password and stored salt
+                $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($Password, $salt, 1000)
+                try {
+                    $key = $rfc.GetBytes(32)
+
+                    # Create AES decryption object
+                    $aes = [System.Security.Cryptography.Aes]::Create()
+                    try {
+                        $aes.Key = $key
+                        $aes.IV = $iv
+                        $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+                        $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+
+                        # Create decryptor and decrypt
+                        $decryptor = $aes.CreateDecryptor()
+                        try {
+                            $decrypted = $decryptor.TransformFinalBlock($encrypted, 0, $encrypted.Length)
+                        }
+                        catch {
+                            throw "Incorrect password. Please try again with the correct password."
+                        }
+                        finally {
+                            $decryptor.Dispose()
+                        }
+                        
+                        # Convert back to string
+                        $decryptedText = [System.Text.Encoding]::UTF8.GetString($decrypted)
+                        
+                        # Save decrypted content
+                        $decryptedText | Set-Content $outputPath -Encoding UTF8
+                        Write-Host "File decrypted successfully to: $outputPath"
+                    }
+                    finally {
+                        $aes.Dispose()
+                        # Securely clear sensitive data from memory
+                        for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
+                    }
+                }
+                finally {
+                    $rfc.Dispose()
+                }
+            }
+            catch {
+                Write-Error $_.Exception.Message
+                exit 1
+            }
+        }
+    }
+    catch {
+        Write-Error "Error processing file: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Get-WinforgeConfig {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Path
@@ -249,17 +409,67 @@ function Get-XmlConfig {
         # Handle remote configurations
         if ($Path -match '^https?://') {
             Write-Log "Downloading configuration from: $Path"
-            $tempPath = Join-Path $env:TEMP "winforge_config.xml"
+            $tempPath = Join-Path $env:TEMP "winforge.config"
             $script:tempFiles += $tempPath
-            Invoke-WebRequest -Uri $Path -OutFile $tempPath
+            
+            # Convert Google Drive links if necessary
+            $downloadUrl = Convert-GoogleDriveLink -Url $Path
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $tempPath
             $Path = $tempPath
         }
         
-        # Load XML
         Write-SystemMessage -Title "Configuration" -msg1 "Loading configuration file..."
-        [xml]$config = Get-Content -Path $Path
         
+        # Check if file exists
+        if (-not (Test-Path $Path)) {
+            throw "Configuration file not found: $Path"
+        }
+
+        # Check if file is encrypted
+        $isEncrypted = Test-EncryptedConfig -FilePath $Path
+        if ($isEncrypted) {
+            Write-SystemMessage -msg1 "Configuration is encrypted. Please enter the password to decrypt it."
+            $password = Read-Host -AsSecureString "Password"
+            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+            $passwordText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+            
+            try {
+                # Decrypt the configuration
+                $decryptedPath = Join-Path $env:TEMP "winforge_decrypted.config"
+                $script:tempFiles += $decryptedPath
+                
+                if (Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText) {
+                    Write-SystemMessage -msg1 "Configuration decrypted successfully."
+                    $Path = $decryptedPath
+                }
+            }
+            catch {
+                if ($_.Exception.Message -match "Padding is invalid|Bad Data|Length of the data to decrypt is invalid") {
+                    throw "Incorrect password provided for encrypted configuration."
+                }
+                throw
+            }
+            finally {
+                # Clean up sensitive data
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
+            }
+        }
+        
+        # Load and validate XML
+        try {
+        [xml]$config = Get-Content -Path $Path
+            
+            # Validate against schema
+            if (-not (Test-ConfigSchema -Xml $config)) {
+                throw "Configuration failed schema validation"
+            }
+            
         return $config.WinforgeConfig
+        }
+        catch [System.Xml.XmlException] {
+            throw "Invalid XML in configuration file: $($_.Exception.Message)"
+        }
     }
     catch {
         Write-Log "Failed to load configuration: $($_.Exception.Message)" -Level Error
@@ -2541,6 +2751,7 @@ function Set-Shortcuts {
     }
 }
 
+
 # Main Execution Block
 try {
 
@@ -2557,7 +2768,7 @@ try {
     $configStatus = @{}
 
     # Load and validate configuration
-    $configXML = Get-XmlConfig -Path $ConfigPath
+    $configXML = Get-WinforgeConfig -Path $ConfigPath
 
     # System Configuration
     if ($configXML.System) {
