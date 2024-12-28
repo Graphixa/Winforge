@@ -397,7 +397,7 @@ function Convert-SecureConfig {
     }
 }
 
-function Get-WinforgeConfig {
+function Get-WinforgeConfig2 {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Path
@@ -504,6 +504,126 @@ function Get-WinforgeConfig {
         throw
     }
 }
+
+function Get-WinforgeConfig {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+    
+    try {
+        # Handle remote configurations
+        if ($Path -match '^https?://') {
+            # Check if URL is a Google Drive link before conversion
+            if ($Path -match "drive\.google\.com") {
+                $Path = Convert-GoogleDriveLink -Url $Path
+            }
+            Write-Log "Downloading configuration from: $Path"
+            $tempPath = Join-Path $env:TEMP "winforge.config"
+            $script:tempFiles += $tempPath
+            Invoke-WebRequest -Uri $Path -OutFile $tempPath
+            $Path = $tempPath
+        }
+        
+        Write-SystemMessage -Title "Configuration" -msg1 "Loading configuration file..."
+        
+        # Check if file exists
+        if (-not (Test-Path $Path)) {
+            throw "Configuration file not found: $Path"
+        }
+        
+        # Check if file is encrypted
+        $isEncrypted = Test-EncryptedConfig -FilePath $Path
+        if ($isEncrypted) {
+            Write-SystemMessage -msg1 "Configuration is encrypted. Please enter the password to decrypt it."
+            
+            $maxAttempts = 5
+            $attempt = 1
+            $decrypted = $false
+
+            while ($attempt -le $maxAttempts -and -not $decrypted) {
+                if ($attempt -gt 1) {
+                    Write-SystemMessage -msg1 "Incorrect password. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
+                }
+
+                $password = Read-Host -AsSecureString "Password"
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+                $passwordText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                
+                # Check for empty/null password
+                if ([string]::IsNullOrWhiteSpace($passwordText)) {
+                    $attempt++
+                    Write-SystemMessage -msg1 "Password cannot be empty. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                    Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
+                    continue
+                }
+                
+                try {
+                    # Decrypt the configuration
+                    $decryptedPath = Join-Path $env:TEMP "winforge_decrypted.config"
+                    $script:tempFiles += $decryptedPath
+                    
+                    # Instead of letting Convert-SecureConfig throw all the way up, we can handle it right here
+                    $decryptResult = Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText 2> $null
+                    if ($decryptResult) {
+                        Write-SystemMessage -msg1 "Configuration decrypted successfully."
+                        $Path = $decryptedPath
+                        $decrypted = $true
+                    }
+                    else {
+                        $attempt++
+                    }
+                }
+                catch {
+                    # If decryption fails *for this attempt*, just log it and increment $attempt
+                    Write-Log "Decryption error on attempt $attempt: $($_.Exception.Message)" -Level Error
+                    $attempt++
+                    if ($attempt -gt $maxAttempts) {
+                        throw "Maximum password attempts reached. Exiting script."
+                    }
+                }
+                finally {
+                    # Clean up sensitive data
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                    Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
+                }
+            }
+
+            if (-not $decrypted) {
+                throw "Failed to decrypt configuration after $maxAttempts attempts."
+            }
+        }
+        
+        # Load and validate XML
+        try {
+            [xml]$config = Get-Content -Path $Path
+            
+            # Validate against schema
+            if (-not (Test-ConfigSchema -Xml $config)) {
+                throw "Configuration failed schema validation"
+            }
+            
+            return $config.WinforgeConfig
+        }
+        catch [System.Xml.XmlException] {
+            throw "Invalid XML in configuration file: $($_.Exception.Message)"
+        }
+    }
+    catch {
+
+        Write-Log "Failed to load configuration: $($_.Exception.Message)" -Level Error
+        
+        if ($_.Exception.Message -match "Maximum password attempts reached" -or 
+            $_.Exception.Message -match "Failed to decrypt configuration after") {
+            throw
+        }
+        else {
+            return $null
+        }
+    }
+}
+
 
 function Remove-TempFiles {
     foreach ($file in $script:tempFiles) {
