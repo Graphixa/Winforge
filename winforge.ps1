@@ -666,7 +666,7 @@ function Get-WinforgeConfig {
     try {
         # Handle remote configurations
         if ($Path -match '^https?://') {
-            # Check if URL is a Google Drive link before conversion
+            # Check if URL is a Google Drive link
             if ($Path -match "drive\.google\.com") {
                 $Path = Convert-GoogleDriveLink -Url $Path
             }
@@ -699,28 +699,22 @@ function Get-WinforgeConfig {
                 }
 
                 $password = Read-Host -AsSecureString "Password"
-                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-                $passwordText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+                $passwordText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
                 
-                # Check for empty/null password
+                # Check for empty password
                 if ([string]::IsNullOrWhiteSpace($passwordText)) {
                     $attempt++
                     Write-SystemMessage -msg1 "Password cannot be empty. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
-                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
                     Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
                     continue
                 }
                 
                 try {
-                    # Decrypt the configuration
-                    $decryptedPath = Join-Path $env:TEMP "winforge_decrypted.config"
-                    $script:tempFiles += $decryptedPath
-                    
-                    # Instead of letting Convert-SecureConfig throw all the way up, we can handle it right here
-                    $decryptResult = Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText 2> $null
+                    $decryptResult = Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText 2>$null
                     if ($decryptResult) {
                         Write-SystemMessage -msg1 "Configuration decrypted successfully."
-                        $Path = $decryptedPath
                         $decrypted = $true
                     }
                     else {
@@ -728,7 +722,7 @@ function Get-WinforgeConfig {
                     }
                 }
                 catch {
-                    # If decryption fails *for this attempt*, just log it and increment $attempt
+                    # Decryption failed for this attempt; just log & increment
                     Write-Log "Decryption error on attempt $attempt of ${maxAttempts}: $($_.Exception.Message)" -Level Error
                     $attempt++
                     if ($attempt -gt $maxAttempts) {
@@ -736,8 +730,7 @@ function Get-WinforgeConfig {
                     }
                 }
                 finally {
-                    # Clean up sensitive data
-                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
                     Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
                 }
             }
@@ -747,11 +740,11 @@ function Get-WinforgeConfig {
             }
         }
         
-        # Load and validate XML
+        # Now that we've decrypted in place, $Path is a plain XML file.
         try {
             [xml]$config = Get-Content -Path $Path
             
-            # Validate against schema
+            # Validate XML against schema
             if (-not (Test-ConfigSchema -Xml $config)) {
                 throw "Configuration failed schema validation"
             }
@@ -763,9 +756,9 @@ function Get-WinforgeConfig {
         }
     }
     catch {
-
         Write-Log "Failed to load configuration: $($_.Exception.Message)" -Level Error
         
+        # If it's a "max attempts" or "failed to decrypt," rethrow so the script can exit. 
         if ($_.Exception.Message -match "Maximum password attempts reached" -or 
             $_.Exception.Message -match "Failed to decrypt configuration after") {
             throw
@@ -775,6 +768,7 @@ function Get-WinforgeConfig {
         }
     }
 }
+
 
 
 function Remove-TempFiles {
