@@ -415,10 +415,7 @@ function Get-WinforgeConfig {
             Write-Log "Downloading configuration from: $Path"
             $tempPath = Join-Path $env:TEMP "winforge.config"
             $script:tempFiles += $tempPath
-            
-            # Convert Google Drive links if necessary
-            $downloadUrl = Convert-GoogleDriveLink -Url $Path
-            Invoke-WebRequest -Uri $downloadUrl -OutFile $tempPath
+            Invoke-WebRequest -Uri $Path -OutFile $tempPath
             $Path = $tempPath
         }
         
@@ -428,48 +425,65 @@ function Get-WinforgeConfig {
         if (-not (Test-Path $Path)) {
             throw "Configuration file not found: $Path"
         }
-
+        
         # Check if file is encrypted
         $isEncrypted = Test-EncryptedConfig -FilePath $Path
         if ($isEncrypted) {
             Write-SystemMessage -msg1 "Configuration is encrypted. Please enter the password to decrypt it."
-            $password = Read-Host -AsSecureString "Password"
-            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-            $passwordText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
             
-            try {
-                # Decrypt the configuration
-                $decryptedPath = Join-Path $env:TEMP "winforge_decrypted.config"
-                $script:tempFiles += $decryptedPath
+            $maxAttempts = 5
+            $attempt = 1
+            $decrypted = $false
+
+            while ($attempt -le $maxAttempts -and -not $decrypted) {
+                if ($attempt -gt 1) {
+                    Write-SystemMessage -msg1 "Incorrect password. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
+                }
+
+                $password = Read-Host -AsSecureString "Password"
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+                $passwordText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
                 
-                if (Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText) {
-                    Write-SystemMessage -msg1 "Configuration decrypted successfully."
-                    $Path = $decryptedPath
+                try {
+                    # Decrypt the configuration
+                    $decryptedPath = Join-Path $env:TEMP "winforge_decrypted.config"
+                    $script:tempFiles += $decryptedPath
+                    
+                    if (Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText) {
+                        Write-SystemMessage -msg1 "Configuration decrypted successfully."
+                        $Path = $decryptedPath
+                        $decrypted = $true
+                    }
                 }
-            }
-            catch {
-                if ($_.Exception.Message -match "Padding is invalid|Bad Data|Length of the data to decrypt is invalid") {
-                    throw "Incorrect password provided for encrypted configuration."
+                catch {
+                    if ($_.Exception.Message -match "Padding is invalid|Bad Data|Length of the data to decrypt is invalid") {
+                        $attempt++
+                        if ($attempt -gt $maxAttempts) {
+                            throw "Maximum password attempts reached. Exiting script."
+                        }
+                    }
+                    else {
+                        throw  # Re-throw if it's not a password-related error
+                    }
                 }
-                throw
-            }
-            finally {
-                # Clean up sensitive data
-                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-                Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
+                finally {
+                    # Clean up sensitive data
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                    Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
+                }
             }
         }
         
         # Load and validate XML
         try {
-        [xml]$config = Get-Content -Path $Path
+            [xml]$config = Get-Content -Path $Path
             
             # Validate against schema
             if (-not (Test-ConfigSchema -Xml $config)) {
                 throw "Configuration failed schema validation"
             }
             
-        return $config.WinforgeConfig
+            return $config.WinforgeConfig
         }
         catch [System.Xml.XmlException] {
             throw "Invalid XML in configuration file: $($_.Exception.Message)"
