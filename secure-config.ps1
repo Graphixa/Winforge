@@ -13,19 +13,98 @@ param (
     [string]$Password
 )
 
-# If password not provided, prompt securely
-if (-not $Password) {
-    $securePassword = Read-Host -Prompt "Enter password" -AsSecureString
-    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+function Test-EncryptedConfig {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+    
     try {
-        $Password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+        # Try to parse the content as JSON
+        $content = Get-Content $FilePath -Raw
+        $package = $content | ConvertFrom-Json
+
+        # Check if it has our expected structure
+        return ($null -ne $package.Salt -and 
+                $null -ne $package.Data -and 
+                $null -ne $package.IV)
     }
-    finally {
-        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+    catch {
+        return $false
     }
 }
 
-function Convert-SecureXml {
+# First check if file exists
+if (-not (Test-Path $FilePath)) {
+    Write-Error "File not found: $FilePath"
+    exit 1
+}
+
+# Check encryption status based on operation
+if ($Decrypt) {
+    $isEncrypted = Test-EncryptedConfig -FilePath $FilePath
+    if (-not $isEncrypted) {
+        Write-Host "File is not encrypted. Skipping decryption."
+        exit 0
+    }
+}
+elseif ($Encrypt) {
+    $isEncrypted = Test-EncryptedConfig -FilePath $FilePath
+    if ($isEncrypted) {
+        Write-Error "File is already encrypted. Decrypt it first if you want to re-encrypt."
+        exit 1
+    }
+}
+
+# Only prompt for password if not provided
+if (-not $Password) {
+    if ($Encrypt) {
+        # For encryption, ask for password twice
+        $passwordsMatch = $false
+        while (-not $passwordsMatch) {
+            $securePassword1 = Read-Host -Prompt "Enter password" -AsSecureString
+            $securePassword2 = Read-Host -Prompt "Re-enter password" -AsSecureString
+            
+            $BSTR1 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword1)
+            $BSTR2 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword2)
+            
+            try {
+                $pass1 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR1)
+                $pass2 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR2)
+                
+                if ($pass1 -eq $pass2) {
+                    $Password = $pass1
+                    $passwordsMatch = $true
+                }
+                else {
+                    Write-Host "Passwords do not match. Please try again."
+                }
+            }
+            finally {
+                # Clean up the passwords from memory
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR1)
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR2)
+                if ($pass1) { $pass1 = "0" * $pass1.Length }
+                if ($pass2) { $pass2 = "0" * $pass2.Length }
+                Remove-Variable -Name pass1 -ErrorAction SilentlyContinue
+                Remove-Variable -Name pass2 -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    else {
+        # For decryption, just ask once
+        $securePassword = Read-Host -Prompt "Enter password" -AsSecureString
+        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+        try {
+            $Password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+        }
+        finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+        }
+    }
+}
+
+function Convert-SecureConfig {
     param (
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
@@ -42,12 +121,17 @@ function Convert-SecureXml {
         }
 
         # Get file content
-        $xmlContent = Get-Content $FilePath -Raw
+        $configContent = Get-Content $FilePath -Raw
 
-        # Generate output path
-        $outputPath = [System.IO.Path]::ChangeExtension($FilePath, ".config")
+        # Generate output path (keep .config extension)
+        $outputPath = $FilePath
 
         if ($IsEncrypting) {
+            # Check if already encrypted
+            if (Test-EncryptedConfig -FilePath $FilePath) {
+                throw "File is already encrypted. Decrypt it first if you want to re-encrypt."
+            }
+
             # Generate unique random salt
             $salt = New-Object byte[] 32
             $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
@@ -65,7 +149,7 @@ function Convert-SecureXml {
                 $iv = $rfc.GetBytes(16)  # 128 bits
 
                 # Convert content to bytes
-                $bytes = [System.Text.Encoding]::UTF8.GetBytes($xmlContent)
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($configContent)
 
                 # Create AES encryption object
                 $aes = [System.Security.Cryptography.Aes]::Create()
@@ -173,10 +257,10 @@ function Convert-SecureXml {
 # Execute based on parameter
 try {
     if ($Encrypt) {
-        Convert-SecureXml -FilePath $FilePath -IsEncrypting $true -Password $Password
+        Convert-SecureConfig -FilePath $FilePath -IsEncrypting $true -Password $Password
     }
     else {
-        Convert-SecureXml -FilePath $FilePath -IsEncrypting $false -Password $Password
+        Convert-SecureConfig -FilePath $FilePath -IsEncrypting $false -Password $Password
     }
 }
 finally {
