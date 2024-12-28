@@ -577,7 +577,7 @@ function Get-WinforgeConfig {
                 }
                 catch {
                     # If decryption fails *for this attempt*, just log it and increment $attempt
-                    Write-Log "Decryption error on attempt $attempt: $($_.Exception.Message)" -Level Error
+                    Write-Log "Decryption error on attempt $attempt of ${maxAttempts}: $($_.Exception.Message)" -Level Error
                     $attempt++
                     if ($attempt -gt $maxAttempts) {
                         throw "Maximum password attempts reached. Exiting script."
