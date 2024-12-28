@@ -444,6 +444,15 @@ function Get-WinforgeConfig {
                 $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
                 $passwordText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
                 
+                # Check for empty/null password
+                if ([string]::IsNullOrWhiteSpace($passwordText)) {
+                    $attempt++
+                    Write-SystemMessage -msg1 "Password cannot be empty. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                    Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
+                    continue
+                }
+                
                 try {
                     # Decrypt the configuration
                     $decryptedPath = Join-Path $env:TEMP "winforge_decrypted.config"
