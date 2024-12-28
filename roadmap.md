@@ -7,3 +7,5 @@
 
 # BUGFIXES
 
+- Fix Google Drive installation as it prompts user for installation, should be silent.
+
