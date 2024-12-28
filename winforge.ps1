@@ -249,7 +249,7 @@ function Test-EncryptedConfig {
     catch { return $false }
 }
 
-function Convert-SecureConfig-BACKUP {
+function Convert-SecureConfig {
     param (
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
@@ -397,7 +397,7 @@ function Convert-SecureConfig-BACKUP {
     }
 }
 
-function Convert-SecureConfig {
+function Convert-SecureConfig2 {
     param (
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
@@ -549,7 +549,7 @@ function Convert-SecureConfig {
     }
 }
 
-function Get-WinforgeConfig-BACKUP {
+function Get-WinforgeConfig {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Path
@@ -657,7 +657,7 @@ function Get-WinforgeConfig-BACKUP {
     }
 }
 
-function Get-WinforgeConfig {
+function Get-WinforgeConfig2 {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Path
@@ -887,7 +887,7 @@ function Set-SystemCheckpoint {
 
 
 
-#region Configuration Functions
+# Configuration Functions
 function Set-SystemConfiguration {
     param (
         [Parameter(Mandatory = $true)]
