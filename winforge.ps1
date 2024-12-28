@@ -2774,7 +2774,6 @@ function Set-Shortcuts {
 try {
 
     Clear-Host
-    Set-SystemCheckpoint  # This is missing
     Write-SystemMessage -Title "Starting Winforge Configuration"
 
     # Verify running as administrator
@@ -2787,6 +2786,9 @@ try {
 
     # Load and validate configuration
     $configXML = Get-WinforgeConfig -Path $ConfigPath
+
+    # Set System Checkpoint
+    Set-SystemCheckpoint
 
     # System Configuration
     if ($configXML.System) {
