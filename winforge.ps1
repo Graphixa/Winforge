@@ -41,7 +41,7 @@ $script:tempFiles = @()
 # Initialize Error Handling
 $ErrorActionPreference = "Stop"
 
-# Helper Functions
+# HELPER FUNCTIONS
 function Write-Log {
     param (
         [Parameter(Mandatory = $true)]
@@ -237,7 +237,6 @@ function Convert-GoogleDriveLink {
         return $Url
     }
 }
-
 
 function Test-EncryptedConfig {
     param ([string]$FilePath)
@@ -513,7 +512,6 @@ function Get-WinforgeConfig {
     }
 }
 
-
 function Remove-TempFiles {
     foreach ($file in $script:tempFiles) {
         if (Test-Path $file) {
@@ -565,7 +563,6 @@ function Set-RegistryModification {
     }
 }
 
-
 function Test-ProgramInstalled {
     param(
         [string]$ProgramName
@@ -582,7 +579,6 @@ function Test-ProgramInstalled {
 
     return $isProgramInstalled
 }
-
 
 function Set-SystemCheckpoint {
     try {
@@ -623,7 +619,7 @@ function Set-SystemCheckpoint {
 }
 
 
-# Configuration Functions
+# CONFIGURATION FUNCTIONS
 function Set-SystemConfiguration {
     param (
         [Parameter(Mandatory = $true)]
@@ -1480,7 +1476,8 @@ function Set-ScheduledTasksConfiguration {
     }
 }
 
-# System Modification Functions
+
+# SYSTEM MODIFICATION FUNCTIONS
 
 # Function to test if a font is installed
 function Test-FontInstalled {
@@ -2349,6 +2346,55 @@ public class Wallpaper
             }
         }
 
+        # Lockscreen
+        if ($ThemeConfig.LockScreenPath) {
+            Write-SystemMessage -msg1 "- Setting lock screen from: " -msg2 $ThemeConfig.LockScreenPath
+            try {
+                $lockscreenPath = $ThemeConfig.LockScreenPath
+                if ($lockscreenPath -match "^https?://") {
+                    $tempLockscreenPath = "$env:TEMP\lockscreen.jpg"
+                    Write-Log "Downloading lock screen from: $lockscreenPath"
+                    Invoke-WebRequest -Uri $lockscreenPath -OutFile $tempLockscreenPath
+                    $lockscreenPath = $tempLockscreenPath
+                    $script:tempFiles += $tempLockscreenPath
+                }
+
+                # Helper function to handle asynchronous tasks
+                $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
+
+                Function Await($WinRtTask, $ResultType) {
+                    $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
+                    $netTask = $asTask.Invoke($null, @($WinRtTask))
+                    $netTask.Wait(-1) | Out-Null
+                    $netTask.Result
+                }
+
+                Function AwaitAction($WinRtAction) {
+                    $asTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and !$_.IsGenericMethod })[0]
+                    $netTask = $asTask.Invoke($null, @($WinRtAction))
+                    $netTask.Wait(-1) | Out-Null
+                }
+
+                # Load Windows.Storage namespace to work with files
+                [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime] | Out-Null
+
+
+  
+                    # Retrieve the image file asynchronously
+                    $image = Await([Windows.Storage.StorageFile]::GetFileFromPathAsync($lockscreenPath)) ([Windows.Storage.StorageFile])
+
+                    # Set the lock screen image asynchronously
+                    AwaitAction([Windows.System.UserProfile.LockScreen]::SetImageFileAsync($image))
+                    Write-Log "Lock screen set successfully."
+                    Write-SuccessMessage -msg "Lock screen set successfully"
+
+            }              
+           
+            catch {
+                Write-Log "Error setting wallpaper: $($_.Exception.Message)" -Level Error
+                Write-ErrorMessage -msg "Failed to set wallpaper"
+            }
+
         # Desktop Icon Size
         if ($ThemeConfig.DesktopIconSize) {
             Write-SystemMessage -msg1 "- Setting desktop icon size..."
@@ -2374,6 +2420,7 @@ public class Wallpaper
         Write-Log "Theme configuration completed successfully"
         return $true
     }
+}
     catch {
         Write-Log "Error configuring theme settings: $($_.Exception.Message)" -Level Error
         Write-ErrorMessage -msg "Failed to configure theme settings"
@@ -2802,8 +2849,6 @@ function Set-Shortcuts {
 }
 
 
-
-
 # Main Execution Block
 try {
 
@@ -2877,6 +2922,11 @@ try {
     # Registry
     if ($configXML.Registry) {
         $configStatus['Registry'] = Set-RegistryEntries -RegistryConfig $configXML.Registry
+    }
+
+    # Scheduled Tasks
+    if ($configXML.Tasks) {
+        $configStatus['Tasks'] = Set-ScheduledTasksConfiguration -TasksConfig $configXML.Tasks
     }
 
     # Windows Features
