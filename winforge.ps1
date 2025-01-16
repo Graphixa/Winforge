@@ -2268,17 +2268,20 @@ function Set-ThemeConfiguration {
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Type DWord -Value 0
                 Write-SuccessMessage -msg "Dark mode enabled"
-            } catch {
+            }
+            catch {
                 Write-Log "Failed to enable dark mode: $($_.Exception.Message)" -Level Error
                 Write-ErrorMessage -msg "Failed to enable dark mode"
             }
-        } elseif ($ThemeConfig.DarkMode -eq 'false') {
+        }
+        elseif ($ThemeConfig.DarkMode -eq 'false') {
             Write-SystemMessage -msg1 "- Enabling light mode..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Type DWord -Value 1
                 Write-SuccessMessage -msg "Light mode enabled"
-            } catch {
+            }
+            catch {
                 Write-Log "Failed to enable light mode: $($_.Exception.Message)" -Level Error
                 Write-ErrorMessage -msg "Failed to enable light mode"
             }
@@ -2290,16 +2293,19 @@ function Set-ThemeConfiguration {
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Type DWord -Value 0
                 Write-SuccessMessage -msg "Transparency effects disabled"
-            } catch {
+            }
+            catch {
                 Write-Log "Failed to disable transparency effects: $($_.Exception.Message)" -Level Error
                 Write-ErrorMessage -msg "Failed to disable transparency effects"
             }
-        } elseif ($ThemeConfig.TransparencyEffects -eq 'true') {
+        }
+        elseif ($ThemeConfig.TransparencyEffects -eq 'true') {
             Write-SystemMessage -msg1 "- Enabling transparency effects..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Type DWord -Value 1
                 Write-SuccessMessage -msg "Transparency effects enabled"
-            } catch {
+            }
+            catch {
                 Write-Log "Failed to enable transparency effects: $($_.Exception.Message)" -Level Error
                 Write-ErrorMessage -msg "Failed to enable transparency effects"
             }
@@ -2346,6 +2352,66 @@ public class Wallpaper
             }
         }
 
+        
+        # Lock Screen
+        if ($ThemeConfig.LockScreenPath) {
+            Write-SystemMessage -msg1 "- Setting lock screen from: " -msg2 $ThemeConfig.LockScreenPath
+            try {
+                $lockScreenPath = $ThemeConfig.LockScreenPath
+                if ($lockScreenPath -match "^https?://") {
+                    $tempLockScreenPath = "$env:TEMP\lockscreen.jpg"
+                    Write-Log "Downloading lock screen from: $lockScreenPath"
+                    Invoke-WebRequest -Uri $lockScreenPath -OutFile $tempLockScreenPath
+                    $lockScreenPath = $tempLockScreenPath
+                    $script:tempFiles += $tempLockScreenPath
+                }
+
+                # Load necessary Windows Runtime namespaces for Lock Screen
+                [Windows.System.UserProfile.LockScreen, Windows.System.UserProfile, ContentType = WindowsRuntime] | Out-Null
+                Add-Type -AssemblyName System.Runtime.WindowsRuntime
+
+                # Helper function to handle asynchronous tasks
+                $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
+
+                Function Await($WinRtTask, $ResultType) {
+                    $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
+                    $netTask = $asTask.Invoke($null, @($WinRtTask))
+                    $netTask.Wait(-1) | Out-Null
+                    $netTask.Result
+                }
+
+                Function AwaitAction($WinRtAction) {
+                    $asTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and !$_.IsGenericMethod })[0]
+                    $netTask = $asTask.Invoke($null, @($WinRtAction))
+                    $netTask.Wait(-1) | Out-Null
+                }
+
+                # Load Windows.Storage namespace to work with files
+                [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime] | Out-Null
+
+                # Check if the image path exists
+                if (-not (Test-Path -Path $lockScreenPath)) {
+                    Write-Error "The lock screen image file at '$lockScreenPath' does not exist. Please provide a valid file path."
+                    return
+                }
+
+                # Retrieve the image file asynchronously
+                $image = Await([Windows.Storage.StorageFile]::GetFileFromPathAsync($lockScreenPath)) ([Windows.Storage.StorageFile])
+
+                # Set the lock screen image asynchronously
+                AwaitAction([Windows.System.UserProfile.LockScreen]::SetImageFileAsync($image))
+        
+                Write-Log "Lock screen set successfully."
+                Write-SuccessMessage -msg "Lock screen set successfully"
+            }
+            catch {
+                Write-Log "Error setting lock screen: $($_.Exception.Message)" -Level Error
+                Write-ErrorMessage -msg "Failed to set lock screen"
+            }
+        }
+        
+
+        <#
         # Lockscreen
         if ($ThemeConfig.LockScreenPath) {
             Write-SystemMessage -msg1 "- Setting lock screen from: " -msg2 $ThemeConfig.LockScreenPath
@@ -2380,47 +2446,49 @@ public class Wallpaper
 
 
   
-                    # Retrieve the image file asynchronously
-                    $image = Await([Windows.Storage.StorageFile]::GetFileFromPathAsync($lockscreenPath)) ([Windows.Storage.StorageFile])
+                # Retrieve the image file asynchronously
+                $image = Await([Windows.Storage.StorageFile]::GetFileFromPathAsync($lockscreenPath)) ([Windows.Storage.StorageFile])
 
-                    # Set the lock screen image asynchronously
-                    AwaitAction([Windows.System.UserProfile.LockScreen]::SetImageFileAsync($image))
-                    Write-Log "Lock screen set successfully."
-                    Write-SuccessMessage -msg "Lock screen set successfully"
+                # Set the lock screen image asynchronously
+                AwaitAction([Windows.System.UserProfile.LockScreen]::SetImageFileAsync($image))
+                Write-Log "Lock screen set successfully."
+                Write-SuccessMessage -msg "Lock screen set successfully"
 
             }              
            
             catch {
-                Write-Log "Error setting wallpaper: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set wallpaper"
+                Write-Log "Error setting lockscreen: $($_.Exception.Message)" -Level Error
+                Write-ErrorMessage -msg "Failed to set lockscreen"
             }
 
-        # Desktop Icon Size
-        if ($ThemeConfig.DesktopIconSize) {
-            Write-SystemMessage -msg1 "- Setting desktop icon size..."
-            Write-Log "Setting desktop icon size..."
-            try {
-                $sizeValue = switch ($ThemeConfig.DesktopIconSize) {
-                    "Small" { 0 }
-                    "Medium" { 1 }
-                    "Large" { 2 }
-                    default {
-                        Write-Log "Invalid desktop icon size specified: $($ThemeConfig.DesktopIconSize). Using Medium." -Level Warning
-                        1
+            # Desktop Icon Size
+            if ($ThemeConfig.DesktopIconSize) {
+                Write-SystemMessage -msg1 "- Setting desktop icon size..."
+                Write-Log "Setting desktop icon size..."
+                try {
+                    $sizeValue = switch ($ThemeConfig.DesktopIconSize) {
+                        "Small" { 0 }
+                        "Medium" { 1 }
+                        "Large" { 2 }
+                        default {
+                            Write-Log "Invalid desktop icon size specified: $($ThemeConfig.DesktopIconSize). Using Medium." -Level Warning
+                            1
+                        }
                     }
+                    Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop" -Name "IconSize" -Type DWord -Value $sizeValue
+                    Write-SuccessMessage -msg "Desktop icon size set successfully"
                 }
-                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop" -Name "IconSize" -Type DWord -Value $sizeValue
-                Write-SuccessMessage -msg "Desktop icon size set successfully"
-            } catch {
-                Write-Log "Failed to set desktop icon size: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set desktop icon size"
+                catch {
+                    Write-Log "Failed to set desktop icon size: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to set desktop icon size"
+                }
             }
-        }
 
-        Write-Log "Theme configuration completed successfully"
-        return $true
+            Write-Log "Theme configuration completed successfully"
+            return $true
+        }
+        #>
     }
-}
     catch {
         Write-Log "Error configuring theme settings: $($_.Exception.Message)" -Level Error
         Write-ErrorMessage -msg "Failed to configure theme settings"
