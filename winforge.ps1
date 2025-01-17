@@ -477,70 +477,6 @@ function Get-WinforgeConfig {
     }
 }
 
-
-
-function Get-RemoteFile {
-
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$Uri,
-
-        [Parameter(Mandatory = $true)]
-        [string]$DownloadPath,
-
-        [Parameter(Mandatory = $false)]
-        [string]$FileName
-    )
-
-    try {
-
-        # Validate the URI
-        if (-not [Uri]::IsWellFormedUriString($Uri, [UriKind]::Absolute)) {
-            throw "The specified URI '$Uri' is not valid or well-formed. Please provide a valid absolute URI."
-        }
-        
-        # If the filename is not specified, try to extract it from the URI
-        if (-not $FileName) {
-            $FileName = [System.IO.Path]::GetFileName($Uri)
-        }
-
-
-        # Use UnescapeDataString to decode encoded URIs
-        if (-not $FileName) {
-            $FileName = [System.IO.Path]::GetFileName([Uri]::UnescapeDataString($Uri))
-        }
-
-        # Fallback if no filename can be inferred
-        if (-not $FileName) {
-            throw "Unable to determine a filename from the URI '$Uri'. Please specify a filename manually using the -FileName parameter."
-            Write-Log "Unable to determine a valid filename from the URI '$Uri'." -Level Error
-            return
-        }
-
-        # Ensure the download path exists
-        if (-not (Test-Path -Path $DownloadPath)) {
-            New-Item -Path $DownloadPath -ItemType Directory | Out-Null
-        }
-
-        # Set the full path for the downloaded file
-        $FullPath = Join-Path -Path $DownloadPath -ChildPath $FileName
-
-
-        Write-Log "Downloading file to $FullPath'." -Level Info
-
-        # Download the file directly to the destination
-        Invoke-WebRequest -Uri $Uri -OutFile $FullPath -ErrorAction Stop
-
-        Write-Log "Download Complete: $FullPath" -Level Info
-
-    } catch {
-    
-        Write-Log "Failed to download file from ${Uri}: $($_.Exception.Message)" -Level Error
-        return $null
-    }
-    }
-
-
 function Convert-GoogleDriveLink {
     param (
         [Parameter(Mandatory = $true)]
@@ -2384,11 +2320,26 @@ function Set-ThemeConfiguration {
             try {
                 $wallpaperPath = $ThemeConfig.WallpaperPath
                 if ($wallpaperPath -match "^https?://") {
-                    $tempWallpaperPath = $env:TEMP
-                    Write-Log "Downloading wallpaper from: $wallpaperPath"
-                    $downloadedWallpaperFile = Get-RemoteFile -Uri $wallpaperPath -DownloadPath $tempWallpaperPath
-                    $wallpaperPath = $downloadedWallpaperFile
-                    $script:tempFiles += $downloadedWallpaperFile
+                    try {
+                        Write-Log "Downloading wallpaper from: $wallpaperPath"
+                    
+                    # Extract filename from URL or use a default
+                    $wallpaperFileName = [System.IO.Path]::GetFileName($wallpaperPath)
+                    if ([string]::IsNullOrEmpty($wallpaperFileName)) {
+                        $wallpaperFileName = "wallpaper$(([System.IO.Path]::GetExtension($wallpaperPath)))"
+                    }
+                    
+                    Invoke-WebRequest -Uri $wallpaperPath -OutFile "$env:TEMP\$wallpaperFileName" | Out-Null
+
+                    $wallpaperPath = "$env:TEMP\$wallpaperFileName"
+                    $script:tempFiles += $wallpaperPath
+                    Write-Log "Wallpaper downloaded successfully to: $wallpaperPath"
+                    }
+                    catch {
+                        Write-Log "Failed to download wallpaper from: $wallpaperPath" -Level Error
+                        Write-ErrorMessage -msg "Failed to download wallpaper"
+                    }
+                    
                 }
 
                 $setwallpapersrc = @"
@@ -2426,11 +2377,25 @@ public class Wallpaper
             try {
                 $lockScreenPath = $ThemeConfig.LockScreenPath
                 if ($lockScreenPath -match "^https?://") {
-                    $tempLockScreenPath = $env:TEMP
-                    Write-Log "Downloading lock screen from: $lockScreenPath"
-                    $downloadedLockScreenFile = Get-RemoteFile -Uri $lockScreenPath -DownloadPath $tempLockScreenPath
-                    $lockScreenPath = $downloadedLockScreenFile
-                    $script:tempFiles += $downloadedLockScreenFile
+                    try {
+                        Write-Log "Downloading lock screen from: $lockScreenPath"
+                    
+                        # Extract filename from URL or use a default
+                        $lockScreenFileName = [System.IO.Path]::GetFileName($lockScreenPath)
+                        if ([string]::IsNullOrEmpty($lockScreenFileName)) {
+                            $lockScreenFileName = "lockscreen$(([System.IO.Path]::GetExtension($lockScreenPath)))"
+                        }
+                        
+                        Invoke-WebRequest -Uri $lockScreenPath -OutFile "$env:TEMP\$lockScreenFileName" | Out-Null
+
+                        $lockScreenPath = "$env:TEMP\$lockScreenFileName"
+                        $script:tempFiles += $lockScreenPath
+                        Write-Log "Lock screen downloaded successfully to: $lockScreenPath"
+                    }
+                    catch {
+                        Write-Log "Failed to download lock screen from: $lockScreenPath" -Level Error
+                        Write-ErrorMessage -msg "Failed to download lock screen"
+                    }
                 }
 
                 # Load necessary Windows Runtime namespaces for Lock Screen
