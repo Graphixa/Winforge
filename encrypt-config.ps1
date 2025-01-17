@@ -10,7 +10,7 @@ param (
     [switch]$Decrypt,
 
     [Parameter(Mandatory = $false)]
-    [string]$Password
+    [System.Security.SecureString]$Password
 )
 
 function Test-EncryptedConfig {

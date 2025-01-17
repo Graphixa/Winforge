@@ -38,6 +38,9 @@ $script:schemaPath = "https://raw.githubusercontent.com/Graphixa/WinforgeX/main/
 $script:restartRequired = $false
 $script:tempFiles = @()
 
+
+$ProgressPreference = 'SilentlyContinue'
+
 # Initialize Error Handling
 $ErrorActionPreference = "Stop"
 
@@ -197,44 +200,6 @@ function Test-ConfigSchema {
     catch {
         Write-Log "Schema validation error: $($_.Exception.Message)" -Level Error
         return $false
-    }
-}
-
-function Convert-GoogleDriveLink {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$Url
-    )
-
-    try {
-        # Check if URL is a Google Drive link
-        if ($Url -match "drive\.google\.com") {
-            # Extract file ID using regex
-            $fileId = if ($Url -match "(?:id=|/d/)([^/&\?]+)") {
-                $matches[1]
-            } else {
-                Write-Log "Could not extract file ID from Google Drive URL" -Level Error
-                return $Url
-            }
-
-            # Check if already a direct download link
-            if ($Url -match "export=download") {
-                Write-Log "URL is already a direct download link" -Level Info
-                return $Url
-            }
-
-            # Convert to direct download link
-            $directUrl = "https://drive.google.com/uc?export=download&id=$fileId"
-            Write-Log "Converted Google Drive link to direct download URL" -Level Info
-            return $directUrl
-        }
-
-        # Return original URL if not a Google Drive link
-        return $Url
-    }
-    catch {
-        Write-Log "Error converting Google Drive link: $($_.Exception.Message)" -Level Error
-        return $Url
     }
 }
 
@@ -485,14 +450,14 @@ function Get-WinforgeConfig {
         
         # Now that we've decrypted in place, $Path is a plain XML file.
         try {
-            [xml]$config = Get-Content -Path $Path
+        [xml]$config = Get-Content -Path $Path
             
             # Validate XML against schema
             if (-not (Test-ConfigSchema -Xml $config)) {
                 throw "Configuration failed schema validation"
             }
-            
-            return $config.WinforgeConfig
+        
+        return $config.WinforgeConfig
         }
         catch [System.Xml.XmlException] {
             throw "Invalid XML in configuration file: $($_.Exception.Message)"
@@ -504,11 +469,113 @@ function Get-WinforgeConfig {
         # If it's a "max attempts" or "failed to decrypt," rethrow so the script can exit. 
         if ($_.Exception.Message -match "Maximum password attempts reached" -or 
             $_.Exception.Message -match "Failed to decrypt configuration after") {
-            throw
+        throw
         }
         else {
             return $null
         }
+    }
+}
+
+
+
+function Get-RemoteFile {
+
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Uri,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DownloadPath,
+
+        [Parameter(Mandatory = $false)]
+        [string]$FileName
+    )
+
+    try {
+
+        # Validate the URI
+        if (-not [Uri]::IsWellFormedUriString($Uri, [UriKind]::Absolute)) {
+            throw "The specified URI '$Uri' is not valid or well-formed. Please provide a valid absolute URI."
+        }
+        
+        # If the filename is not specified, try to extract it from the URI
+        if (-not $FileName) {
+            $FileName = [System.IO.Path]::GetFileName($Uri)
+        }
+
+
+        # Use UnescapeDataString to decode encoded URIs
+        if (-not $FileName) {
+            $FileName = [System.IO.Path]::GetFileName([Uri]::UnescapeDataString($Uri))
+        }
+
+        # Fallback if no filename can be inferred
+        if (-not $FileName) {
+            throw "Unable to determine a filename from the URI '$Uri'. Please specify a filename manually using the -FileName parameter."
+            Write-Log "Unable to determine a valid filename from the URI '$Uri'." -Level Error
+            return
+        }
+
+        # Ensure the download path exists
+        if (-not (Test-Path -Path $DownloadPath)) {
+            New-Item -Path $DownloadPath -ItemType Directory | Out-Null
+        }
+
+        # Set the full path for the downloaded file
+        $FullPath = Join-Path -Path $DownloadPath -ChildPath $FileName
+
+
+        Write-Log "Downloading file to $FullPath'." -Level Info
+
+        # Download the file directly to the destination
+        Invoke-WebRequest -Uri $Uri -OutFile $FullPath -ErrorAction Stop
+
+        Write-Log "Download Complete: $FullPath" -Level Info
+
+    } catch {
+    
+        Write-Log "Failed to download file from ${Uri}: $($_.Exception.Message)" -Level Error
+        return $null
+    }
+    }
+
+
+function Convert-GoogleDriveLink {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Url
+    )
+
+    try {
+        # Check if URL is a Google Drive link
+        if ($Url -match "drive\.google\.com") {
+            # Extract file ID using regex
+            $fileId = if ($Url -match "(?:id=|/d/)([^/&\?]+)") {
+                $matches[1]
+            } else {
+                Write-Log "Could not extract file ID from Google Drive URL" -Level Error
+                return $Url
+            }
+
+            # Check if already a direct download link
+            if ($Url -match "export=download") {
+                Write-Log "URL is already a direct download link" -Level Info
+                return $Url
+            }
+
+            # Convert to direct download link
+            $directUrl = "https://drive.google.com/uc?export=download&id=$fileId"
+            Write-Log "Converted Google Drive link to direct download URL" -Level Info
+            return $directUrl
+        }
+
+        # Return original URL if not a Google Drive link
+        return $Url
+    }
+    catch {
+        Write-Log "Error converting Google Drive link: $($_.Exception.Message)" -Level Error
+        return $Url
     }
 }
 
@@ -2317,11 +2384,11 @@ function Set-ThemeConfiguration {
             try {
                 $wallpaperPath = $ThemeConfig.WallpaperPath
                 if ($wallpaperPath -match "^https?://") {
-                    $tempWallpaperPath = "$env:TEMP\wallpaper.jpg"
+                    $tempWallpaperPath = $env:TEMP
                     Write-Log "Downloading wallpaper from: $wallpaperPath"
-                    Invoke-WebRequest -Uri $wallpaperPath -OutFile $tempWallpaperPath
-                    $wallpaperPath = $tempWallpaperPath
-                    $script:tempFiles += $tempWallpaperPath
+                    $downloadedWallpaperFile = Get-RemoteFile -Uri $wallpaperPath -DownloadPath $tempWallpaperPath
+                    $wallpaperPath = $downloadedWallpaperFile
+                    $script:tempFiles += $downloadedWallpaperFile
                 }
 
                 $setwallpapersrc = @"
@@ -2359,11 +2426,11 @@ public class Wallpaper
             try {
                 $lockScreenPath = $ThemeConfig.LockScreenPath
                 if ($lockScreenPath -match "^https?://") {
-                    $tempLockScreenPath = "$env:TEMP\lockscreen.jpg"
+                    $tempLockScreenPath = $env:TEMP
                     Write-Log "Downloading lock screen from: $lockScreenPath"
-                    Invoke-WebRequest -Uri $lockScreenPath -OutFile $tempLockScreenPath
-                    $lockScreenPath = $tempLockScreenPath
-                    $script:tempFiles += $tempLockScreenPath
+                    $downloadedLockScreenFile = Get-RemoteFile -Uri $lockScreenPath -DownloadPath $tempLockScreenPath
+                    $lockScreenPath = $downloadedLockScreenFile
+                    $script:tempFiles += $downloadedLockScreenFile
                 }
 
                 # Load necessary Windows Runtime namespaces for Lock Screen
@@ -2391,7 +2458,7 @@ public class Wallpaper
 
                 # Check if the image path exists
                 if (-not (Test-Path -Path $lockScreenPath)) {
-                    Write-Error "The lock screen image file at '$lockScreenPath' does not exist. Please provide a valid file path."
+                    Write-Log "The lock screen image file at '$lockScreenPath' does not exist. Please provide a valid file path." -Level Error
                     return
                 }
 
@@ -2459,33 +2526,33 @@ public class Wallpaper
             catch {
                 Write-Log "Error setting lockscreen: $($_.Exception.Message)" -Level Error
                 Write-ErrorMessage -msg "Failed to set lockscreen"
-            }
+        }
 
-            # Desktop Icon Size
-            if ($ThemeConfig.DesktopIconSize) {
-                Write-SystemMessage -msg1 "- Setting desktop icon size..."
-                Write-Log "Setting desktop icon size..."
-                try {
-                    $sizeValue = switch ($ThemeConfig.DesktopIconSize) {
-                        "Small" { 0 }
-                        "Medium" { 1 }
-                        "Large" { 2 }
-                        default {
-                            Write-Log "Invalid desktop icon size specified: $($ThemeConfig.DesktopIconSize). Using Medium." -Level Warning
-                            1
-                        }
+        # Desktop Icon Size
+        if ($ThemeConfig.DesktopIconSize) {
+            Write-SystemMessage -msg1 "- Setting desktop icon size..."
+            Write-Log "Setting desktop icon size..."
+            try {
+                $sizeValue = switch ($ThemeConfig.DesktopIconSize) {
+                    "Small" { 0 }
+                    "Medium" { 1 }
+                    "Large" { 2 }
+                    default {
+                        Write-Log "Invalid desktop icon size specified: $($ThemeConfig.DesktopIconSize). Using Medium." -Level Warning
+                        1
                     }
-                    Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop" -Name "IconSize" -Type DWord -Value $sizeValue
-                    Write-SuccessMessage -msg "Desktop icon size set successfully"
+                }
+                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop" -Name "IconSize" -Type DWord -Value $sizeValue
+                Write-SuccessMessage -msg "Desktop icon size set successfully"
                 }
                 catch {
-                    Write-Log "Failed to set desktop icon size: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to set desktop icon size"
-                }
+                Write-Log "Failed to set desktop icon size: $($_.Exception.Message)" -Level Error
+                Write-ErrorMessage -msg "Failed to set desktop icon size"
             }
+        }
 
-            Write-Log "Theme configuration completed successfully"
-            return $true
+        Write-Log "Theme configuration completed successfully"
+        return $true
         }
         #>
     }
