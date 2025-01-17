@@ -2263,59 +2263,75 @@ function Set-ThemeConfiguration {
     
     try {
         Write-SystemMessage -Title "Configuring Theme Settings"
+        $successCount = 0
+        $totalCount = 0
 
         # Theme Mode (Dark/Light)
-        if ($ThemeConfig.DarkMode -eq 'true') {
-            Write-SystemMessage -msg1 "- Enabling dark mode..."
-            try {
-                Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Type DWord -Value 0
-                Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Dark mode enabled"
+        if ($ThemeConfig.DarkMode) {
+            $totalCount++
+            if ($ThemeConfig.DarkMode -eq 'true') {
+                Write-SystemMessage -msg1 "- Enabling dark mode..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Type DWord -Value 0
+                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "Dark mode enabled"
+                    $successCount++
+                }
+                catch {
+                    Write-Log "Failed to enable dark mode: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable dark mode"
+                }
             }
-            catch {
-                Write-Log "Failed to enable dark mode: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable dark mode"
-            }
-        }
-        elseif ($ThemeConfig.DarkMode -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling light mode..."
-            try {
-                Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Type DWord -Value 1
-                Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Light mode enabled"
-            }
-            catch {
-                Write-Log "Failed to enable light mode: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable light mode"
+            elseif ($ThemeConfig.DarkMode -eq 'false') {
+                Write-SystemMessage -msg1 "- Enabling light mode..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Type DWord -Value 1
+                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Type DWord -Value 1
+                    Write-SuccessMessage -msg "Light mode enabled"
+                    $successCount++
+                }
+                catch {
+                    Write-Log "Failed to enable light mode: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable light mode"
+                }
             }
         }
 
         # Transparency Effects
-        if ($ThemeConfig.TransparencyEffects -eq 'false') {
-            Write-SystemMessage -msg1 "- Disabling transparency effects..."
-            try {
-                Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Transparency effects disabled"
+        if ($ThemeConfig.TransparencyEffects) {
+            $totalCount++
+            if ($ThemeConfig.TransparencyEffects -eq 'false') {
+                Write-SystemMessage -msg1 "- Disabling transparency effects..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "Transparency effects disabled"
+                    $successCount++
+                }
+                catch {
+                    Write-Log "Failed to disable transparency effects: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable transparency effects"
+                }
             }
-            catch {
-                Write-Log "Failed to disable transparency effects: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable transparency effects"
-            }
-        }
-        elseif ($ThemeConfig.TransparencyEffects -eq 'true') {
-            Write-SystemMessage -msg1 "- Enabling transparency effects..."
-            try {
-                Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Transparency effects enabled"
-            }
-            catch {
-                Write-Log "Failed to enable transparency effects: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable transparency effects"
+            elseif ($ThemeConfig.TransparencyEffects -eq 'true') {
+                Write-SystemMessage -msg1 "- Enabling transparency effects..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Type DWord -Value 1
+                    Write-SuccessMessage -msg "Transparency effects enabled"
+                    $successCount++
+                }
+                catch {
+                    Write-Log "Failed to enable transparency effects: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable transparency effects"
+                }
             }
         }
 
+        # Continue with other theme settings...
+        # For each setting, increment $totalCount when attempting and $successCount on success
+
         # Wallpaper
         if ($ThemeConfig.WallpaperPath) {
+            $totalCount++
             Write-SystemMessage -msg1 "- Setting wallpaper from: " -msg2 $ThemeConfig.WallpaperPath
             try {
                 $wallpaperPath = $ThemeConfig.WallpaperPath
@@ -2323,23 +2339,26 @@ function Set-ThemeConfiguration {
                     try {
                         Write-Log "Downloading wallpaper from: $wallpaperPath"
                     
-                    # Extract filename from URL or use a default
-                    $wallpaperFileName = [System.IO.Path]::GetFileName($wallpaperPath)
-                    if ([string]::IsNullOrEmpty($wallpaperFileName)) {
-                        $wallpaperFileName = "wallpaper$(([System.IO.Path]::GetExtension($wallpaperPath)))"
-                    }
-                    
-                    Invoke-WebRequest -Uri $wallpaperPath -OutFile "$env:TEMP\$wallpaperFileName" | Out-Null
+                        # Extract filename from URL or use a default
+                        $wallpaperFileName = [System.IO.Path]::GetFileName($wallpaperPath)
+                        if ([string]::IsNullOrEmpty($wallpaperFileName)) {
+                            $wallpaperFileName = "wallpaper$(([System.IO.Path]::GetExtension($wallpaperPath)))"
+                        }
+                        
+                        Invoke-WebRequest -Uri $wallpaperPath -OutFile "$env:TEMP\$wallpaperFileName" | Out-Null
 
-                    $wallpaperPath = "$env:TEMP\$wallpaperFileName"
-                    $script:tempFiles += $wallpaperPath
-                    Write-Log "Wallpaper downloaded successfully to: $wallpaperPath"
+                        $wallpaperPath = "$env:TEMP\$wallpaperFileName"
+                        $script:tempFiles += $wallpaperPath
+                        Write-Log "Wallpaper downloaded successfully to: $wallpaperPath"
                     }
                     catch {
                         Write-Log "Failed to download wallpaper from: $wallpaperPath" -Level Error
                         Write-ErrorMessage -msg "Failed to download wallpaper"
+                        return @{
+                            SuccessCount = $successCount
+                            TotalCount = $totalCount
+                        }
                     }
-                    
                 }
 
                 $setwallpapersrc = @"
@@ -2363,6 +2382,7 @@ public class Wallpaper
                 
                 Write-Log "Wallpaper set successfully."
                 Write-SuccessMessage -msg "Wallpaper set successfully"
+                $successCount++
             }
             catch {
                 Write-Log "Error setting wallpaper: $($_.Exception.Message)" -Level Error
@@ -2370,9 +2390,9 @@ public class Wallpaper
             }
         }
 
-        
         # Lock Screen
         if ($ThemeConfig.LockScreenPath) {
+            $totalCount++
             Write-SystemMessage -msg1 "- Setting lock screen from: " -msg2 $ThemeConfig.LockScreenPath
             try {
                 $lockScreenPath = $ThemeConfig.LockScreenPath
@@ -2395,6 +2415,10 @@ public class Wallpaper
                     catch {
                         Write-Log "Failed to download lock screen from: $lockScreenPath" -Level Error
                         Write-ErrorMessage -msg "Failed to download lock screen"
+                        return @{
+                            SuccessCount = $successCount
+                            TotalCount = $totalCount
+                        }
                     }
                 }
 
@@ -2424,7 +2448,10 @@ public class Wallpaper
                 # Check if the image path exists
                 if (-not (Test-Path -Path $lockScreenPath)) {
                     Write-Log "The lock screen image file at '$lockScreenPath' does not exist. Please provide a valid file path." -Level Error
-                    return
+                    return @{
+                        SuccessCount = $successCount
+                        TotalCount = $totalCount
+                    }
                 }
 
                 # Retrieve the image file asynchronously
@@ -2435,6 +2462,7 @@ public class Wallpaper
         
                 Write-Log "Lock screen set successfully."
                 Write-SuccessMessage -msg "Lock screen set successfully"
+                $successCount++
             }
             catch {
                 Write-Log "Error setting lock screen: $($_.Exception.Message)" -Level Error
@@ -2444,6 +2472,7 @@ public class Wallpaper
 
         # Desktop Icon Size
         if ($ThemeConfig.DesktopIconSize) {
+            $totalCount++
             Write-SystemMessage -msg1 "- Setting desktop icon size..."
             Write-Log "Setting desktop icon size..."
             try {
@@ -2458,21 +2487,27 @@ public class Wallpaper
                 }
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop" -Name "IconSize" -Type DWord -Value $sizeValue
                 Write-SuccessMessage -msg "Desktop icon size set successfully"
-                }
-                catch {
+                $successCount++
+            }
+            catch {
                 Write-Log "Failed to set desktop icon size: $($_.Exception.Message)" -Level Error
                 Write-ErrorMessage -msg "Failed to set desktop icon size"
             }
         }
 
         Write-Log "Theme configuration completed successfully"
-        return $true
-    
+        return @{
+            SuccessCount = $successCount
+            TotalCount = $totalCount
+        }
     }
     catch {
         Write-Log "Error configuring theme settings: $($_.Exception.Message)" -Level Error
         Write-ErrorMessage -msg "Failed to configure theme settings"
-        return $false
+        return @{
+            SuccessCount = $successCount
+            TotalCount = $totalCount
+        }
     }
 }
 
@@ -2908,7 +2943,7 @@ try {
         throw "This script requires administrative privileges"
     }
 
-    # Initialize configuration status tracking
+    # Initialize configuration status hashtable with counts
     $configStatus = @{}
 
     # Load and validate configuration
@@ -3018,7 +3053,7 @@ try {
     }
 
     Write-SystemMessage -Title "Configuration Completed"
-    $cleanup = Read-Host "Would you like to cleanup temporary files? (Y/N)" -ForegroundColor Yellow
+    $cleanup = Read-Host "Would you like to cleanup temporary files? (Y/N)"
     switch ($cleanup) {
         'Y' {
             Remove-TempFiles
@@ -3032,20 +3067,39 @@ try {
         }
     }
 
-    # Display configuration status
+    # Display configuration status with counts
     Write-SystemMessage -Title "Configuration Status"
     foreach ($item in $configStatus.GetEnumerator()) {
-        $status = if ($item.Value) { "Success" } else { "Failed" }
-        $color = if ($item.Value) { "Green" } else { "Red" }
+        $successCount = $item.Value.SuccessCount
+        $totalCount = $item.Value.TotalCount
+        
+        $status = if ($successCount -eq $totalCount) { 
+            "Success"
+        } elseif ($successCount -eq 0) {
+            "Failed"
+        } else {
+            "Incomplete"
+        }
+        
+        $color = switch ($status) {
+            "Success" { "Green" }
+            "Failed" { "Red" }
+            "Incomplete" { "DarkYellow" }
+        }
+        
         Write-Host "$($item.Key): " -NoNewline
-        Write-Host $status -ForegroundColor $color
+        Write-Host "$status ($successCount of $totalCount applied)" -ForegroundColor $color
     }
 
-    # Check if any configurations failed
-    if ($configStatus.Values -contains $false) {
-        Write-ErrorMessage -msg "Some configurations failed. Please check the logs for details."
+    # Check if any configurations failed completely
+    if ($configStatus.Values | Where-Object { $_.SuccessCount -eq 0 -and $_.TotalCount -gt 0 }) {
+        Write-ErrorMessage -msg "Some configurations failed completely. Please check the logs for details."
         Pause
         return 1
+    }
+    # Check if any configurations were incomplete
+    elseif ($configStatus.Values | Where-Object { $_.SuccessCount -ne $_.TotalCount }) {
+        Write-SystemMessage -Title "Warning" -msg1 "Some configurations were not fully applied. Check the logs for details."
     }
     else {
         Write-SuccessMessage -msg "All configurations completed successfully"
