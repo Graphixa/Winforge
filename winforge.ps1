@@ -3070,25 +3070,51 @@ try {
     # Display configuration status with counts
     Write-SystemMessage -Title "Configuration Status"
     foreach ($item in $configStatus.GetEnumerator()) {
-        $successCount = $item.Value.SuccessCount
-        $totalCount = $item.Value.TotalCount
-        
-        $status = if ($successCount -eq $totalCount) { 
-            "Success"
-        } elseif ($successCount -eq 0) {
-            "Failed"
+        # Handle both boolean and hashtable returns
+        if ($item.Value -is [bool]) {
+            $status = if ($item.Value) { "Success" } else { "Failed" }
+            $color = if ($item.Value) { "Green" } else { "Red" }
+            Write-Host "$($item.Key): " -NoNewline
+            Write-Host $status -ForegroundColor $color
         } else {
-            "Incomplete"
+            $successCount = $item.Value.SuccessCount
+            $totalCount = $item.Value.TotalCount
+            
+            $status = if ($successCount -eq $totalCount) { 
+                "Success"
+            } elseif ($successCount -eq 0) {
+                "Failed"
+            } else {
+                "Incomplete"
+            }
+            
+            $color = switch ($status) {
+                "Success" { "Green" }
+                "Failed" { "Red" }
+                "Incomplete" { "DarkYellow" }
+            }
+            
+            Write-Host "$($item.Key): " -NoNewline
+            Write-Host "$status ($successCount of $totalCount applied)" -ForegroundColor $color
         }
-        
-        $color = switch ($status) {
-            "Success" { "Green" }
-            "Failed" { "Red" }
-            "Incomplete" { "DarkYellow" }
+    }
+
+    # Check if any configurations failed
+    $anyFailed = $false
+    $anyIncomplete = $false
+
+    foreach ($value in $configStatus.Values) {
+        if ($value -is [bool]) {
+            if (-not $value) {
+                $anyFailed = $true
+            }
+        } else {
+            if ($value.SuccessCount -eq 0 -and $value.TotalCount -gt 0) {
+                $anyFailed = $true
+            } elseif ($value.SuccessCount -ne $value.TotalCount) {
+                $anyIncomplete = $true
+            }
         }
-        
-        Write-Host "$($item.Key): " -NoNewline
-        Write-Host "$status ($successCount of $totalCount applied)" -ForegroundColor $color
     }
 
     # Check if any configurations failed completely
