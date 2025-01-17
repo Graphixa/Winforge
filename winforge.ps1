@@ -3049,6 +3049,7 @@ try {
     # Check if any configurations failed
     if ($configStatus.Values -contains $false) {
         Write-ErrorMessage -msg "Some configurations failed. Please check the logs for details."
+        Pause
         exit 1
     }
     else {
