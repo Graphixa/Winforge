@@ -80,7 +80,10 @@ function Write-SystemMessage {
         $msg1Color = 'Cyan',
 
         [Parameter()]
-        $msg2color = 'White'
+        $msg2color = 'White',
+
+        [Parameter()]
+        $NoNewline
     )
     
     
@@ -89,7 +92,17 @@ function Write-SystemMessage {
         Write-Host " $title ".ToUpper() -ForegroundColor White -BackgroundColor $titleColor 
         Write-Host
     }
-  
+    
+    if ($PSBoundParameters.ContainsKey('msg1') -and $PSBoundParameters.ContainsKey('NoNewline') -and $PSBoundParameters.ContainsKey('msg2')) {
+        Write-Host "$msg1" -ForegroundColor $msg1Color -NoNewline; Write-Host "$msg2" -ForegroundColor $msg2color -NoNewline
+        return
+    }
+
+    if ($PSBoundParameters.ContainsKey('msg1') -and $PSBoundParameters.ContainsKey('NoNewline')){
+        Write-Host "$msg1" -ForegroundColor $msg1Color -NoNewline
+        return
+    }
+
     if ($PSBoundParameters.ContainsKey('msg1') -and $PSBoundParameters.ContainsKey('msg2')){
         Write-Host "$msg1" -ForegroundColor $msg1Color -NoNewline; Write-Host "$msg2" -ForegroundColor $msg2color
         return
@@ -644,7 +657,7 @@ function Set-SystemConfiguration {
                     $script:restartRequired = $true
                 } else {
                     Write-Log "Computer name is already set to: $($SystemConfig.ComputerName)"
-                    Write-SystemMessage -msg1 "- Computer name already set to: " -msg2 $SystemConfig.ComputerName -msg1Color "DarkYellow"
+                    Write-SystemMessage -msg1 "! Computer name already set to: " -msg2 $SystemConfig.ComputerName -msg1Color "DarkYellow"
                 }
             }
             catch {
