@@ -61,7 +61,7 @@ function Write-Log {
     
 
 }
-
+<#
 function Write-SystemMessage {
     param (
         [Parameter()]
@@ -117,7 +117,69 @@ function Write-SystemMessage {
     }
 
 }
+#>
 
+function Write-SystemMessage {
+    param (
+        [Parameter()]
+        [string]$Title,
+  
+        [Parameter()]
+        [string]$Message,
+
+        [Parameter()]
+        [string]$Value,
+
+        [Parameter()]
+        [switch]$StartOperation,
+
+        [Parameter()]
+        [ValidateSet('Success', 'Failed', 'Warning', 'Info')]
+        [string]$Status,
+
+        [Parameter()]
+        [string]$ErrorMessage
+    )
+    
+    # Handle Title Block
+    if ($Title) {
+        Write-Host
+        Write-Host " $Title ".ToUpper() -ForegroundColor White -BackgroundColor DarkMagenta
+        Write-Host
+        return
+    }
+
+    # Start of operation
+    if ($StartOperation) {
+        Write-Host -NoNewline "- $Message" -ForegroundColor Cyan
+        if ($Value) {
+            Write-Host -NoNewline ": $Value" -ForegroundColor White
+        }
+        return
+    }
+
+    # Status update (end of operation)
+    if ($Status) {
+        switch ($Status) {
+            'Success' { 
+                Write-Host " - Success" -ForegroundColor Green 
+            }
+            'Failed' { 
+                if ($ErrorMessage) {
+                    Write-Host " - Failed: $ErrorMessage" -ForegroundColor Red
+                } else {
+                    Write-Host " - Failed" -ForegroundColor Red
+                }
+            }
+            'Warning' { 
+                Write-Host " - Warning" -ForegroundColor Yellow
+            }
+            'Info' { 
+                Write-Host " - Info" -ForegroundColor Gray 
+            }
+        }
+    }
+}
 function Write-ErrorMessage {
     param (
       [Parameter()]
@@ -649,19 +711,21 @@ function Set-SystemConfiguration {
         # Computer Name
         if ($SystemConfig.ComputerName) {
             try {
-                Write-SystemMessage -msg1 "- Setting computer name to: " -msg2 $SystemConfig.ComputerName -NoNewline
+                Write-SystemMessage -Message "Setting computer name to:" -Value $SystemConfig.ComputerName -StartOperation
                 $currentName = $env:COMPUTERNAME
                 if ($currentName -ne $SystemConfig.ComputerName) {
                     Write-Log "Setting computer name to: $($SystemConfig.ComputerName)"
                     Rename-Computer -NewName $SystemConfig.ComputerName -Force
                     $script:restartRequired = $true
+                    Write-SystemMessage -Status Success
                 } else {
                     Write-Log "Computer name is already set to: $($SystemConfig.ComputerName)" -Level Warning
+                    Write-SystemMessage -Status Warning
                 }
             }
             catch {
                 Write-Log "Error setting computer name: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set computer name"
+                Write-SystemMessage -Status Failed -ErrorMessage $_.Exception.Message
                 $success = $false
             }
         }
