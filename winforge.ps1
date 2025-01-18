@@ -630,15 +630,28 @@ function Set-SystemConfiguration {
     )
     
     try {
-        Write-Output "DEBUG: Entering Set-SystemConfiguration function"
         Write-SystemMessage -Title "Configuring System Settings"
+        $success = $true
 
         # Computer Name
         if ($SystemConfig.ComputerName) {
-            Write-SystemMessage -msg1 "- Setting computer name to: " -msg2 $SystemConfig.ComputerName
-            Write-Log "Setting computer name to: $($SystemConfig.ComputerName)"
-            Rename-Computer -NewName $SystemConfig.ComputerName -Force
-            $script:restartRequired = $true
+            try {
+                $currentName = $env:COMPUTERNAME
+                if ($currentName -ne $SystemConfig.ComputerName) {
+                    Write-SystemMessage -msg1 "- Setting computer name to: " -msg2 $SystemConfig.ComputerName
+                    Write-Log "Setting computer name to: $($SystemConfig.ComputerName)"
+                    Rename-Computer -NewName $SystemConfig.ComputerName -Force
+                    $script:restartRequired = $true
+                } else {
+                    Write-Log "Computer name is already set to: $($SystemConfig.ComputerName)"
+                    Write-SystemMessage -msg1 "- Computer name already set to: " -msg2 $SystemConfig.ComputerName -msg1Color "DarkYellow"
+                }
+            }
+            catch {
+                Write-Log "Error setting computer name: $($_.Exception.Message)" -Level Error
+                Write-ErrorMessage -msg "Failed to set computer name"
+                $success = $false
+            }
         }
 
         # Locale and Timezone
@@ -853,11 +866,11 @@ function Set-SystemConfiguration {
             }
         }
 
-        Write-Log "System configuration completed successfully"
-        return $true
+        Write-Log "System configuration completed"
+        return $success
     }
     catch {
-        Write-Log "Error configuring system settings: $($_.Exception.Message)" -Level Error
+        Write-Log "Error in system configuration: $($_.Exception.Message)" -Level Error
         return $false
     }
 }
