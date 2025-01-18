@@ -656,7 +656,7 @@ function Set-SystemConfiguration {
                     Rename-Computer -NewName $SystemConfig.ComputerName -Force
                     $script:restartRequired = $true
                 } else {
-                    Write-Log "Computer name is already set to: $($SystemConfig.ComputerName)"
+                    Write-Log "Computer name is already set to: $($SystemConfig.ComputerName)" -Level Warning
                     Write-SystemMessage -msg1 "! Computer name already set to: " -msg2 $SystemConfig.ComputerName -msg1Color "DarkYellow"
                 }
             }
