@@ -681,17 +681,16 @@ function Set-SystemCheckpoint {
         $snapshotName = "Winforge - $date - $time"
         
         Write-Log "Creating system restore point. Snapshot Name: $snapshotName"
-        Write-SystemMessage -title "Creating System Restore Point" -msg1 "Snapshot Name: " -msg2 $snapshotName
-        
+        Write-SystemMessage -Title "Creating System Restore Point" -Message "Snapshot Name:" -Value $snapshotName -StartOperation
         Checkpoint-Computer -Description $snapshotName -RestorePointType "MODIFY_SETTINGS" -Verbose
+        Write-SystemMessage -Status Success
         
         Write-Log "System restore point created successfully."
-        Write-SuccessMessage -msg "System restore point created successfully."
         return $true
     }
     catch {
         Write-Log "Error creating system restore point: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to create system restore point: $($_.Exception.Message)"
+        Write-SystemMessage -Status Failed -ErrorMessage $_.Exception.Message
         return $false
     }
 }
