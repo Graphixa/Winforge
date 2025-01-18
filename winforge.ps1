@@ -657,7 +657,6 @@ function Set-SystemConfiguration {
                     $script:restartRequired = $true
                 } else {
                     Write-Log "Computer name is already set to: $($SystemConfig.ComputerName)" -Level Warning
-                    Write-SystemMessage -msg1 "! Computer name already set to: " -msg2 $SystemConfig.ComputerName -msg1Color "DarkYellow"
                 }
             }
             catch {
@@ -669,7 +668,7 @@ function Set-SystemConfiguration {
 
         # Locale and Timezone
         if ($SystemConfig.Locale) {
-            Write-SystemMessage -msg1 "- Setting system locale to: " -msg2 $SystemConfig.Locale
+            Write-SystemMessage -msg1 "- Setting system locale to: " -msg2 $SystemConfig.Locale -NoNewline
             Write-Log "Setting system locale to: $($SystemConfig.Locale)"
             
             try {
