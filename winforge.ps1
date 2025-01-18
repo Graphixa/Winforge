@@ -629,7 +629,7 @@ function Set-SystemConfiguration {
         [System.Xml.XmlElement]$SystemConfig
     )
     
-    if ($SystemConfig) {
+
         try {
             Write-SystemMessage -Title "Configuring System Settings"
 
@@ -861,7 +861,7 @@ function Set-SystemConfiguration {
             return $false
         }
     }
-}
+
 
 function Set-SecurityConfiguration {
     param (
@@ -869,7 +869,7 @@ function Set-SecurityConfiguration {
         [System.Xml.XmlElement]$SecurityConfig
     )
     
-    if ($SecurityConfig) {
+
         try {
             Write-SystemMessage -Title "Configuring Security Settings"
 
@@ -1045,7 +1045,7 @@ function Set-SecurityConfiguration {
             return $false
         }
     }
-}
+
 
 function Set-PrivacyConfiguration {
     param (
