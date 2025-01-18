@@ -589,7 +589,7 @@ function Set-SystemCheckpoint {
         $srEnabled = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
         if (-not $srEnabled) {
             Write-Log "System Restore is not enabled. Attempting to enable..." -Level Warning
-            Enable-ComputerRestore -Drive "$env:systemdrive" -ErrorAction Stop
+            Enable-ComputerRestore -Drive "$env:systemdrive" -ErrorAction Stop | Out-Null
             Write-Log "System Restore enabled successfully"
         }
 
