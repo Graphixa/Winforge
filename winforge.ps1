@@ -61,6 +61,7 @@ function Write-Log {
     
 
 }
+
 <#
 function Write-SystemMessage {
     param (
@@ -149,6 +150,15 @@ function Write-SystemMessage {
         return
     }
 
+    # Handle Message (without status)
+    if ($Message -and -not $StartOperation -and -not $Status) {
+        Write-Host "- $Message" -ForegroundColor Cyan
+        if ($Value) {
+            Write-Host ": $Value" -ForegroundColor White
+        }
+        return
+    }
+
     # Start of operation
     if ($StartOperation) {
         Write-Host -NoNewline "- $Message" -ForegroundColor Cyan
@@ -172,7 +182,7 @@ function Write-SystemMessage {
                 }
             }
             'Warning' { 
-                Write-Host " - Warning" -ForegroundColor Yellow
+                Write-Host " - Warning" -ForegroundColor Yellow 
             }
             'Info' { 
                 Write-Host " - Info" -ForegroundColor Gray 
@@ -180,6 +190,7 @@ function Write-SystemMessage {
         }
     }
 }
+
 function Write-ErrorMessage {
     param (
       [Parameter()]
@@ -470,7 +481,7 @@ function Get-WinforgeConfig {
         # Check if file is encrypted
         $isEncrypted = Test-EncryptedConfig -FilePath $Path
         if ($isEncrypted) {
-            Write-SystemMessage -msg1 "Configuration is encrypted. Please enter the password to decrypt it."
+            Write-SystemMessage -Title "Encrypted Configuration" -Message "Configuration is encrypted. Please enter the password to decrypt it." -StartOperation
             
             $maxAttempts = 5
             $attempt = 1
@@ -478,7 +489,7 @@ function Get-WinforgeConfig {
 
             while ($attempt -le $maxAttempts -and -not $decrypted) {
                 if ($attempt -gt 1) {
-                    Write-SystemMessage -msg1 "Incorrect password. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
+                    Write-SystemMessage -Message "Incorrect password." -Value "Attempts remaining: $($maxAttempts - $attempt + 1)" -Status Warning
                 }
 
                 $password = Read-Host -AsSecureString "Password"
@@ -488,7 +499,7 @@ function Get-WinforgeConfig {
                 # Check for empty password
                 if ([string]::IsNullOrWhiteSpace($passwordText)) {
                     $attempt++
-                    Write-SystemMessage -msg1 "Password cannot be empty. Attempts remaining: $($maxAttempts - $attempt + 1)" -msg1Color 'Yellow'
+                    Write-SystemMessage -Message "Password cannot be empty." -Value "Attempts remaining: $($maxAttempts - $attempt + 1)" -Status Warning
                     [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
                     Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
                     continue
@@ -497,11 +508,12 @@ function Get-WinforgeConfig {
                 try {
                     $decryptResult = Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText 2>$null
                     if ($decryptResult) {
-                        Write-SystemMessage -msg1 "Configuration decrypted successfully."
+                        Write-SystemMessage -Message "Configuration decrypted successfully." -Status Success
                         $decrypted = $true
                     }
                     else {
                         $attempt++
+                        Write-SystemMessage -Message "Incorrect password." -Value "Attempts remaining: $($maxAttempts - $attempt + 1)" -Status Warning
                     }
                 }
                 catch {
@@ -672,7 +684,7 @@ function Set-SystemCheckpoint {
         $systemDrive = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='$env:systemdrive'"
         if ($systemDrive.FreeSpace -lt 1GB) {
             Write-Log "Insufficient disk space for system restore point" -Level Error
-            Write-ErrorMessage -msg "Insufficient disk space for system restore point"
+            Write-SystemMessage -Status Failed -ErrorMessage "Insufficient disk space for system restore point"
             return $false
         }
 
