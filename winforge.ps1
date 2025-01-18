@@ -629,211 +629,236 @@ function Set-SystemConfiguration {
         [System.Xml.XmlElement]$SystemConfig
     )
     
-    try {
-        Write-SystemMessage -Title "Configuring System Settings"
+    if ($SystemConfig) {
+        try {
+            Write-SystemMessage -Title "Configuring System Settings"
 
-        # Computer Name
-        if ($SystemConfig.ComputerName) {
-            Write-Log "Setting computer name to: $($SystemConfig.ComputerName)"
-            Rename-Computer -NewName $SystemConfig.ComputerName -Force
-            $script:restartRequired = $true
-        }
-
-        # Locale and Timezone
-        if ($SystemConfig.Locale) {
-            Write-Log "Setting system locale to: $($SystemConfig.Locale)"
-            Write-SystemMessage -msg1 "- Setting system locale to: " -msg2 $SystemConfig.Locale
-            
-            try {
-                # Validate locale is supported
-                if (Get-WinUserLanguageList | Where-Object { $_.LanguageTag -eq $SystemConfig.Locale }) {
-                    Set-WinUILanguageOverride -Language $SystemConfig.Locale
-                    Set-WinSystemLocale -SystemLocale $SystemConfig.Locale
-                    Set-WinUserLanguageList $SystemConfig.Locale -Force
-                    Set-Culture -CultureInfo $SystemConfig.Locale
-                    
-                    $script:restartRequired = $true
-                    Write-SuccessMessage -msg "System locale set successfully"
-                } else {
-                    Write-Log "Invalid or unsupported locale: $($SystemConfig.Locale)" -Level Warning
-                    Write-ErrorMessage -msg "Invalid or unsupported locale: $($SystemConfig.Locale)"
-                }
-            } catch {
-                Write-Log "Error setting system locale: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set system locale"
+            # Computer Name
+            if ($SystemConfig.ComputerName) {
+                Write-Log "Setting computer name to: $($SystemConfig.ComputerName)"
+                Rename-Computer -NewName $SystemConfig.ComputerName -Force
+                $script:restartRequired = $true
             }
-        }
 
-        if ($SystemConfig.Timezone) {
-            $currentTZ = (Get-TimeZone).Id
-            if ($currentTZ -ne $SystemConfig.Timezone) {
-                Write-Log "Setting timezone to: $($SystemConfig.Timezone)"
-                Write-SystemMessage -msg1 "- Setting timezone to: " -msg2 $SystemConfig.Timezone
+            # Locale and Timezone
+            if ($SystemConfig.Locale) {
+                Write-Log "Setting system locale to: $($SystemConfig.Locale)"
+                Write-SystemMessage -msg1 "- Setting system locale to: " -msg2 $SystemConfig.Locale
+                
                 try {
-                    Set-TimeZone -Id $SystemConfig.Timezone
-                    $newTZ = (Get-TimeZone).Id
-                    if ($newTZ -eq $SystemConfig.Timezone) {
-                        Write-SuccessMessage -msg "Timezone set successfully to: $($SystemConfig.Timezone)"
-                    } else {
-                        Write-Log "Failed to set timezone to: $($SystemConfig.Timezone)" -Level Warning
+                    # Validate locale is supported
+                    if (Get-WinUserLanguageList | Where-Object { $_.LanguageTag -eq $SystemConfig.Locale }) {
+                        Set-WinUILanguageOverride -Language $SystemConfig.Locale
+                        Set-WinSystemLocale -SystemLocale $SystemConfig.Locale
+                        Set-WinUserLanguageList $SystemConfig.Locale -Force
+                        Set-Culture -CultureInfo $SystemConfig.Locale
+                        
+                        $script:restartRequired = $true
+                        Write-SuccessMessage -msg "System locale set successfully"
+                    }
+                    else {
+                        Write-Log "Invalid or unsupported locale: $($SystemConfig.Locale)" -Level Warning
+                        Write-ErrorMessage -msg "Invalid or unsupported locale: $($SystemConfig.Locale)"
+                    }
+                }
+                catch {
+                    Write-Log "Error setting system locale: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to set system locale"
+                }
+            }
+
+            if ($SystemConfig.Timezone) {
+                $currentTZ = (Get-TimeZone).Id
+                if ($currentTZ -ne $SystemConfig.Timezone) {
+                    Write-Log "Setting timezone to: $($SystemConfig.Timezone)"
+                    Write-SystemMessage -msg1 "- Setting timezone to: " -msg2 $SystemConfig.Timezone
+                    try {
+                        Set-TimeZone -Id $SystemConfig.Timezone
+                        $newTZ = (Get-TimeZone).Id
+                        if ($newTZ -eq $SystemConfig.Timezone) {
+                            Write-SuccessMessage -msg "Timezone set successfully to: $($SystemConfig.Timezone)"
+                        }
+                        else {
+                            Write-Log "Failed to set timezone to: $($SystemConfig.Timezone)" -Level Warning
+                            Write-ErrorMessage -msg "Failed to set timezone"
+                        }
+                    }
+                    catch {
+                        Write-Log "Error setting timezone: $($_.Exception.Message)" -Level Error
                         Write-ErrorMessage -msg "Failed to set timezone"
                     }
-                } catch {
-                    Write-Log "Error setting timezone: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to set timezone"
                 }
-            } else {
-                Write-Log "Timezone is already set to: $($SystemConfig.Timezone)"
-                Write-SystemMessage -msg1 "- Timezone already set to: " -msg2 $SystemConfig.Timezone -msg1Color "Cyan"
+                else {
+                    Write-Log "Timezone is already set to: $($SystemConfig.Timezone)"
+                    Write-SystemMessage -msg1 "- Timezone already set to: " -msg2 $SystemConfig.Timezone -msg1Color "Cyan"
+                }
             }
-        }
 
-        # Remote Desktop
-        if ($SystemConfig.EnableRemoteDesktop -eq 'true') {
-            Write-Log "Enabling Remote Desktop..."
-            Write-SystemMessage -msg1 "- Enabling Remote Desktop..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Type DWord -Value 0
-                Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-                Write-SuccessMessage -msg "Remote Desktop enabled"
-            } catch {
-                Write-Log "Failed to enable Remote Desktop: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Remote Desktop"
+            # Remote Desktop
+            if ($SystemConfig.EnableRemoteDesktop -eq 'true') {
+                Write-Log "Enabling Remote Desktop..."
+                Write-SystemMessage -msg1 "- Enabling Remote Desktop..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Type DWord -Value 0
+                    Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+                    Write-SuccessMessage -msg "Remote Desktop enabled"
+                }
+                catch {
+                    Write-Log "Failed to enable Remote Desktop: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable Remote Desktop"
+                }
             }
-        } elseif ($SystemConfig.EnableRemoteDesktop -eq 'false') {
-            Write-Log "Disabling Remote Desktop..."
-            Write-SystemMessage -msg1 "- Disabling Remote Desktop..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Type DWord -Value 1
-                Disable-NetFirewallRule -DisplayGroup "Remote Desktop"
-                Write-SuccessMessage -msg "Remote Desktop disabled"
-            } catch {
-                Write-Log "Failed to disable Remote Desktop: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Remote Desktop"
+            elseif ($SystemConfig.EnableRemoteDesktop -eq 'false') {
+                Write-Log "Disabling Remote Desktop..."
+                Write-SystemMessage -msg1 "- Disabling Remote Desktop..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Type DWord -Value 1
+                    Disable-NetFirewallRule -DisplayGroup "Remote Desktop"
+                    Write-SuccessMessage -msg "Remote Desktop disabled"
+                }
+                catch {
+                    Write-Log "Failed to disable Remote Desktop: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable Remote Desktop"
+                }
             }
-        }
 
-        # Windows Store
-        if ($SystemConfig.DisableWindowsStore -eq 'true') {
-            Write-Log "Disabling Windows Store..."
-            Write-SystemMessage -msg1 "- Disabling Windows Store..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" -Name "RemoveWindowsStore" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Windows Store disabled"
-            } catch {
-                Write-Log "Failed to disable Windows Store: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Windows Store"
+            # Windows Store
+            if ($SystemConfig.DisableWindowsStore -eq 'true') {
+                Write-Log "Disabling Windows Store..."
+                Write-SystemMessage -msg1 "- Disabling Windows Store..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" -Name "RemoveWindowsStore" -Type DWord -Value 1
+                    Write-SuccessMessage -msg "Windows Store disabled"
+                }
+                catch {
+                    Write-Log "Failed to disable Windows Store: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable Windows Store"
+                }
             }
-        } elseif ($SystemConfig.DisableWindowsStore -eq 'false') {
-            Write-Log "Enabling Windows Store..."
-            Write-SystemMessage -msg1 "- Enabling Windows Store..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" -Name "RemoveWindowsStore" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Windows Store enabled"
-            } catch {
-                Write-Log "Failed to enable Windows Store: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Windows Store"
+            elseif ($SystemConfig.DisableWindowsStore -eq 'false') {
+                Write-Log "Enabling Windows Store..."
+                Write-SystemMessage -msg1 "- Enabling Windows Store..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" -Name "RemoveWindowsStore" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "Windows Store enabled"
+                }
+                catch {
+                    Write-Log "Failed to enable Windows Store: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable Windows Store"
+                }
             }
-        }
 
-        if ($SystemConfig.DisableOneDrive -eq 'true') {
-            Write-Log "Disabling OneDrive..."
-            Write-SystemMessage -msg1 "- Disabling OneDrive."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 1
-                Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
-                Write-SuccessMessage -msg "OneDrive disabled."
-            } catch {
-                Write-Log "Error disabling OneDrive: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable OneDrive."
+            if ($SystemConfig.DisableOneDrive -eq 'true') {
+                Write-Log "Disabling OneDrive..."
+                Write-SystemMessage -msg1 "- Disabling OneDrive."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 1
+                    Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
+                    Write-SuccessMessage -msg "OneDrive disabled."
+                }
+                catch {
+                    Write-Log "Error disabling OneDrive: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable OneDrive."
+                }
             }
-        } elseif ($SystemConfig.DisableOneDrive -eq 'false') {
-            Write-Log "Enabling OneDrive..."
-            Write-SystemMessage -msg1 "- Enabling OneDrive."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 0
-                Write-SuccessMessage -msg "OneDrive enabled."
-            } catch {
-                Write-Log "Error enabling OneDrive: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable OneDrive."
+            elseif ($SystemConfig.DisableOneDrive -eq 'false') {
+                Write-Log "Enabling OneDrive..."
+                Write-SystemMessage -msg1 "- Enabling OneDrive."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "OneDrive enabled."
+                }
+                catch {
+                    Write-Log "Error enabling OneDrive: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable OneDrive."
+                }
             }
-        }
 
-        if ($SystemConfig.DisableCopilot -eq 'true') {
-            Write-Log "Disabling Windows Copilot..."
-            Write-SystemMessage -msg1 "- Disabling Windows Copilot."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" -Name "CopilotEnabled" -Type DWord -Value 0
-                Set-RegistryModification -Action add -Path "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot" -Name "TurnOffWindowsCopilot" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Windows Copilot disabled."
-            } catch {
-                Write-Log "Error disabling Windows Copilot: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Windows Copilot."
+            if ($SystemConfig.DisableCopilot -eq 'true') {
+                Write-Log "Disabling Windows Copilot..."
+                Write-SystemMessage -msg1 "- Disabling Windows Copilot."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" -Name "CopilotEnabled" -Type DWord -Value 0
+                    Set-RegistryModification -Action add -Path "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot" -Name "TurnOffWindowsCopilot" -Type DWord -Value 1
+                    Write-SuccessMessage -msg "Windows Copilot disabled."
+                }
+                catch {
+                    Write-Log "Error disabling Windows Copilot: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable Windows Copilot."
+                }
             }
-        } elseif ($SystemConfig.DisableCopilot -eq 'false') {
-            Write-Log "Enabling Windows Copilot..."
-            Write-SystemMessage -msg1 "- Enabling Windows Copilot."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" -Name "CopilotEnabled" -Type DWord -Value 1
-                Set-RegistryModification -Action add -Path "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot" -Name "TurnOffWindowsCopilot" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Windows Copilot enabled."
-            } catch {
-                Write-Log "Error enabling Windows Copilot: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Windows Copilot."
+            elseif ($SystemConfig.DisableCopilot -eq 'false') {
+                Write-Log "Enabling Windows Copilot..."
+                Write-SystemMessage -msg1 "- Enabling Windows Copilot."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" -Name "CopilotEnabled" -Type DWord -Value 1
+                    Set-RegistryModification -Action add -Path "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot" -Name "TurnOffWindowsCopilot" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "Windows Copilot enabled."
+                }
+                catch {
+                    Write-Log "Error enabling Windows Copilot: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable Windows Copilot."
+                }
             }
-        }
 
-        # File Explorer Settings
-        if ($SystemConfig.ShowFileExtensions -eq 'true') {
-            Write-SystemMessage -msg1 "- Showing file extensions..."
-            Write-Log "Showing file extensions..."
-            try {
-                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 0
-                Write-SuccessMessage -msg "File extensions enabled"
-            } catch {
-                Write-Log "Failed to show file extensions: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to show file extensions"
+            # File Explorer Settings
+            if ($SystemConfig.ShowFileExtensions -eq 'true') {
+                Write-SystemMessage -msg1 "- Showing file extensions..."
+                Write-Log "Showing file extensions..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "File extensions enabled"
+                }
+                catch {
+                    Write-Log "Failed to show file extensions: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to show file extensions"
+                }
             }
-        } elseif ($SystemConfig.ShowFileExtensions -eq 'false') {
-            Write-SystemMessage -msg1 "- Hiding file extensions..."
-            Write-Log "Hiding file extensions..."
-            try {
-                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 1
-                Write-SuccessMessage -msg "File extensions hidden"
-            } catch {
-                Write-Log "Failed to hide file extensions: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to hide file extensions"
+            elseif ($SystemConfig.ShowFileExtensions -eq 'false') {
+                Write-SystemMessage -msg1 "- Hiding file extensions..."
+                Write-Log "Hiding file extensions..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 1
+                    Write-SuccessMessage -msg "File extensions hidden"
+                }
+                catch {
+                    Write-Log "Failed to hide file extensions: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to hide file extensions"
+                }
             }
-        }
 
-        if ($SystemConfig.ShowHiddenFiles -eq 'true') {
-            Write-SystemMessage -msg1 "- Showing hidden files..."
-            Write-Log "Showing hidden files..."
-            try {
-                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Hidden files enabled"
-            } catch {
-                Write-Log "Failed to show hidden files: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to show hidden files"
+            if ($SystemConfig.ShowHiddenFiles -eq 'true') {
+                Write-SystemMessage -msg1 "- Showing hidden files..."
+                Write-Log "Showing hidden files..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 1
+                    Write-SuccessMessage -msg "Hidden files enabled"
+                }
+                catch {
+                    Write-Log "Failed to show hidden files: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to show hidden files"
+                }
             }
-        } elseif ($SystemConfig.ShowHiddenFiles -eq 'false') {
-            Write-SystemMessage -msg1 "- Hiding hidden files..."
-            Write-Log "Hiding hidden files..."
-            try {
-                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Hidden files disabled"
-            } catch {
-                Write-Log "Failed to hide hidden files: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to hide hidden files"
+            elseif ($SystemConfig.ShowHiddenFiles -eq 'false') {
+                Write-SystemMessage -msg1 "- Hiding hidden files..."
+                Write-Log "Hiding hidden files..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "Hidden files disabled"
+                }
+                catch {
+                    Write-Log "Failed to hide hidden files: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to hide hidden files"
+                }
             }
-        }
 
-        Write-Log "System configuration completed successfully"
-        return $true
-    }
-    catch {
-        Write-Log "Error configuring system settings: $($_.Exception.Message)" -Level Error
-        return $false
+            Write-Log "System configuration completed successfully"
+            return $true
+        }
+        catch {
+            Write-Log "Error configuring system settings: $($_.Exception.Message)" -Level Error
+            return $false
+        }
     }
 }
 
@@ -1960,7 +1985,7 @@ function Set-WindowsFeaturesConfiguration {
                         $currentState = Get-WindowsOptionalFeature -Online -FeatureName $feature.Name
                         if ($currentState.State -eq 'Enabled') {
                             Write-Log "Feature $($feature.Name) is already enabled" -Level Warning
-                            Write-SystemMessage -msg1 "- Feature already enabled: " -msg2 $feature.Name
+                            Write-SystemMessage -msg1 "! Feature already enabled: " -msg2 $feature.Name -msg1Color "DarkYellow"
                             continue
                         }
                         $result = Enable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart | Out-Null
@@ -1975,7 +2000,7 @@ function Set-WindowsFeaturesConfiguration {
                         $currentState = Get-WindowsOptionalFeature -Online -FeatureName $feature.Name
                         if ($currentState.State -eq 'Disabled') {
                             Write-Log "Feature $($feature.Name) is already disabled" -Level Warning
-                            Write-SystemMessage -msg1 "- Feature already disabled: " -msg2 $feature.Name
+                            Write-SystemMessage -msg1 "! Feature already disabled: " -msg2 $feature.Name -msg1Color "DarkYellow"
                             continue
                         }
                         $result = Disable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart | Out-Null
