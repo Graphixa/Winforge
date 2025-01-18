@@ -2190,14 +2190,14 @@ function Set-OfficeConfiguration {
 </Configuration>
 "@
         $configPath = Join-Path $env:TEMP "OfficeConfig.xml"
-        $script:tempFiles += $configPath
         $configXml | Out-File -FilePath $configPath -Encoding UTF8
+        $script:tempFiles += $configPath
 
         # Download Office Deployment Tool
         Write-SystemMessage -msg1 "- Downloading Office Deployment Tool..."
         Write-Log "Downloading Office Deployment Tool..."
         
-        $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_15330-20102.exe"
+        $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_16731-20398.exe"
         $odtPath = Join-Path $env:TEMP "ODT.exe"
         $script:tempFiles += $odtPath
         
