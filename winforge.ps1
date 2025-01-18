@@ -649,9 +649,9 @@ function Set-SystemConfiguration {
         # Computer Name
         if ($SystemConfig.ComputerName) {
             try {
+                Write-SystemMessage -msg1 "- Setting computer name to: " -msg2 $SystemConfig.ComputerName -NoNewline
                 $currentName = $env:COMPUTERNAME
                 if ($currentName -ne $SystemConfig.ComputerName) {
-                    Write-SystemMessage -msg1 "- Setting computer name to: " -msg2 $SystemConfig.ComputerName -NoNewline
                     Write-Log "Setting computer name to: $($SystemConfig.ComputerName)"
                     Rename-Computer -NewName $SystemConfig.ComputerName -Force
                     $script:restartRequired = $true
