@@ -635,6 +635,7 @@ function Set-SystemConfiguration {
 
             # Computer Name
             if ($SystemConfig.ComputerName) {
+                Write-SystemMessage -msg1 "- Setting computer name to: " -msg2 $SystemConfig.ComputerName
                 Write-Log "Setting computer name to: $($SystemConfig.ComputerName)"
                 Rename-Computer -NewName $SystemConfig.ComputerName -Force
                 $script:restartRequired = $true
@@ -642,8 +643,8 @@ function Set-SystemConfiguration {
 
             # Locale and Timezone
             if ($SystemConfig.Locale) {
-                Write-Log "Setting system locale to: $($SystemConfig.Locale)"
                 Write-SystemMessage -msg1 "- Setting system locale to: " -msg2 $SystemConfig.Locale
+                Write-Log "Setting system locale to: $($SystemConfig.Locale)"
                 
                 try {
                     # Validate locale is supported
@@ -868,162 +869,181 @@ function Set-SecurityConfiguration {
         [System.Xml.XmlElement]$SecurityConfig
     )
     
-    try {
-        Write-SystemMessage -Title "Configuring Security Settings"
+    if ($SecurityConfig) {
+        try {
+            Write-SystemMessage -Title "Configuring Security Settings"
 
-        # Windows Defender
-        if ($SecurityConfig.DisableDefender -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling Windows Defender..."
-            Write-Log "Disabling Windows Defender..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Windows Defender disabled"
-            } catch {
-                Write-Log "Failed to disable Windows Defender: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Windows Defender"
-            }
-        } elseif ($SecurityConfig.DisableDefender -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling Windows Defender..."
-            Write-Log "Enabling Windows Defender..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Windows Defender enabled"
-            } catch {
-                Write-Log "Failed to enable Windows Defender: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Windows Defender"
-            }
-        }
-
-        # UAC Settings
-        if ($SecurityConfig.DisableUAC -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling UAC..."
-            Write-Log "Disabling UAC..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Type DWord -Value 0
-                Write-SuccessMessage -msg "UAC disabled"
-                $script:restartRequired = $true
-            } catch {
-                Write-Log "Failed to disable UAC: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable UAC"
-            }
-        } elseif ($SecurityConfig.DisableUAC -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling UAC..."
-            Write-Log "Enabling UAC..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Type DWord -Value 1
-                Write-SuccessMessage -msg "UAC enabled"
-                $script:restartRequired = $true
-            } catch {
-                Write-Log "Failed to enable UAC: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable UAC"
-            }
-        }
-
-        # UAC Level Settings
-        if ($SecurityConfig.UACLevel) {
-            Write-SystemMessage -msg1 "- Setting UAC level to: " -msg2 $SecurityConfig.UACLevel
-            Write-Log "Setting UAC level to: $($SecurityConfig.UACLevel)"
-            try {
-                $uacValue = switch ($SecurityConfig.UACLevel) {
-                    "AlwaysNotify" { 2 }    # Always notify
-                    "NeverNotify" { 0 }     # Never notify
-                    "Default" { 5 }         # Default - Notify when apps try to make changes (no dim)
-                    default {
-                        Write-Log "Invalid UAC level specified: $($SecurityConfig.UACLevel). Using default." -Level Warning
-                        5  # Default value
-                    }
+            # Windows Defender
+            if ($SecurityConfig.DisableDefender -eq 'true') {
+                Write-SystemMessage -msg1 "- Disabling Windows Defender..."
+                Write-Log "Disabling Windows Defender..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Type DWord -Value 1
+                    Write-SuccessMessage -msg "Windows Defender disabled"
                 }
+                catch {
+                    Write-Log "Failed to disable Windows Defender: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable Windows Defender"
+                }
+            }
+            elseif ($SecurityConfig.DisableDefender -eq 'false') {
+                Write-SystemMessage -msg1 "- Enabling Windows Defender..."
+                Write-Log "Enabling Windows Defender..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "Windows Defender enabled"
+                }
+                catch {
+                    Write-Log "Failed to enable Windows Defender: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable Windows Defender"
+                }
+            }
+
+            # UAC Settings
+            if ($SecurityConfig.DisableUAC -eq 'true') {
+                Write-SystemMessage -msg1 "- Disabling UAC..."
+                Write-Log "Disabling UAC..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "UAC disabled"
+                    $script:restartRequired = $true
+                }
+                catch {
+                    Write-Log "Failed to disable UAC: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable UAC"
+                }
+            }
+            elseif ($SecurityConfig.DisableUAC -eq 'false') {
+                Write-SystemMessage -msg1 "- Enabling UAC..."
+                Write-Log "Enabling UAC..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Type DWord -Value 1
+                    Write-SuccessMessage -msg "UAC enabled"
+                    $script:restartRequired = $true
+                }
+                catch {
+                    Write-Log "Failed to enable UAC: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable UAC"
+                }
+            }
+
+            # UAC Level Settings
+            if ($SecurityConfig.UACLevel) {
+                Write-SystemMessage -msg1 "- Setting UAC level to: " -msg2 $SecurityConfig.UACLevel
+                Write-Log "Setting UAC level to: $($SecurityConfig.UACLevel)"
+                try {
+                    $uacValue = switch ($SecurityConfig.UACLevel) {
+                        "AlwaysNotify" { 2 }    # Always notify
+                        "NeverNotify" { 0 }     # Never notify
+                        "Default" { 5 }         # Default - Notify when apps try to make changes (no dim)
+                        default {
+                            Write-Log "Invalid UAC level specified: $($SecurityConfig.UACLevel). Using default." -Level Warning
+                            5  # Default value
+                        }
+                    }
                 
-                $promptValue = if ($uacValue -eq 2) { 1 } else { 0 }
+                    $promptValue = if ($uacValue -eq 2) { 1 } else { 0 }
                 
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Type DWord -Value $uacValue
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "PromptOnSecureDesktop" -Type DWord -Value $promptValue
-                Write-SuccessMessage -msg "UAC level set successfully"
-            } catch {
-                Write-Log "Failed to set UAC level: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set UAC level"
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Type DWord -Value $uacValue
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "PromptOnSecureDesktop" -Type DWord -Value $promptValue
+                    Write-SuccessMessage -msg "UAC level set successfully"
+                }
+                catch {
+                    Write-Log "Failed to set UAC level: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to set UAC level"
+                }
+            
             }
+
+
+            # SMB1 Protocol
+            if ($SecurityConfig.DisableSMB1 -eq 'true') {
+                Write-SystemMessage -msg1 "- Disabling SMB1 protocol..."
+                Write-Log "Disabling SMB1 protocol..."
+                try {
+                    Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+                    $script:restartRequired = $true
+                    Write-SuccessMessage -msg "SMB1 protocol disabled"
+                }
+                catch {
+                    Write-Log "Failed to disable SMB1 protocol: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable SMB1 protocol"
+                }
+            }
+            elseif ($SecurityConfig.DisableSMB1 -eq 'false') {
+                Write-SystemMessage -msg1 "- Enabling SMB1 protocol..."
+                Write-Log "Enabling SMB1 protocol..."
+                try {
+                    Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+                    $script:restartRequired = $true
+                    Write-SuccessMessage -msg "SMB1 protocol enabled"
+                }
+                catch {
+                    Write-Log "Failed to enable SMB1 protocol: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable SMB1 protocol"
+                }
+            }
+
+            # AutoPlay
+            if ($SecurityConfig.DisableAutoPlay -eq 'true') {
+                Write-SystemMessage -msg1 "- Disabling AutoPlay..."
+                Write-Log "Disabling AutoPlay..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Type DWord -Value 255
+                    Write-SuccessMessage -msg "AutoPlay disabled"
+                }
+                catch {
+                    Write-Log "Failed to disable AutoPlay: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable AutoPlay"
+                }
+            }
+            elseif ($SecurityConfig.DisableAutoPlay -eq 'false') {
+                Write-SystemMessage -msg1 "- Enabling AutoPlay..."
+                Write-Log "Enabling AutoPlay..."
+                try {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Type DWord -Value 0
+                    Write-SuccessMessage -msg "AutoPlay enabled"
+                }
+                catch {
+                    Write-Log "Failed to enable AutoPlay: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to enable AutoPlay"
+                }
+            }
+
+            # BitLocker
+            if ($SecurityConfig.BitLocker.Enable -eq 'true') {
+                Write-SystemMessage -msg1 "- Configuring BitLocker for drive: " -msg2 $SecurityConfig.BitLocker.Target
+                Write-Log "Configuring BitLocker for drive: $($SecurityConfig.BitLocker.Target)"
+                try {
+                    Enable-BitLocker -MountPoint $SecurityConfig.BitLocker.Target -EncryptionMethod XtsAes256 -UsedSpaceOnly
+                    Write-SuccessMessage -msg "BitLocker configured successfully"
+                }
+                catch {
+                    Write-Log "Failed to configure BitLocker: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to configure BitLocker"
+                }
+            }
+            elseif ($SecurityConfig.BitLocker.Enable -eq 'false') {
+                Write-SystemMessage -msg1 "- Disabling BitLocker for drive: " -msg2 $SecurityConfig.BitLocker.Target
+                Write-Log "Disabling BitLocker for drive: $($SecurityConfig.BitLocker.Target)"
+                try {
+                    Disable-BitLocker -MountPoint $SecurityConfig.BitLocker.Target
+                    Write-SuccessMessage -msg "BitLocker disabled successfully"
+                }
+                catch {
+                    Write-Log "Failed to disable BitLocker: $($_.Exception.Message)" -Level Error
+                    Write-ErrorMessage -msg "Failed to disable BitLocker"
+                }
+            }
+
+            Write-Log "Security configuration completed successfully"
+            return $true
         }
-
-
-        # SMB1 Protocol
-        if ($SecurityConfig.DisableSMB1 -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling SMB1 protocol..."
-            Write-Log "Disabling SMB1 protocol..."
-            try {
-                Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
-                $script:restartRequired = $true
-                Write-SuccessMessage -msg "SMB1 protocol disabled"
-            } catch {
-                Write-Log "Failed to disable SMB1 protocol: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable SMB1 protocol"
-            }
-        } elseif ($SecurityConfig.DisableSMB1 -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling SMB1 protocol..."
-            Write-Log "Enabling SMB1 protocol..."
-            try {
-                Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
-                $script:restartRequired = $true
-                Write-SuccessMessage -msg "SMB1 protocol enabled"
-            } catch {
-                Write-Log "Failed to enable SMB1 protocol: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable SMB1 protocol"
-            }
+        catch {
+            Write-Log "Error configuring security settings: $($_.Exception.Message)" -Level Error
+            Write-ErrorMessage -msg "Failed to configure security settings"
+            return $false
         }
-
-        # AutoPlay
-        if ($SecurityConfig.DisableAutoPlay -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling AutoPlay..."
-            Write-Log "Disabling AutoPlay..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Type DWord -Value 255
-                Write-SuccessMessage -msg "AutoPlay disabled"
-            } catch {
-                Write-Log "Failed to disable AutoPlay: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable AutoPlay"
-            }
-        } elseif ($SecurityConfig.DisableAutoPlay -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling AutoPlay..."
-            Write-Log "Enabling AutoPlay..."
-            try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Type DWord -Value 0
-                Write-SuccessMessage -msg "AutoPlay enabled"
-            } catch {
-                Write-Log "Failed to enable AutoPlay: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable AutoPlay"
-            }
-        }
-
-        # BitLocker
-        if ($SecurityConfig.BitLocker.Enable -eq 'true') {
-            Write-SystemMessage -msg1 "- Configuring BitLocker for drive: " -msg2 $SecurityConfig.BitLocker.Target
-            Write-Log "Configuring BitLocker for drive: $($SecurityConfig.BitLocker.Target)"
-            try {
-                Enable-BitLocker -MountPoint $SecurityConfig.BitLocker.Target -EncryptionMethod XtsAes256 -UsedSpaceOnly
-                Write-SuccessMessage -msg "BitLocker configured successfully"
-            } catch {
-                Write-Log "Failed to configure BitLocker: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to configure BitLocker"
-            }
-        } elseif ($SecurityConfig.BitLocker.Enable -eq 'false') {
-            Write-SystemMessage -msg1 "- Disabling BitLocker for drive: " -msg2 $SecurityConfig.BitLocker.Target
-            Write-Log "Disabling BitLocker for drive: $($SecurityConfig.BitLocker.Target)"
-            try {
-                Disable-BitLocker -MountPoint $SecurityConfig.BitLocker.Target
-                Write-SuccessMessage -msg "BitLocker disabled successfully"
-            } catch {
-                Write-Log "Failed to disable BitLocker: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable BitLocker"
-            }
-        }
-
-        Write-Log "Security configuration completed successfully"
-        return $true
-    }
-    catch {
-        Write-Log "Error configuring security settings: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure security settings"
-        return $false
     }
 }
 
