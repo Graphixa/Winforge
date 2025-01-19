@@ -474,7 +474,8 @@ function Get-WinforgeConfig {
             $Path = $tempPath
         }
         
-        Write-SystemMessage -Title "Configuration" -msg1 "Loading configuration file..."
+       # Write-SystemMessage -Title "Configuration" -msg1 "Loading configuration file..."
+       Write-SystemMessage -Title "Configuration" -Message "Loading configuration file..." -StartOperation
         
         # Check if file exists
         if (-not (Test-Path $Path)) {

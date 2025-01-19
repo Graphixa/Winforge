@@ -9,3 +9,4 @@
 
 - Fix Google Drive installation as it prompts user for installation, should be silent.
 - Branding: Ensure that downloading of lockscreen and wallpaper file supports downloading as JPG and PNG depending on the file format of the hosted file.
+- Remove duplicate of install google drive /chrome from config file. 1 under applications and 1 under google.
