@@ -39,7 +39,10 @@ $script:restartRequired = $false
 $script:tempFiles = @()
 
 
+# Ensure console output works in remote sessions
+$VerbosePreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
+$InformationPreference = 'Continue'
 
 # Initialize Error Handling
 $ErrorActionPreference = "Stop"
