@@ -1,6 +1,3 @@
-#Requires -Version 5.1
-#Requires -RunAsAdministrator
-
 <#
 .SYNOPSIS
     Windows configuration deployment tool using XML configurations.
