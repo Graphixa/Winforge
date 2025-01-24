@@ -39,10 +39,8 @@ $script:restartRequired = $false
 $script:tempFiles = @()
 
 
-# Ensure console output works in remote sessions
-$VerbosePreference = 'Continue'
+
 $ProgressPreference = 'SilentlyContinue'
-$InformationPreference = 'Continue'
 
 # Initialize Error Handling
 $ErrorActionPreference = "Stop"
@@ -65,150 +63,201 @@ function Write-Log {
 
 }
 
-<#
 function Write-SystemMessage {
     param (
         [Parameter()]
-        [string] $title = '',
+        [string]$title = '',
   
         [Parameter()]
-        [string] $msg1 = '',
+        [string]$msg = '',
 
         [Parameter()]
-        [string] $msg2 = '',
+        [string]$value = '',
   
         [Parameter()]
-        $titleColor = 'DarkMagenta',
+        [ConsoleColor]$titleColor = 'DarkMagenta',
   
         [Parameter()]
-        $msg1Color = 'Cyan',
+        [ConsoleColor]$msgColor = 'Cyan',
 
         [Parameter()]
-        $msg2color = 'White',
+        [ConsoleColor]$valueColor = 'White',
 
         [Parameter()]
-        $NoNewline
+        [switch]$errorMsg = $false,
+
+        [Parameter()]
+        [switch]$warningMsg = $false,
+
+        [Parameter()]
+        [switch]$successMsg = $false
     )
+
+    # Initialize script variables if not exists
+    if (-not (Test-Path variable:script:lastMessageCursorPosition)) {
+        $script:lastMessageCursorPosition = $null
+        $script:lastMessage = $null
+        $script:lastValue = $null
+    }
     
-    
+    # Handle title blocks
     if ($PSBoundParameters.ContainsKey('title')) {
-        Write-Host
-        Write-Host " $title ".ToUpper() -ForegroundColor White -BackgroundColor $titleColor 
-        Write-Host
-    }
-    
-    if ($PSBoundParameters.ContainsKey('msg1') -and $PSBoundParameters.ContainsKey('NoNewline') -and $PSBoundParameters.ContainsKey('msg2')) {
-        Write-Host "$msg1" -ForegroundColor $msg1Color -NoNewline; Write-Host "$msg2" -ForegroundColor $msg2color -NoNewline
+        Write-Host "`n`n $($title.ToUpper()) " -ForegroundColor White -BackgroundColor $titleColor 
+        Write-Host ""
+        $script:lastMessageCursorPosition = $null
+        $script:lastMessage = $null
+        $script:lastValue = $null
         return
     }
 
-    if ($PSBoundParameters.ContainsKey('msg1') -and $PSBoundParameters.ContainsKey('NoNewline')){
-        Write-Host "$msg1" -ForegroundColor $msg1Color -NoNewline
-        return
+    # Define status message properties
+    $statusTypes = @{
+        successMsg = @{ symbol = "✓"; text = "SUCCESS"; color = "Green" }
+        warningMsg = @{ symbol = "⚠ "; text = "WARNING"; color = "DarkYellow" }
+        errorMsg = @{ symbol = "x"; text = "ERROR"; color = "Red" }
     }
 
-    if ($PSBoundParameters.ContainsKey('msg1') -and $PSBoundParameters.ContainsKey('msg2')){
-        Write-Host "$msg1" -ForegroundColor $msg1Color -NoNewline; Write-Host "$msg2" -ForegroundColor $msg2color
-        return
-    }
-
-    if ($PSBoundParameters.ContainsKey('msg1')) {
-        Write-Host "$msg1" -ForegroundColor $msg1Color
-    }
-
-    if ($PSBoundParameters.ContainsKey('msg2')) {
-        Write-Host "$msg2" -ForegroundColor $msg2color
-    }
-
-}
-#>
-
-function Write-SystemMessage {
-    param (
-        [Parameter()]
-        [string]$Title,
-  
-        [Parameter()]
-        [string]$Message,
-
-        [Parameter()]
-        [string]$Value,
-
-        [Parameter()]
-        [switch]$StartOperation,
-
-        [Parameter()]
-        [ValidateSet('Success', 'Failed', 'Warning', 'Info')]
-        [string]$Status,
-
-        [Parameter()]
-        [string]$ErrorMessage
-    )
-    
-    # Handle Title Block
-    if ($Title) {
-        Write-Host
-        Write-Host " $Title ".ToUpper() -ForegroundColor White -BackgroundColor DarkMagenta
-        Write-Host
-        return
-    }
-
-    # Handle Message (without status)
-    if ($Message -and -not $StartOperation -and -not $Status) {
-        Write-Host "- $Message" -ForegroundColor Cyan
-        if ($Value) {
-            Write-Host ": $Value" -ForegroundColor White
-        }
-        return
-    }
-
-    # Start of operation
-    if ($StartOperation) {
-        Write-Host -NoNewline "- $Message" -ForegroundColor Cyan
-        if ($Value) {
-            Write-Host -NoNewline ": $Value" -ForegroundColor White
-        }
-        return
-    }
-
-    # Status update (end of operation)
-    if ($Status) {
-        switch ($Status) {
-            'Success' { 
-                Write-Host " - Success" -ForegroundColor Green 
-            }
-            'Failed' { 
-                if ($ErrorMessage) {
-                    Write-Host " - Failed: $ErrorMessage" -ForegroundColor Red
+    # Handle msg and value combinations
+    if ($PSBoundParameters.ContainsKey('msg') -or $PSBoundParameters.ContainsKey('value')) {
+        # If it's a status message with msg/value, handle differently
+        $statusType = $statusTypes.Keys | Where-Object { $PSBoundParameters.ContainsKey($_) } | Select-Object -First 1
+        if ($statusType) {
+            $status = $statusTypes[$statusType]
+            if ($script:lastMessageCursorPosition -and $script:lastMessage) {
+                # Append to previous line
+                $host.UI.RawUI.CursorPosition = $script:lastMessageCursorPosition
+                Write-Host (" " * ($host.UI.RawUI.BufferSize.Width - 1))
+                $host.UI.RawUI.CursorPosition = $script:lastMessageCursorPosition
+                Write-Host " - $script:lastMessage" -ForegroundColor $msgColor -NoNewline
+                if ($script:lastValue) {
+                    Write-Host ": " -ForegroundColor $msgColor -NoNewline
+                    Write-Host "$script:lastValue" -ForegroundColor $valueColor -NoNewline
+                }
+                Write-Host " - $($status.symbol) $($status.text)" -ForegroundColor $status.color -NoNewline
+                if ($PSBoundParameters.ContainsKey('msg')) {
+                    Write-Host ": " -ForegroundColor $status.color -NoNewline
+                    Write-Host "$msg" -ForegroundColor DarkGray -NoNewline
+                    if ($PSBoundParameters.ContainsKey('value')) {
+                        Write-Host ": " -ForegroundColor $status.color -NoNewline
+                        Write-Host "$value" -ForegroundColor Gray
+                    } else {
+                        Write-Host ""
+                    }
                 } else {
-                    Write-Host " - Failed" -ForegroundColor Red
+                    Write-Host ""
+                }
+            } else {
+                # New status message line
+                Write-Host " $($status.symbol) $($status.text)" -ForegroundColor $status.color -NoNewline
+                if ($PSBoundParameters.ContainsKey('msg')) {
+                    Write-Host " | " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "$msg" -ForegroundColor DarkGray -NoNewline
+                    if ($PSBoundParameters.ContainsKey('value')) {
+                        Write-Host ": " -ForegroundColor $status.color -NoNewline
+                        Write-Host "$value" -ForegroundColor Gray
+                    } else {
+                        Write-Host ""
+                    }
+                } else {
+                    Write-Host ""
                 }
             }
-            'Warning' { 
-                Write-Host " - Warning" -ForegroundColor Yellow 
+            $script:lastMessageCursorPosition = $null
+            return
+        }
+
+        # Store for potential status append later
+        $script:lastMessage = $msg
+        $script:lastValue = $value
+
+        if ($PSBoundParameters.ContainsKey('msg')) {
+            Write-Host " - $msg" -ForegroundColor $msgColor -NoNewline
+            if ($PSBoundParameters.ContainsKey('value')) {
+                Write-Host ": " -ForegroundColor $msgColor -NoNewline
+                Write-Host $value -ForegroundColor $valueColor
+            } else {
+                Write-Host ""
             }
-            'Info' { 
-                Write-Host " - Info" -ForegroundColor Gray 
+        } else {
+            Write-Host $value -ForegroundColor $valueColor
+        }
+
+        $script:lastMessageCursorPosition = $host.UI.RawUI.CursorPosition
+        $script:lastMessageCursorPosition.Y -= 1
+        return
+    }
+
+    # Handle standalone status messages
+    $statusType = $statusTypes.Keys | Where-Object { $PSBoundParameters.ContainsKey($_) } | Select-Object -First 1
+    if ($statusType) {
+        $status = $statusTypes[$statusType]
+        if ($script:lastMessageCursorPosition -and $script:lastMessage) {
+            $host.UI.RawUI.CursorPosition = $script:lastMessageCursorPosition
+            Write-Host (" " * ($host.UI.RawUI.BufferSize.Width - 1))
+            $host.UI.RawUI.CursorPosition = $script:lastMessageCursorPosition
+            Write-Host " - $script:lastMessage" -ForegroundColor $msgColor -NoNewline
+            if ($script:lastValue) {
+                Write-Host ": " -ForegroundColor $msgColor -NoNewline
+                Write-Host "$script:lastValue" -ForegroundColor $valueColor -NoNewline
+            }
+            Write-Host " - $($status.symbol) $($status.text)" -ForegroundColor $status.color -NoNewline
+            if ($PSBoundParameters.ContainsKey('msg')) {
+                Write-Host ": " -ForegroundColor $status.color -NoNewline
+                Write-Host "$msg" -ForegroundColor $status.color -NoNewline
+                if ($PSBoundParameters.ContainsKey('value')) {
+                    Write-Host ": " -ForegroundColor $status.color -NoNewline
+                    Write-Host "$value" -ForegroundColor $valueColor
+                } else {
+                    Write-Host ""
+                }
+            } else {
+                Write-Host ""
+            }
+        } else {
+            Write-Host " $($status.symbol) $($status.text)" -ForegroundColor $status.color -NoNewline
+            if ($PSBoundParameters.ContainsKey('msg')) {
+                Write-Host " | " -ForegroundColor DarkGray -NoNewline
+                Write-Host "$msg" -ForegroundColor $status.color -NoNewline
+                if ($PSBoundParameters.ContainsKey('value')) {
+                    Write-Host ": " -ForegroundColor $status.color -NoNewline
+                    Write-Host "$value" -ForegroundColor $valueColor
+                } else {
+                    Write-Host ""
+                }
+            } else {
+                Write-Host ""
             }
         }
+
+        if ($statusType -eq 'errorMsg' -and $_.Exception.Message) {
+            Write-Host $_.Exception.Message -ForegroundColor Red
+        }
+        
+        $script:lastMessageCursorPosition = $null
     }
 }
 
+<#
 function Write-ErrorMessage {
     param (
-      [Parameter()]
-      $msg = "ERROR",
-  
-      [Parameter()]
-      $color = 'White'
+        [Parameter()]
+        [string]$msg = '',
+
+        [Parameter()]
+        [string]$value = ''
     )
-  
-    Write-Host
-    Write-Host " $msg ".ToUpper() -ForegroundColor $color -BackgroundColor DarkRed
-    Write-Host
-    Write-Host $_.Exception.Message -ForegroundColor Red
-    Write-Host
-  }
+
+    # Write the error header with optional message
+    if ($PSBoundParameters.ContainsKey('msg') -and $PSBoundParameters.ContainsKey('value')) {
+        Write-Host " x ERROR | ${msg}: " -ForegroundColor Red -NoNewline
+        Write-Host "$value" -ForegroundColor White
+    } elseif ($PSBoundParameters.ContainsKey('msg')) {
+        Write-Host " x ERROR | ${msg}" -ForegroundColor Red
+    } else {
+        Write-Host " x ERROR" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+    }
+}
 
 function Write-SuccessMessage {
     param (
@@ -224,9 +273,12 @@ function Write-SuccessMessage {
     Write-Host
   }
 
+  #>
+
 function Test-AdminPrivileges {
-    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-    return $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+        throw "This script must be run with administrative privileges."
+    }
 }
 
 function Test-ConfigSchema {
@@ -473,27 +525,33 @@ function Get-WinforgeConfig {
             Invoke-WebRequest -Uri $Path -OutFile $tempPath
             $Path = $tempPath
         }
+        Write-SystemMessage -title "Winforge Configuration" 
         
-       # Write-SystemMessage -Title "Configuration" -msg1 "Loading configuration file..."
-       Write-SystemMessage -Title "Configuration" -Message "Loading configuration file..." -StartOperation
+        Write-SystemMessage -msg "Loading configuration file..."
+      
         
         # Check if file exists
         if (-not (Test-Path $Path)) {
+            Write-SystemMessage -errorMsg -msg "Configuration file not found"
             throw "Configuration file not found: $Path"
         }
         
         # Check if file is encrypted
         $isEncrypted = Test-EncryptedConfig -FilePath $Path
         if ($isEncrypted) {
-            Write-SystemMessage -Title "Encrypted Configuration" -Message "Configuration is encrypted. Please enter the password to decrypt it." -StartOperation
             
             $maxAttempts = 5
             $attempt = 1
             $decrypted = $false
 
             while ($attempt -le $maxAttempts -and -not $decrypted) {
+                
+                Write-SystemMessage -msg "Configuration is encrypted. Please enter the password to decrypt it."
+                Write-SystemMessage -msg "Attempts remaining" -value "$($maxAttempts - $attempt + 1)" -msgColor "Yellow"
+                
                 if ($attempt -gt 1) {
-                    Write-SystemMessage -Message "Incorrect password." -Value "Attempts remaining: $($maxAttempts - $attempt + 1)" -Status Warning
+                    Write-SystemMessage -errorMsg -msg "Incorrect password." 
+                    Write-SystemMessage -msg "Attempts remaining" -value "$($maxAttempts - $attempt + 1)" -msgColor "Yellow"
                 }
 
                 $password = Read-Host -AsSecureString "Password"
@@ -503,7 +561,8 @@ function Get-WinforgeConfig {
                 # Check for empty password
                 if ([string]::IsNullOrWhiteSpace($passwordText)) {
                     $attempt++
-                    Write-SystemMessage -Message "Password cannot be empty." -Value "Attempts remaining: $($maxAttempts - $attempt + 1)" -Status Warning
+                    Write-SystemMessage -errorMsg -msg "Password cannot be empty." 
+                    Write-SystemMessage -msg "Attempts remaining" -value "$($maxAttempts - $attempt + 1)" -msgColor "Yellow"
                     [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
                     Remove-Variable -Name passwordText -ErrorAction SilentlyContinue
                     continue
@@ -512,12 +571,13 @@ function Get-WinforgeConfig {
                 try {
                     $decryptResult = Convert-SecureConfig -FilePath $Path -IsEncrypting $false -Password $passwordText 2>$null
                     if ($decryptResult) {
-                        Write-SystemMessage -Message "Configuration decrypted successfully." -Status Success
+                        Write-SystemMessage -successMsg "Configuration decrypted successfully." 
                         $decrypted = $true
                     }
                     else {
                         $attempt++
-                        Write-SystemMessage -Message "Incorrect password." -Value "Attempts remaining: $($maxAttempts - $attempt + 1)" -Status Warning
+                        Write-SystemMessage -errorMsg -msg "Incorrect password." 
+                        Write-SystemMessage -msg "Attempts remaining" -value "$($maxAttempts - $attempt + 1)" -msgColor "Yellow"
                     }
                 }
                 catch {
@@ -556,6 +616,7 @@ function Get-WinforgeConfig {
     }
     catch {
         Write-Log "Failed to load configuration: $($_.Exception.Message)" -Level Error
+        Write-SystemMessage -errorMsg -msg "Failed to load configuration" -value "$($_.Exception.Message)"
         
         # If it's a "max attempts" or "failed to decrypt," rethrow so the script can exit. 
         if ($_.Exception.Message -match "Maximum password attempts reached" -or 
@@ -675,20 +736,24 @@ function Test-ProgramInstalled {
 }
 
 function Set-SystemCheckpoint {
+
+    Write-SystemMessage -title "Creating System Restore Point"
+    Write-Log "Creating system restore point..." -Level Info
+
     try {
         # Check if System Restore is enabled
         $srEnabled = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
         if (-not $srEnabled) {
             Write-Log "System Restore is not enabled. Attempting to enable..." -Level Warning
             Enable-ComputerRestore -Drive "$env:systemdrive" -ErrorAction Stop | Out-Null
-            Write-Log "System Restore enabled successfully"
+            Write-Log "System Restore enabled successfully" -Level Info
         }
 
         # Check available disk space (minimum 1GB recommended)
         $systemDrive = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='$env:systemdrive'"
         if ($systemDrive.FreeSpace -lt 1GB) {
             Write-Log "Insufficient disk space for system restore point" -Level Error
-            Write-SystemMessage -Status Failed -ErrorMessage "Insufficient disk space for system restore point"
+            Write-SystemMessage -errorMsg -msg "Insufficient disk space for system restore point"
             return $false
         }
 
@@ -697,58 +762,67 @@ function Set-SystemCheckpoint {
         $snapshotName = "Winforge - $date - $time"
         
         Write-Log "Creating system restore point. Snapshot Name: $snapshotName"
-        Write-SystemMessage -Title "Creating System Restore Point" -Message "Snapshot Name:" -Value $snapshotName -StartOperation
-        Checkpoint-Computer -Description $snapshotName -RestorePointType "MODIFY_SETTINGS" -Verbose
-        Write-SystemMessage -Status Success
+        Write-SystemMessage -msg "Creating System Restore Point | Snapshot Name" -value $snapshotName
         
-        Write-Log "System restore point created successfully."
+       
+        Checkpoint-Computer -Description $snapshotName -RestorePointType "MODIFY_SETTINGS" -Verbose
+        Write-SystemMessage -successMsg
+            
         return $true
     }
     catch {
         Write-Log "Error creating system restore point: $($_.Exception.Message)" -Level Error
-        Write-SystemMessage -Status Failed -ErrorMessage $_.Exception.Message
+        Write-SystemMessage -errorMsg -msg "Failed to create system restore point. Check Log for details."
         return $false
     }
 }
 
 
 # CONFIGURATION FUNCTIONS
+
 function Set-SystemConfiguration {
     param (
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$SystemConfig
     )
+
+    # Return if no system config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($SystemConfig)) {
+        return
+    }
     
+    Write-SystemMessage -title "Configuring System Settings"
+
     try {
-        Write-SystemMessage -Title "Configuring System Settings"
+        
         $success = $true
 
         # Computer Name
         if ($SystemConfig.ComputerName) {
             try {
-                Write-SystemMessage -Message "Setting computer name to:" -Value $SystemConfig.ComputerName -StartOperation
+                Write-SystemMessage -msg "Setting computer name to:" -value $SystemConfig.ComputerName
                 $currentName = $env:COMPUTERNAME
                 if ($currentName -ne $SystemConfig.ComputerName) {
-                    Write-Log "Setting computer name to: $($SystemConfig.ComputerName)"
+                    Write-Log "Setting computer name to: $($SystemConfig.ComputerName)" -Level Info
                     Rename-Computer -NewName $SystemConfig.ComputerName -Force
                     $script:restartRequired = $true
-                    Write-SystemMessage -Status Success
+                    Write-SystemMessage -successMsg
                 } else {
                     Write-Log "Computer name is already set to: $($SystemConfig.ComputerName)" -Level Warning
-                    Write-SystemMessage -Status Warning
+                    Write-SystemMessage -warningMsg -msg "Computer name is already set to" -value "$($SystemConfig.ComputerName)"
                 }
             }
             catch {
                 Write-Log "Error setting computer name: $($_.Exception.Message)" -Level Error
-                Write-SystemMessage -Status Failed -ErrorMessage $_.Exception.Message
+                Write-SystemMessage -errorMsg
                 $success = $false
             }
         }
 
         # Locale and Timezone
         if ($SystemConfig.Locale) {
-            Write-SystemMessage -msg1 "- Setting system locale to: " -msg2 $SystemConfig.Locale -NoNewline
-            Write-Log "Setting system locale to: $($SystemConfig.Locale)"
+            Write-SystemMessage -msg "Setting system locale to" -value $SystemConfig.Locale
+            Write-Log "Setting system locale to: $($SystemConfig.Locale)" -Level Info
             
             try {
                 # Validate locale is supported
@@ -759,201 +833,203 @@ function Set-SystemConfiguration {
                     Set-Culture -CultureInfo $SystemConfig.Locale
                     
                     $script:restartRequired = $true
-                    Write-SuccessMessage -msg "System locale set successfully"
+                    Write-SystemMessage -successMsg
                 }
                 else {
                     Write-Log "Invalid or unsupported locale: $($SystemConfig.Locale)" -Level Warning
-                    Write-ErrorMessage -msg "Invalid or unsupported locale: $($SystemConfig.Locale)"
+                    Write-SystemMessage -errorMsg
                 }
             }
             catch {
                 Write-Log "Error setting system locale: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set system locale"
+                Write-SystemMessage -errorMsg -msg "Failed to set system locale"
             }
         }
 
         if ($SystemConfig.Timezone) {
             $currentTZ = (Get-TimeZone).Id
+
+            Write-Log "Setting timezone to: $($SystemConfig.Timezone)" -Level Info
+            Write-SystemMessage -msg "Setting timezone to" -value $SystemConfig.Timezone
+
             if ($currentTZ -ne $SystemConfig.Timezone) {
-                Write-Log "Setting timezone to: $($SystemConfig.Timezone)"
-                Write-SystemMessage -msg1 "- Setting timezone to: " -msg2 $SystemConfig.Timezone
                 try {
                     Set-TimeZone -Id $SystemConfig.Timezone
                     $newTZ = (Get-TimeZone).Id
                     if ($newTZ -eq $SystemConfig.Timezone) {
-                        Write-SuccessMessage -msg "Timezone set successfully to: $($SystemConfig.Timezone)"
+                        Write-SystemMessage -successMsg
                     }
                     else {
-                        Write-Log "Failed to set timezone to: $($SystemConfig.Timezone)" -Level Warning
-                        Write-ErrorMessage -msg "Failed to set timezone"
+                        Write-Log "Failed to set timezone to: $($SystemConfig.Timezone)" -Level Error
+                        Write-SystemMessage -errorMsg
                     }
                 }
                 catch {
                     Write-Log "Error setting timezone: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to set timezone"
+                    Write-SystemMessage -errorMsg -msg "Failed to set timezone. Check Log for details."
                 }
             }
             else {
-                Write-Log "Timezone is already set to: $($SystemConfig.Timezone)"
-                Write-SystemMessage -msg1 "- Timezone already set to: " -msg2 $SystemConfig.Timezone -msg1Color "Cyan"
+                Write-Log "Timezone is already set to: $($SystemConfig.Timezone)" -Level Warning
+                Write-SystemMessage -warningMsg -msg "Timezone already set to" -value $SystemConfig.Timezone
             }
         }
 
         # Remote Desktop
         if ($SystemConfig.EnableRemoteDesktop -eq 'true') {
-            Write-Log "Enabling Remote Desktop..."
-            Write-SystemMessage -msg1 "- Enabling Remote Desktop..."
+            Write-Log "Enabling Remote Desktop..." -Level Info
+            Write-SystemMessage -msg "Enabling Remote Desktop..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Type DWord -Value 0
                 Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-                Write-SuccessMessage -msg "Remote Desktop enabled"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to enable Remote Desktop: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Remote Desktop"
+                Write-SystemMessage -errorMsg
             }
         }
         elseif ($SystemConfig.EnableRemoteDesktop -eq 'false') {
-            Write-Log "Disabling Remote Desktop..."
-            Write-SystemMessage -msg1 "- Disabling Remote Desktop..."
+            Write-Log "Disabling Remote Desktop..." -Level Info
+            Write-SystemMessage -msg "Disabling Remote Desktop..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Type DWord -Value 1
                 Disable-NetFirewallRule -DisplayGroup "Remote Desktop"
-                Write-SuccessMessage -msg "Remote Desktop disabled"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to disable Remote Desktop: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Remote Desktop"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Windows Store
         if ($SystemConfig.DisableWindowsStore -eq 'true') {
-            Write-Log "Disabling Windows Store..."
-            Write-SystemMessage -msg1 "- Disabling Windows Store..."
+            Write-Log "Disabling Windows Store..." -Level Info
+            Write-SystemMessage -msg "Disabling Windows Store..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" -Name "RemoveWindowsStore" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Windows Store disabled"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to disable Windows Store: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Windows Store"
+                Write-SystemMessage -errorMsg
             }
         }
         elseif ($SystemConfig.DisableWindowsStore -eq 'false') {
             Write-Log "Enabling Windows Store..."
-            Write-SystemMessage -msg1 "- Enabling Windows Store..."
+            Write-SystemMessage -msg "Enabling Windows Store..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore" -Name "RemoveWindowsStore" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Windows Store enabled"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to enable Windows Store: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Windows Store"
+                Write-SystemMessage -errorMsg
             }
         }
 
         if ($SystemConfig.DisableOneDrive -eq 'true') {
-            Write-Log "Disabling OneDrive..."
-            Write-SystemMessage -msg1 "- Disabling OneDrive."
+            Write-Log "Disabling OneDrive..." -Level Info
+            Write-SystemMessage -msg "Disabling OneDrive."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 1
                 Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
-                Write-SuccessMessage -msg "OneDrive disabled."
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Error disabling OneDrive: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable OneDrive."
+                Write-SystemMessage -errorMsg
             }
         }
         elseif ($SystemConfig.DisableOneDrive -eq 'false') {
-            Write-Log "Enabling OneDrive..."
-            Write-SystemMessage -msg1 "- Enabling OneDrive."
+            Write-Log "Enabling OneDrive..." -Level Info
+            Write-SystemMessage -msg "Enabling OneDrive."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 0
-                Write-SuccessMessage -msg "OneDrive enabled."
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Error enabling OneDrive: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable OneDrive."
+                Write-SystemMessage -errorMsg
             }
         }
 
         if ($SystemConfig.DisableCopilot -eq 'true') {
-            Write-Log "Disabling Windows Copilot..."
-            Write-SystemMessage -msg1 "- Disabling Windows Copilot."
+            Write-Log "Disabling Windows Copilot..." -Level Info
+            Write-SystemMessage -msg "Disabling Windows Copilot."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" -Name "CopilotEnabled" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot" -Name "TurnOffWindowsCopilot" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Windows Copilot disabled."
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Error disabling Windows Copilot: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Windows Copilot."
+                Write-SystemMessage -errorMsg
             }
         }
         elseif ($SystemConfig.DisableCopilot -eq 'false') {
-            Write-Log "Enabling Windows Copilot..."
-            Write-SystemMessage -msg1 "- Enabling Windows Copilot."
+            Write-Log "Enabling Windows Copilot..." -Level Info
+            Write-SystemMessage -msg "Enabling Windows Copilot."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" -Name "CopilotEnabled" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot" -Name "TurnOffWindowsCopilot" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Windows Copilot enabled."
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Error enabling Windows Copilot: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Windows Copilot."
+                Write-SystemMessage -errorMsg
             }
         }
 
         # File Explorer Settings
         if ($SystemConfig.ShowFileExtensions -eq 'true') {
-            Write-SystemMessage -msg1 "- Showing file extensions..."
-            Write-Log "Showing file extensions..."
+            Write-SystemMessage -msg "Showing file extensions..."
+            Write-Log "Showing file extensions..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 0
-                Write-SuccessMessage -msg "File extensions enabled"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to show file extensions: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to show file extensions"
+                Write-SystemMessage -errorMsg
             }
         }
         elseif ($SystemConfig.ShowFileExtensions -eq 'false') {
-            Write-SystemMessage -msg1 "- Hiding file extensions..."
-            Write-Log "Hiding file extensions..."
+            Write-SystemMessage -msg "Hiding file extensions..."
+            Write-Log "Hiding file extensions..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 1
-                Write-SuccessMessage -msg "File extensions hidden"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to hide file extensions: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to hide file extensions"
+                Write-SystemMessage -errorMsg
             }
         }
 
         if ($SystemConfig.ShowHiddenFiles -eq 'true') {
-            Write-SystemMessage -msg1 "- Showing hidden files..."
-            Write-Log "Showing hidden files..."
+            Write-SystemMessage -msg "Showing hidden files..."
+            Write-Log "Showing hidden files..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Hidden files enabled"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to show hidden files: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to show hidden files"
+                Write-SystemMessage -errorMsg
             }
         }
         elseif ($SystemConfig.ShowHiddenFiles -eq 'false') {
-            Write-SystemMessage -msg1 "- Hiding hidden files..."
-            Write-Log "Hiding hidden files..."
+            Write-SystemMessage -msg "Hiding hidden files..."
+            Write-Log "Hiding hidden files..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Hidden files disabled"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to hide hidden files: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to hide hidden files"
+                Write-SystemMessage -errorMsg
             }
         }
 
@@ -972,68 +1048,73 @@ function Set-SecurityConfiguration {
         [System.Xml.XmlElement]$SecurityConfig
     )
     
+    # Return if no security config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($SecurityConfig)) {
+        return
+    }
+
+    Write-SystemMessage -title "Configuring Security Settings"
 
         try {
-            Write-SystemMessage -Title "Configuring Security Settings"
 
             # Windows Defender
             if ($SecurityConfig.DisableDefender -eq 'true') {
-                Write-SystemMessage -msg1 "- Disabling Windows Defender..."
-                Write-Log "Disabling Windows Defender..."
+                Write-SystemMessage -msg "Disabling Windows Defender..."
+                Write-Log "Disabling Windows Defender..." -Level Info
                 try {
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Type DWord -Value 1
-                    Write-SuccessMessage -msg "Windows Defender disabled"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to disable Windows Defender: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to disable Windows Defender"
+                    Write-SystemMessage -errorMsg
                 }
             }
             elseif ($SecurityConfig.DisableDefender -eq 'false') {
-                Write-SystemMessage -msg1 "- Enabling Windows Defender..."
-                Write-Log "Enabling Windows Defender..."
+                Write-SystemMessage -msg "Enabling Windows Defender..."
+                Write-Log "Enabling Windows Defender..." -Level Info
                 try {
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Type DWord -Value 0
-                    Write-SuccessMessage -msg "Windows Defender enabled"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to enable Windows Defender: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to enable Windows Defender"
+                    Write-SystemMessage -errorMsg
                 }
             }
 
             # UAC Settings
             if ($SecurityConfig.DisableUAC -eq 'true') {
-                Write-SystemMessage -msg1 "- Disabling UAC..."
-                Write-Log "Disabling UAC..."
+                Write-SystemMessage -msg "Disabling UAC..."
+                Write-Log "Disabling UAC..." -Level Info
                 try {
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Type DWord -Value 0
-                    Write-SuccessMessage -msg "UAC disabled"
+                    Write-SystemMessage -successMsg
                     $script:restartRequired = $true
                 }
                 catch {
                     Write-Log "Failed to disable UAC: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to disable UAC"
+                    Write-SystemMessage -errorMsg
                 }
             }
             elseif ($SecurityConfig.DisableUAC -eq 'false') {
-                Write-SystemMessage -msg1 "- Enabling UAC..."
-                Write-Log "Enabling UAC..."
+                Write-SystemMessage -msg "Enabling UAC..."
+                Write-Log "Enabling UAC..."-Level Info
                 try {
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Type DWord -Value 1
-                    Write-SuccessMessage -msg "UAC enabled"
+                    Write-SystemMessage -successMsg
                     $script:restartRequired = $true
                 }
                 catch {
                     Write-Log "Failed to enable UAC: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to enable UAC"
+                    Write-SystemMessage -errorMsg
                 }
             }
 
             # UAC Level Settings
             if ($SecurityConfig.UACLevel) {
-                Write-SystemMessage -msg1 "- Setting UAC level to: " -msg2 $SecurityConfig.UACLevel
-                Write-Log "Setting UAC level to: $($SecurityConfig.UACLevel)"
+                Write-SystemMessage -msg "Setting UAC level to" -value $SecurityConfig.UACLevel
+                Write-Log "Setting UAC level to: $($SecurityConfig.UACLevel)" -Level Info
                 try {
                     $uacValue = switch ($SecurityConfig.UACLevel) {
                         "AlwaysNotify" { 2 }    # Always notify
@@ -1049,11 +1130,11 @@ function Set-SecurityConfiguration {
                 
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Type DWord -Value $uacValue
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "PromptOnSecureDesktop" -Type DWord -Value $promptValue
-                    Write-SuccessMessage -msg "UAC level set successfully"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to set UAC level: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to set UAC level"
+                    Write-SystemMessage -errorMsg
                 }
             
             }
@@ -1061,90 +1142,90 @@ function Set-SecurityConfiguration {
 
             # SMB1 Protocol
             if ($SecurityConfig.DisableSMB1 -eq 'true') {
-                Write-SystemMessage -msg1 "- Disabling SMB1 protocol..."
-                Write-Log "Disabling SMB1 protocol..."
+                Write-SystemMessage -msg "Disabling SMB1 protocol..."
+                Write-Log "Disabling SMB1 protocol..." -Level Info
                 try {
                     Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
                     $script:restartRequired = $true
-                    Write-SuccessMessage -msg "SMB1 protocol disabled"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to disable SMB1 protocol: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to disable SMB1 protocol"
+                    Write-SystemMessage -errorMsg
                 }
             }
             elseif ($SecurityConfig.DisableSMB1 -eq 'false') {
-                Write-SystemMessage -msg1 "- Enabling SMB1 protocol..."
-                Write-Log "Enabling SMB1 protocol..."
+                Write-SystemMessage -msg "Enabling SMB1 protocol..."
+                Write-Log "Enabling SMB1 protocol..." -Level Info
                 try {
                     Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
                     $script:restartRequired = $true
-                    Write-SuccessMessage -msg "SMB1 protocol enabled"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to enable SMB1 protocol: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to enable SMB1 protocol"
+                    Write-SystemMessage -errorMsg
                 }
             }
 
             # AutoPlay
             if ($SecurityConfig.DisableAutoPlay -eq 'true') {
-                Write-SystemMessage -msg1 "- Disabling AutoPlay..."
-                Write-Log "Disabling AutoPlay..."
+                Write-SystemMessage -msg "Disabling AutoPlay..."
+                Write-Log "Disabling AutoPlay..." -Level Info
                 try {
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Type DWord -Value 255
-                    Write-SuccessMessage -msg "AutoPlay disabled"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to disable AutoPlay: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to disable AutoPlay"
+                    Write-SystemMessage -errorMsg
                 }
             }
             elseif ($SecurityConfig.DisableAutoPlay -eq 'false') {
-                Write-SystemMessage -msg1 "- Enabling AutoPlay..."
-                Write-Log "Enabling AutoPlay..."
+                Write-SystemMessage -msg "Enabling AutoPlay..."
+                Write-Log "Enabling AutoPlay..." -Level Info
                 try {
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Type DWord -Value 0
-                    Write-SuccessMessage -msg "AutoPlay enabled"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to enable AutoPlay: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to enable AutoPlay"
+                    Write-SystemMessage -errorMsg
                 }
             }
 
             # BitLocker
             if ($SecurityConfig.BitLocker.Enable -eq 'true') {
-                Write-SystemMessage -msg1 "- Configuring BitLocker for drive: " -msg2 $SecurityConfig.BitLocker.Target
-                Write-Log "Configuring BitLocker for drive: $($SecurityConfig.BitLocker.Target)"
+                Write-SystemMessage -msg "Configuring BitLocker for drive: " -value $SecurityConfig.BitLocker.Target
+                Write-Log "Configuring BitLocker for drive: $($SecurityConfig.BitLocker.Target)" -Level Info
                 try {
                     Enable-BitLocker -MountPoint $SecurityConfig.BitLocker.Target -EncryptionMethod XtsAes256 -UsedSpaceOnly
-                    Write-SuccessMessage -msg "BitLocker configured successfully"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to configure BitLocker: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to configure BitLocker"
+                    Write-SystemMessage -errorMsg
                 }
             }
             elseif ($SecurityConfig.BitLocker.Enable -eq 'false') {
-                Write-SystemMessage -msg1 "- Disabling BitLocker for drive: " -msg2 $SecurityConfig.BitLocker.Target
-                Write-Log "Disabling BitLocker for drive: $($SecurityConfig.BitLocker.Target)"
+                Write-SystemMessage -msg "Disabling BitLocker for drive: " -value $SecurityConfig.BitLocker.Target
+                Write-Log "Disabling BitLocker for drive: $($SecurityConfig.BitLocker.Target)" -Level Info
                 try {
                     Disable-BitLocker -MountPoint $SecurityConfig.BitLocker.Target
-                    Write-SuccessMessage -msg "BitLocker disabled successfully"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to disable BitLocker: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to disable BitLocker"
+                    Write-SystemMessage -errorMsg
                 }
             }
 
-            Write-Log "Security configuration completed successfully"
+            Write-Log "Security configuration completed successfully" -Level Info
             return $true
         }
         catch {
             Write-Log "Error configuring security settings: $($_.Exception.Message)" -Level Error
-            Write-ErrorMessage -msg "Failed to configure security settings"
+            Write-SystemMessage -errorMsg -msg "Error configuring security settings"
             return $false
         }
     }
@@ -1156,185 +1237,189 @@ function Set-PrivacyConfiguration {
         [System.Xml.XmlElement]$PrivacyConfig
     )
     
-    try {
-        Write-SystemMessage -Title "Configuring Privacy Settings"
+    # Return if no privacy config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($PrivacyConfig)) {
+        return
+    }
+    Write-SystemMessage -title "Configuring Privacy Settings"
 
+    try {
         # Telemetry
         if ($PrivacyConfig.DisableTelemetry -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling telemetry..."
-            Write-Log "Disabling telemetry..."
+            Write-SystemMessage -msg "Disabling telemetry..."
+            Write-Log "Disabling telemetry..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Telemetry disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable telemetry: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable telemetry"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PrivacyConfig.DisableTelemetry -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling telemetry..."
-            Write-Log "Enabling telemetry..."
+            Write-SystemMessage -msg "Enabling telemetry..."
+            Write-Log "Enabling telemetry..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Telemetry enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable telemetry: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable telemetry"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # DiagTrack
         if ($PrivacyConfig.DisableDiagTrack -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling diagnostic tracking..."
-            Write-Log "Disabling diagnostic tracking..."
+            Write-SystemMessage -msg "Disabling diagnostic tracking..."
+            Write-Log "Disabling diagnostic tracking..." -Level Info
             try {
                 Stop-Service "DiagTrack" -Force
                 Set-Service "DiagTrack" -StartupType Disabled
-                Write-SuccessMessage -msg "Diagnostic tracking disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable diagnostic tracking: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable diagnostic tracking"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PrivacyConfig.DisableDiagTrack -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling diagnostic tracking..."
-            Write-Log "Enabling diagnostic tracking..."
+            Write-SystemMessage -msg "Enabling diagnostic tracking..."
+            Write-Log "Enabling diagnostic tracking..." -Level Info
             try {
                 Set-Service "DiagTrack" -StartupType Automatic
                 Start-Service "DiagTrack"
-                Write-SuccessMessage -msg "Diagnostic tracking enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable diagnostic tracking: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable diagnostic tracking"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # App Privacy
         if ($PrivacyConfig.DisableAppPrivacy -eq 'true') {
-            Write-SystemMessage -msg1 "- Configuring app privacy settings..."
+            Write-SystemMessage -msg "Configuring app privacy settings..."
             Write-Log "Configuring app privacy settings..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Type String -Value "Deny"
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name "Value" -Type String -Value "Deny"
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam" -Name "Value" -Type String -Value "Deny"
-                Write-SuccessMessage -msg "App privacy settings configured"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to configure app privacy settings: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to configure app privacy settings"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PrivacyConfig.DisableAppPrivacy -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling app privacy settings..."
+            Write-SystemMessage -msg "Enabling app privacy settings..."
             Write-Log "Enabling app privacy settings..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Type String -Value "Allow"
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name "Value" -Type String -Value "Allow"
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam" -Name "Value" -Type String -Value "Allow"
-                Write-SuccessMessage -msg "App privacy settings enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable app privacy settings: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable app privacy settings"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Start Menu Tracking
         if ($PrivacyConfig.DisableStartMenuTracking -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling Start Menu tracking..."
-            Write-Log "Disabling Start Menu tracking..."
+            Write-SystemMessage -msg "Disabling Start Menu tracking..."
+            Write-Log "Disabling Start Menu tracking..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_TrackProgs" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "HideRecentlyAddedApps" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Start Menu tracking disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Start Menu tracking: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Start Menu tracking"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PrivacyConfig.DisableStartMenuTracking -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling Start Menu tracking..."
-            Write-Log "Enabling Start Menu tracking..."
+            Write-SystemMessage -msg "Enabling Start Menu tracking..."
+            Write-Log "Enabling Start Menu tracking..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_TrackProgs" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "HideRecentlyAddedApps" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Start Menu tracking enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Start Menu tracking: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Start Menu tracking"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Activity History
         if ($PrivacyConfig.DisableActivityHistory -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling Activity History..."
+            Write-SystemMessage -msg "Disabling Activity History..."
             Write-Log "Disabling Activity History..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Activity History disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Activity History: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Activity History"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PrivacyConfig.DisableActivityHistory -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling Activity History..."
-            Write-Log "Enabling Activity History..."
+            Write-SystemMessage -msg "Enabling Activity History..."
+            Write-Log "Enabling Activity History..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Activity History enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Activity History: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Activity History"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Clipboard Data Collection
         if ($PrivacyConfig.DisableClipboardDataCollection -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling Clipboard data collection..."
+            Write-SystemMessage -msg "Disabling Clipboard data collection..."
             Write-Log "Disabling Clipboard data collection..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "AllowClipboardHistory" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Clipboard" -Name "EnableClipboardHistory" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Clipboard data collection disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Clipboard data collection: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Clipboard data collection"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PrivacyConfig.DisableClipboardDataCollection -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling Clipboard data collection..."
-            Write-Log "Enabling Clipboard data collection..."
+            Write-SystemMessage -msg "Enabling Clipboard data collection..."
+            Write-Log "Enabling Clipboard data collection..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "AllowClipboardHistory" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Clipboard" -Name "EnableClipboardHistory" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Clipboard data collection enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Clipboard data collection: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Clipboard data collection"
+                Write-SystemMessage -errorMsg
             }
         } 
 
         # Start Menu Suggestions
         if ($PrivacyConfig.DisableStartMenuSuggestions -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling Start Menu suggestions..."
-            Write-Log "Disabling Start Menu suggestions..."
+            Write-SystemMessage -msg "Disabling Start Menu suggestions..."
+            Write-Log "Disabling Start Menu suggestions..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SystemPaneSuggestionsEnabled" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338388Enabled" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338389Enabled" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Start Menu suggestions disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Start Menu suggestions: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Start Menu suggestions"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PrivacyConfig.DisableStartMenuSuggestions -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling Start Menu suggestions..."
-            Write-Log "Enabling Start Menu suggestions..."
+            Write-SystemMessage -msg "Enabling Start Menu suggestions..."
+            Write-Log "Enabling Start Menu suggestions..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SystemPaneSuggestionsEnabled" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338388Enabled" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338389Enabled" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Start Menu suggestions enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Start Menu suggestions: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Start Menu suggestions"
+                Write-SystemMessage -errorMsg
             }
         }
 
@@ -1343,7 +1428,7 @@ function Set-PrivacyConfiguration {
     }
     catch {
         Write-Log "Error configuring privacy settings: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure privacy settings"
+        Write-SystemMessage -errorMsg -msg "Error configuring privacy settings"
         return $false
     }
 }
@@ -1353,92 +1438,103 @@ function Install-Applications {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$AppConfig
     )
-    
-    try {
-        Write-SystemMessage -Title "Installing Applications"
 
+    # Return if no app config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($AppConfig)) {
+        return
+    }
+
+    Write-SystemMessage -title "Installing Applications"
+
+    try {
         # Package Manager Selection
         $packageManager = $AppConfig.PackageManager
 
         # Chocolatey Apps
         if ($packageManager -eq "Chocolatey" -and $AppConfig.ChocolateyApps) {
-            Write-SystemMessage -msg1 "- Checking Chocolatey is installed..."
-            Write-Log "Checking Chocolatey is installed..."
+            Write-SystemMessage -msg "Checking Chocolatey is installed..."
+            Write-Log "Checking Chocolatey is installed..." -Level Info
 
             # Install Chocolatey if not present
             if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-                Write-SystemMessage -msg1 "- Installing Chocolatey package manager..."
-                Write-Log "Installing Chocolatey package manager..."
+                Write-SystemMessage -msg "Installing Chocolatey package manager..."
+                Write-Log "Installing Chocolatey package manager..." -Level Info
                 try {
                     Set-ExecutionPolicy Bypass -Scope Process -Force
                     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
                     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-                    Write-SuccessMessage -msg "Chocolatey installed successfully"
+                    Write-SystemMessage -successMsg
                 } catch {
                     Write-Log "Failed to install Chocolatey: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to install Chocolatey"
+                    Write-SystemMessage -errorMsg
                     return $false
                 }
             }
 
             # Install Chocolatey Apps
             foreach ($app in $AppConfig.ChocolateyApps.App) {
-                Write-SystemMessage -msg1 "- Installing: " -msg2 $app
-                Write-Log "Installing $app..."
+                Write-SystemMessage -msg "Installing: " -value $app
+                Write-Log "Installing $app..." -Level Info
                 try {
                     if ($app.Version) {
                         choco install $app --version $app.Version -y
                     } else {
                         choco install $app -y
                     }
-                    Write-SuccessMessage -msg "$app installed successfully"
+                    Write-SystemMessage -successMsg
                 } catch {
                     Write-Log "Failed to install $app : $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to install $app"
+                    Write-SystemMessage -errorMsg
                 }
             }
         }
 
         # Winget Apps
         if ($packageManager -eq "Winget" -and $AppConfig.WingetApps) {
-            Write-SystemMessage -msg1 "- Checking Winget installation..."
-            Write-Log "Checking Winget installation..."
+            Write-SystemMessage -msg "Checking Winget installation..."
+            Write-Log "Checking Winget installation..." -Level Info
 
             # Check if Winget is available
             if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-                Write-Log "Winget is not installed" -Level Error
-                Write-ErrorMessage -msg "Winget is not installed. Please install Windows App Installer"
+                Write-SystemMessage -errorMsg -msg "Winget is not installed. Please install winget"
+                Write-Log "Winget is not installed. Please install winget" -Level Error
                 return $false
             }
 
             # Reset Winget sources and accept agreements
-            Write-SystemMessage -msg1 "- Resetting Winget sources..."
-            Write-Log "Resetting Winget sources..."
+            Write-SystemMessage -msg "Resetting Winget sources..."
+            Write-Log "Resetting Winget sources..." -Level Info
             try {
                 winget source reset --force
                 Add-AppxPackage -Path "https://cdn.winget.microsoft.com/cache/source.msix"
-                Write-SuccessMessage -msg "Winget sources reset successfully"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to reset Winget sources: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to reset Winget sources"
+                Write-SystemMessage -errorMsg
             }
 
             # Install Winget Apps
             foreach ($app in $AppConfig.WingetApps.App) {
-                Write-SystemMessage -msg1 "- Installing: " -msg2 $app.ID
-                Write-Log "Installing $($app.ID)..."
+                Write-SystemMessage -msg "Installing: " -value $app.ID
+                Write-Log "Installing $($app.ID)..." -Level Info
                 try {
                     if ($app.Version) {
                         winget install $app.ID --version $app.Version --accept-source-agreements --accept-package-agreements
                     } else {
                         winget install $app.ID --accept-source-agreements --accept-package-agreements
                     }
-                    Write-SuccessMessage -msg "$($app.ID) installed successfully"
+                    Write-SystemMessage -successMsg
                 } catch {
                     Write-Log "Failed to install $($app.ID): $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to install $($app.ID)"
+                    Write-SystemMessage -errorMsg
                 }
             }
+        }
+
+        if ($packageManager -eq '') {
+            Write-SystemMessage -errorMsg -msg "No package manager selected, skipping application installation"
+            Write-Log "No package manager selected, skipping application installation" -Level Error
+            return
         }
 
         Write-Log "Application installation completed successfully"
@@ -1446,7 +1542,7 @@ function Install-Applications {
     }
     catch {
         Write-Log "Error installing applications: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to install applications"
+        Write-SystemMessage -errorMsg -msg "Failed to install applications. Check the log for details."
         return $false
     }
 }
@@ -1456,16 +1552,24 @@ function Set-EnvironmentVariables {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$EnvConfig
     )
+
+    # Return if no env config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($EnvConfig)) {
+        return
+    }
     
+    Write-SystemMessage -title "Setting Environment Variables"
+
     try {
-        Write-SystemMessage -Title "Setting Environment Variables"
         foreach ($variable in $EnvConfig.ChildNodes) {
             [System.Environment]::SetEnvironmentVariable($variable.Name, $variable.InnerText, [System.EnvironmentVariableTarget]::Machine)
         }
+        Write-SystemMessage -successMsg
         return $true
     }
     catch {
         Write-Log "Error setting environment variables: $($_.Exception.Message)" -Level Error
+        Write-SystemMessage -errorMsg
         return $false
     }
 }
@@ -1475,23 +1579,32 @@ function Set-WindowsActivation {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$ActivationConfig
     )
+
+    # Return if no activation config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($ActivationConfig)) {
+        return
+    }
     
+    Write-SystemMessage -title "Windows Activation"
+
     try {
-        Write-SystemMessage -Title "Windows Activation"
         $productKey = $ActivationConfig.ProductKey
         $version = $ActivationConfig.Version
         
         # Install product key
         if ($productKey) {
-            Write-Log "Installing product key..."
+            Write-SystemMessage -msg "Activating Windows with product key..."
+            Write-Log "Activating Windows with product key..." -Level Info
             slmgr.vbs /ipk $productKey
             Start-Sleep -Seconds 2
             slmgr.vbs /ato
+            Write-SystemMessage -successMsg
         }
         return $true
     }
     catch {
         Write-Log "Error activating Windows: $($_.Exception.Message)" -Level Error
+        Write-SystemMessage -errorMsg
         return $false
     }
 }
@@ -1501,79 +1614,85 @@ function Set-WindowsUpdateConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$UpdateConfig
     )
+
+    # Return if no update config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($UpdateConfig)) {
+        return
+    }
     
-    try {
-        Write-SystemMessage -Title "Configuring Windows Update"
-        
+    Write-SystemMessage -title "Configuring Windows Update"
+
+    try {        
         # Auto Update Settings
         if ($UpdateConfig.NoAutoUpdate) {
-            Write-SystemMessage -msg1 "- Configuring automatic updates..."
+            Write-SystemMessage -msg "Configuring automatic updates..."
             Write-Log "Setting automatic updates to: $($UpdateConfig.NoAutoUpdate)"
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoUpdate" -Type DWord -Value ([int]$UpdateConfig.NoAutoUpdate)
-                Write-SuccessMessage -msg "Automatic updates configured"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to configure automatic updates: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to configure automatic updates"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Update Options (2=Notify, 3=Auto DL, 4=Auto DL and Install)
         if ($UpdateConfig.AUOptions) {
-            Write-SystemMessage -msg1 "- Setting update behavior..."
+            Write-SystemMessage -msg "Setting update behavior..."
             Write-Log "Setting update options to: $($UpdateConfig.AUOptions)"
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUOptions" -Type DWord -Value $UpdateConfig.AUOptions
-                Write-SuccessMessage -msg "Update behavior configured"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to set update options: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set update options"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Schedule Settings
         if ($UpdateConfig.ScheduledInstallDay -and $UpdateConfig.ScheduledInstallTime) {
-            Write-SystemMessage -msg1 "- Configuring update schedule..."
+            Write-SystemMessage -msg "Configuring update schedule..."
             Write-Log "Setting update schedule - Day: $($UpdateConfig.ScheduledInstallDay), Time: $($UpdateConfig.ScheduledInstallTime)"
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallDay" -Type DWord -Value $UpdateConfig.ScheduledInstallDay
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "ScheduledInstallTime" -Type DWord -Value $UpdateConfig.ScheduledInstallTime
-                Write-SuccessMessage -msg "Update schedule configured"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to set update schedule: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set update schedule"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Auto Install Minor Updates
         if ($UpdateConfig.AutoInstallMinorUpdates -eq 'true') {
-            Write-SystemMessage -msg1 "- Enabling automatic minor updates..."
+            Write-SystemMessage -msg "Enabling automatic minor updates..."
             Write-Log "Enabling automatic minor updates..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AutoInstallMinorUpdates" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Automatic minor updates enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable automatic minor updates: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable automatic minor updates"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($UpdateConfig.AutoInstallMinorUpdates -eq 'false') {
-            Write-SystemMessage -msg1 "- Disabling automatic minor updates..."
+            Write-SystemMessage -msg "Disabling automatic minor updates..."
             Write-Log "Disabling automatic minor updates..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AutoInstallMinorUpdates" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Automatic minor updates disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable automatic minor updates: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable automatic minor updates"
+                Write-SystemMessage -errorMsg
             }
         }
 
         Write-Log "Windows Update configuration completed successfully"
+
         return $true
     }
     catch {
         Write-Log "Error configuring Windows Update: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure Windows Update"
+        Write-SystemMessage -errorMsg -msg "Failed to configure Windows Update. Check the log for details."
         return $false
     }
 }
@@ -1583,13 +1702,19 @@ function Set-ScheduledTasksConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$TasksConfig
     )
-    
-    try {
-        Write-SystemMessage -Title "Configuring Scheduled Tasks"
 
+    # Return if no tasks config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($TasksConfig)) {
+        return
+    }
+    
+    Write-SystemMessage -title "Configuring Scheduled Tasks"
+
+    try {
+        
         foreach ($task in $TasksConfig.Task) {
-            Write-SystemMessage -msg1 "- Importing task: " -msg2 $task.Name
-            Write-Log "Importing task: $($task.Name)"
+            Write-SystemMessage -msg "Importing task: " -value $task.Name
+            Write-Log "Importing task: $($task.Name)" -Level Info
             
             try {
                 # Handle remote or local task XML
@@ -1605,15 +1730,15 @@ function Set-ScheduledTasksConfiguration {
                 # Register the task
                 if (Test-Path $taskPath) {
                     Register-ScheduledTask -TaskName $task.Name -Xml (Get-Content $taskPath -Raw) -Force
-                    Write-Log "Task imported successfully: $($task.Name)"
-                    Write-SystemMessage -msg1 "- Task imported successfully: " -msg2 $task.Name
+                    Write-Log "Task imported successfully: $($task.Name)" -Level Info
+                    Write-SystemMessage -successMsg
                 } else {
                     Write-Log "Task XML file not found: $taskPath" -Level Warning
-                    Write-ErrorMessage -msg "Task XML file not found: $taskPath"
+                    Write-SystemMessage -errorMsg -msg "Task XML file not found" -value $taskPath
                 }
             } catch {
                 Write-Log "Failed to import task $($task.Name): $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to import task: $($task.Name)"
+                Write-SystemMessage -errorMsg
             }
         }
 
@@ -1622,7 +1747,7 @@ function Set-ScheduledTasksConfiguration {
     }
     catch {
         Write-Log "Error configuring scheduled tasks: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure scheduled tasks"
+        Write-SystemMessage -errorMsg -msg "Failed to configure scheduled tasks. Check the log for details."
         return $false
     }
 }
@@ -1695,13 +1820,18 @@ function Install-Fonts {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$FontConfig
     )
+
+    # Return if no font config is provided
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($FontConfig)) {
+        return
+    }
     
+    Write-SystemMessage -title "Installing Fonts"
+
     try {
-        Write-SystemMessage -Title "Installing Fonts"
-        
-        $ProgressPreference = 'SilentlyContinue'
         $tempDownloadFolder = "$env:TEMP\google_fonts"
         $script:tempFiles += $tempDownloadFolder
+        $progressPreference = 'SilentlyContinue'
 
         foreach ($fontName in $FontConfig.Font) {
             # Correct the font names for the GitHub repository
@@ -1709,13 +1839,13 @@ function Install-Fonts {
 
             # Check if the font is already installed
             if (Test-FontInstalled -FontName $correctFontName) {
-                Write-Log "Font $correctFontName is already installed. Skipping..."
-                Write-SystemMessage -msg1 "- $correctFontName is already installed. Skipping..." -msg1Color "Cyan"
+                Write-Log "Font $correctFontName is already installed. Skipping..." -Level Info
+                Write-SystemMessage -msg "Font $correctFontName is already installed. Skipping..."
                 continue
             }
 
-            Write-SystemMessage -msg1 "- Downloading & Installing: " -msg2 $correctFontName
-            Write-Log "Downloading & Installing $correctFontName from Google Fonts GitHub repository..."
+            Write-SystemMessage -msg "Installing" -value $correctFontName
+            Write-Log "Downloading & Installing $correctFontName from Google Fonts GitHub repository..." -Level Info
 
             try {
                 # Download the font files
@@ -1731,12 +1861,12 @@ function Install-Fonts {
                     Set-RegistryModification -Action add -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -Name $font.BaseName -Value $font.Name -Type String
                 }
 
-                Write-Log "Font installed: $correctFontName"
-                Write-SuccessMessage -msg "$correctFontName installed successfully"
+                Write-Log "Font installed: $correctFontName" -Level Info
+                Write-SystemMessage -successMsg
 
             } catch {
                 Write-Log "Failed to install font $correctFontName : $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to install font: $correctFontName"
+                Write-SystemMessage -errorMsg
                 continue
             }
         }
@@ -1746,7 +1876,7 @@ function Install-Fonts {
     }
     catch {
         Write-Log "Error installing fonts: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to install fonts"
+        Write-SystemMessage -errorMsg -msg "Failed to install fonts. Check the log for details."
         return $false
     }
     finally {
@@ -1763,112 +1893,124 @@ function Set-TaskbarConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$TaskbarConfig
     )
-    
-    try {
-        Write-SystemMessage -Title "Configuring Taskbar Settings"
 
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($TaskbarConfig)) {
+        return
+    }
+    
+    Write-SystemMessage -title "Configuring Taskbar"
+
+    try {
+        
         # Taskbar Alignment (Left = 0, Center = 1)
         if ($TaskbarConfig.TaskbarAlignment) {
-            Write-Log "Setting taskbar alignment to: $($TaskbarConfig.TaskbarAlignment)"
+            Write-Log "Setting taskbar alignment to: $($TaskbarConfig.TaskbarAlignment)" -Level Info
+            Write-SystemMessage -msg "Setting taskbar alignment to" -value $($TaskbarConfig.TaskbarAlignment)
             $alignmentValue = if ($TaskbarConfig.TaskbarAlignment -eq 'Left') { 0 } else { 1 }
-            Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Type DWord -Value $alignmentValue
+            try {
+                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Type DWord -Value $alignmentValue
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to set taskbar alignment: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+            }
         }
 
         # Meet Now
         if ($TaskbarConfig.DisableMeetNow -eq 'true') {
-            Write-Log "Disabling Meet Now..."
-            Write-SystemMessage -msg1 "- Disabling Meet Now..."
+            Write-Log "Disabling Meet Now..." -Level Info
+            Write-SystemMessage -msg "Disabling Meet Now..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Meet Now disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Meet Now: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Meet Now"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($TaskbarConfig.DisableMeetNow -eq 'false') {
-            Write-Log "Enabling Meet Now..."
-            Write-SystemMessage -msg1 "- Enabling Meet Now..."
+            Write-Log "Enabling Meet Now..." -Level Info
+            Write-SystemMessage -msg "Enabling Meet Now..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Meet Now enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Meet Now: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Meet Now"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Widgets
         if ($TaskbarConfig.DisableWidgets -eq 'true') {
-            Write-Log "Disabling Widgets..."
-            Write-SystemMessage -msg1 "- Disabling Widgets..."
+            Write-Log "Disabling Widgets..." -Level Info
+            Write-SystemMessage -msg "Disabling Widgets..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Widgets disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Widgets: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Widgets"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($TaskbarConfig.DisableWidgets -eq 'false') {
-            Write-Log "Enabling Widgets..."
-            Write-SystemMessage -msg1 "- Enabling Widgets..."
+            Write-Log "Enabling Widgets..." -Level Info
+            Write-SystemMessage -msg "Enabling Widgets..."
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Widgets enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Widgets: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Widgets"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Task View
         if ($TaskbarConfig.DisableTaskView -eq 'true') {
-            Write-Log "Disabling Task View button..."
-            Write-SystemMessage -msg1 "- Disabling Task View button..."
+            Write-Log "Disabling Task View button..." -Level Info
+            Write-SystemMessage -msg "Disabling Task View button..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Task View button disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Task View button: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Task View button"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($TaskbarConfig.DisableTaskView -eq 'false') {
             Write-Log "Enabling Task View button..."
-            Write-SystemMessage -msg1 "- Enabling Task View button..."
+            Write-SystemMessage -msg "Enabling Task View button..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Task View button enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Task View button: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Task View button"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Search
         if ($TaskbarConfig.DisableSearch -eq 'true') {
             Write-Log "Disabling Search icon..."
-            Write-SystemMessage -msg1 "- Disabling Search icon..."
+            Write-SystemMessage -msg "Disabling Search icon..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Type DWord -Value 0
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowSearchBox" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Search icon disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Search icon: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Search icon"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($TaskbarConfig.DisableSearch -eq 'false') {
             Write-Log "Enabling Search icon..."
-            Write-SystemMessage -msg1 "- Enabling Search icon..."
+            Write-SystemMessage -msg "Enabling Search icon..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Type DWord -Value 1
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowSearchBox" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Search icon enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Search icon: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Search icon"
+                Write-SystemMessage -errorMsg
             }
         }
 
@@ -1882,6 +2024,7 @@ function Set-TaskbarConfiguration {
     }
     catch {
         Write-Log "Error configuring taskbar: $($_.Exception.Message)" -Level Error
+        Write-SystemMessage -errorMsg -msg "Failed to configure taskbar. Check the logs for more details."
         return $false
     }
 }
@@ -1892,14 +2035,19 @@ function Set-PowerConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$PowerConfig
     )
+
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($PowerConfig)) {
+        return
+    }
     
+    Write-SystemMessage -title "Configuring Power Settings"
+
     try {
-        Write-SystemMessage -Title "Configuring Power Settings"
 
         # Power Plan
         if ($PowerConfig.PowerPlan) {
-            Write-SystemMessage -msg1 "- Setting power plan to: " -msg2 $PowerConfig.PowerPlan
             Write-Log "Setting power plan to: $($PowerConfig.PowerPlan)"
+            Write-SystemMessage -msg "Setting power plan to" -value $PowerConfig.PowerPlan
 
             $guid = switch ($PowerConfig.PowerPlan) {
                 "Balanced" { "381b4222-f694-41f0-9685-ff5bb260df2e" }
@@ -1907,92 +2055,100 @@ function Set-PowerConfiguration {
                 "PowerSaver" { "a1841308-3541-4fab-bc81-f71556f20b4a" }
                 default {
                     Write-Log "Invalid power plan specified: $($PowerConfig.PowerPlan)" -Level Warning
-                    Write-ErrorMessage -msg "Invalid power plan specified"
+                    Write-SystemMessage -errorMsg -msg "Invalid power plan specified"
                     return $false
                 }
             }
             
             try {
                 powercfg /setactive $guid
-                Write-SuccessMessage -msg "Power plan set to: $($PowerConfig.PowerPlan)"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to set power plan: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set power plan"
+                Write-SystemMessage -errorMsg
                 return $false
             }
         }
 
         # Sleep Settings
         if ($PowerConfig.DisableSleep -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling sleep..."
+            Write-Log "Disabling sleep..." -Level Info
+            Write-SystemMessage -msg "Disabling sleep..."
+
             try {
                 powercfg /change standby-timeout-ac 0
                 powercfg /change standby-timeout-dc 0
-                Write-SuccessMessage -msg "Sleep disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable sleep: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable sleep"
+                Write-SystemMessage -errorMsg
             }
+
         } elseif ($PowerConfig.DisableSleep -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling sleep..."
+            Write-Log "Enabling sleep..." -Level Info
+            Write-SystemMessage -msg "Enabling sleep..."
+            
             try {
                 powercfg /change standby-timeout-ac 30
                 powercfg /change standby-timeout-dc 30
-                Write-SuccessMessage -msg "Sleep enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable sleep: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable sleep"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Hibernate Settings
         if ($PowerConfig.DisableHibernate -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling hibernate..."
+            Write-Log "Disabling hibernate..." -Level Info
+            Write-SystemMessage -msg "Disabling hibernate..."
             try {
                 powercfg /hibernate off
-                Write-SuccessMessage -msg "Hibernate disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable hibernate: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable hibernate"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PowerConfig.DisableHibernate -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling hibernate..."
+            Write-Log "Enabling hibernate..." -Level Info
+            Write-SystemMessage -msg "Enabling hibernate..."
             try {
                 powercfg /hibernate on
-                Write-SuccessMessage -msg "Hibernate enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable hibernate: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable hibernate"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Timeouts (if specified)
         if ($PowerConfig.MonitorTimeout) {
-            Write-SystemMessage -msg1 "- Setting monitor timeout to: " -msg2 "$($PowerConfig.MonitorTimeout) minutes"
+            Write-Log "Setting monitor timeout to: $($PowerConfig.MonitorTimeout) minutes" -Level Info
+            Write-SystemMessage -msg "Setting monitor timeout to" -value "$($PowerConfig.MonitorTimeout) minutes"
             powercfg /change monitor-timeout-ac $PowerConfig.MonitorTimeout
             powercfg /change monitor-timeout-dc $PowerConfig.MonitorTimeout
         }
 
         # Fast Startup
         if ($PowerConfig.DisableFastStartup -eq 'true') {
-            Write-SystemMessage -msg1 "- Disabling fast startup..."
-            Write-Log "Disabling fast startup..."
+            Write-SystemMessage -msg "Disabling fast startup..."
+            Write-Log "Disabling fast startup..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power" -Name "HiberbootEnabled" -Type DWord -Value 0
-                Write-SuccessMessage -msg "Fast startup disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable fast startup: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable fast startup"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($PowerConfig.DisableFastStartup -eq 'false') {
-            Write-SystemMessage -msg1 "- Enabling fast startup..."
-            Write-Log "Enabling fast startup..."
+            Write-SystemMessage -msg "Enabling fast startup..."
+            Write-Log "Enabling fast startup..." -Level Info
             try {
                 Set-RegistryModification -Action add -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power" -Name "HiberbootEnabled" -Type DWord -Value 1
-                Write-SuccessMessage -msg "Fast startup enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable fast startup: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable fast startup"
+                Write-SystemMessage -errorMsg
             }
         }
 
@@ -2001,7 +2157,7 @@ function Set-PowerConfiguration {
     }
     catch {
         Write-Log "Error configuring power settings: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure power settings"
+        Write-SystemMessage -errorMsg -msg "Failed to configure power settings. Check the logs for more details."
         return $false
     }
 }
@@ -2012,32 +2168,37 @@ function Set-RegistryEntries {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$RegistryConfig
     )
+
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($RegistryConfig)) {
+        return
+    }
     
     try {
-        Write-SystemMessage -Title "Applying Registry Modifications"
-
+        
         # Process registry additions
         if ($RegistryConfig.Add) {
-            Write-SystemMessage -msg1 "- Processing registry additions..."
+           
+            Write-SystemMessage -title "Adding Registry Entries"
+
             foreach ($entry in $RegistryConfig.Add.Entry) {
                 # Expand environment variables in the value
                 $expandedValue = $ExecutionContext.InvokeCommand.ExpandString($entry.Value)
 
-                Write-SystemMessage -msg1 "- Adding registry entry: " -msg2 "Path=$($entry.Path), Name=$($entry.Name)"
-                Write-Log "Adding registry entry: Path=$($entry.Path), Name=$($entry.Name), Type=$($entry.Type), Value=$expandedValue"
+                Write-SystemMessage -msg "Adding registry entry" -value "Path=$($entry.Path), Name=$($entry.Name)"
+                Write-Log "Adding registry entry: Path=$($entry.Path), Name=$($entry.Name), Type=$($entry.Type), Value=$expandedValue" -Level Info
 
                 try {
                     if (-not (Test-Path $entry.Path)) {
                         New-Item -Path $entry.Path -Force | Out-Null
-                        Write-Log "Created registry path: $($entry.Path)"
+                        Write-Log "Created registry path: $($entry.Path)" -Level Info
                     }
 
                     Set-ItemProperty -Path $entry.Path -Name $entry.Name -Value $expandedValue -Type $entry.Type -Force
-                    Write-SuccessMessage -msg "Registry entry added successfully"
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to add registry entry: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to add registry entry: Path=$($entry.Path), Name=$($entry.Name)"
+                    Write-SystemMessage -errorMsg
                     continue
                 }
             }
@@ -2045,34 +2206,36 @@ function Set-RegistryEntries {
 
         # Process registry removals
         if ($RegistryConfig.Remove) {
-            Write-SystemMessage -msg1 "- Processing registry removals..."
+            
+            Write-SystemMessage -title "Removing Registry Entries"
+
             foreach ($entry in $RegistryConfig.Remove.Entry) {
-                Write-SystemMessage -msg1 "- Removing registry entry: " -msg2 "Path=$($entry.Path), Name=$($entry.Name)"
-                Write-Log "Removing registry entry: Path=$($entry.Path), Name=$($entry.Name)"
+                Write-SystemMessage -msg "Removing registry entry" -value "Path=$($entry.Path), Name=$($entry.Name)"
+                Write-Log "Removing registry entry: Path=$($entry.Path), Name=$($entry.Name)" -Level Info
 
                 try {
                     if (Test-Path $entry.Path) {
                         Remove-ItemProperty -Path $entry.Path -Name $entry.Name -Force -ErrorAction Stop
-                        Write-SuccessMessage -msg "Registry entry removed successfully"
+                        Write-SystemMessage -successMsg
                     }
                     else {
                         Write-Log "Registry path not found: $($entry.Path)" -Level Warning
-                        Write-ErrorMessage -msg "Registry path not found"
+                        Write-SystemMessage -errorMsg -msg "Registry path not found"
                     }
                 } catch {
                     Write-Log "Failed to remove registry entry: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to remove registry entry: Path=$($entry.Path), Name=$($entry.Name)"
+                    Write-SystemMessage -errorMsg
                     continue
                 }
             }
         }
 
-        Write-Log "Registry modifications completed successfully"
+        Write-Log "Registry modifications completed successfully" -Level Info
         return $true
     }
     catch {
         Write-Log "Error modifying registry entries: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to modify registry entries"
+        Write-SystemMessage -errorMsg -msg "Failed to modify registry entries. Check the logs for more details."
         return $false
     }
 }
@@ -2083,9 +2246,14 @@ function Set-WindowsFeaturesConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$FeaturesConfig
     )
+
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($FeaturesConfig)) {
+        return
+    }
     
+    Write-SystemMessage -title "Configuring Windows Features"
+
     try {
-        Write-SystemMessage -Title "Configuring Windows Features"
 
         # Get list of available Windows features
         $availableFeatures = Get-WindowsOptionalFeature -Online | Select-Object -ExpandProperty FeatureName
@@ -2094,21 +2262,20 @@ function Set-WindowsFeaturesConfiguration {
             # Validate feature exists
             if ($feature.Name -notin $availableFeatures) {
                 Write-Log "Feature not found: $($feature.Name)" -Level Error
-                Write-ErrorMessage -msg "Feature not found: $($feature.Name)"
+                Write-SystemMessage -errorMsg -msg "Feature not found" -value "$($feature.Name)"
                 continue
             }
 
-            Write-SystemMessage -msg1 "- Processing feature: " -msg2 $feature.Name
-            Write-Log "Processing feature: $($feature.Name) with state: $($feature.State)"
-            
+    
             try {
                 switch ($feature.State.ToLower()) {
                     'enabled' {
                         Write-Log "Enabling feature: $($feature.Name)"
+                        Write-SystemMessage -msg "Enabling feature" -value $feature.Name
                         $currentState = Get-WindowsOptionalFeature -Online -FeatureName $feature.Name
                         if ($currentState.State -eq 'Enabled') {
                             Write-Log "Feature $($feature.Name) is already enabled" -Level Warning
-                            Write-SystemMessage -msg1 "! Feature already enabled: " -msg2 $feature.Name -msg1Color "DarkYellow"
+                            Write-SystemMessage -warningMsg -msg "Feature already enabled" -value $feature.Name
                             continue
                         }
                         $result = Enable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart | Out-Null
@@ -2116,14 +2283,15 @@ function Set-WindowsFeaturesConfiguration {
                             $script:restartRequired = $true
                             Write-Log "Restart will be required for feature: $($feature.Name)"
                         }
-                        Write-SuccessMessage -msg "Feature enabled: $($feature.Name)"
+                        Write-SystemMessage -successMsg
                     }
                     'disabled' {
                         Write-Log "Disabling feature: $($feature.Name)"
+                        Write-SystemMessage -msg "Disabling feature" -value $feature.Name
                         $currentState = Get-WindowsOptionalFeature -Online -FeatureName $feature.Name
                         if ($currentState.State -eq 'Disabled') {
                             Write-Log "Feature $($feature.Name) is already disabled" -Level Warning
-                            Write-SystemMessage -msg1 "! Feature already disabled: " -msg2 $feature.Name -msg1Color "DarkYellow"
+                            Write-SystemMessage -warningMsg -msg "Feature already disabled" -value $feature.Name
                             continue
                         }
                         $result = Disable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart | Out-Null
@@ -2131,29 +2299,29 @@ function Set-WindowsFeaturesConfiguration {
                             $script:restartRequired = $true
                             Write-Log "Restart will be required for feature: $($feature.Name)"
                         }
-                        Write-SuccessMessage -msg "Feature disabled: $($feature.Name)"
+                        Write-SystemMessage -successMsg
                     }
                     default {
                         Write-Log "Invalid state specified for feature $($feature.Name): $($feature.State)" -Level Warning
-                        Write-ErrorMessage -msg "Invalid state specified for feature: $($feature.Name)"
+                        Write-SystemMessage -errorMsg -msg "Invalid state specified for feature: $($feature.Name)"
                     }
                 }
             } catch {
                 $errorMsg = "Failed to configure feature $($feature.Name): $($_.Exception.Message)"
                 Write-Log $errorMsg -Level Error
-                Write-ErrorMessage -msg $errorMsg
+                Write-SystemMessage -errorMsg -msg $errorMsg
                 if ($_.Exception.Message -match "restart") {
                     $script:restartRequired = $true
                 }
             }
         }
 
-        Write-Log "Windows features configuration completed successfully"
+        Write-Log "Windows features configuration completed successfully" -Level Info
         return $true
     }
     catch {
         Write-Log "Error configuring Windows features: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure Windows features"
+        Write-SystemMessage -errorMsg -msg "Failed to configure Windows features. Check the logs for more details."
         return $false
     }
 }
@@ -2165,68 +2333,92 @@ function Set-GoogleConfiguration {
         [System.Xml.XmlElement]$GoogleConfig
     )
     
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($GoogleConfig)) {
+        return
+    }
+
+    Write-SystemMessage -title "Configuring Google Workspace"
+
     try {
-        Write-SystemMessage -Title "Configuring Google Products"
 
         # Google Drive
         if ($GoogleConfig.InstallGoogleDrive -eq 'true') {
             if (Test-ProgramInstalled 'Google Drive') {
-                Write-Log "Google Drive already installed. Skipping..."
-                Write-SystemMessage -msg1 "- Google Drive is already installed. Skipping installation."
+                Write-Log "Google Drive already installed. Skipping..." -Level Info
                 return $true
             }
 
-            Write-Log "Installing Google Drive..."
-            Write-SystemMessage -msg1 "- Installing: " -msg2 "Google Drive"
+            Write-Log "Installing Google Drive..." -Level Info
+            Write-SystemMessage -msg "Installing Google Drive..."
 
-            $driveSetupUrl = "https://dl.google.com/drive-file-stream/GoogleDriveSetup.exe"
-            $driveSetupPath = Join-Path $env:TEMP "GoogleDriveSetup.exe"
-            $script:tempFiles += $driveSetupPath
-            
-            Invoke-WebRequest -Uri $driveSetupUrl -OutFile $driveSetupPath | Out-Null
-            Start-Process -FilePath $driveSetupPath -ArgumentList "/silent /install" -Wait | Out-Null
-            Write-SuccessMessage -msg "Google Drive installed successfully"
-        } elseif ($GoogleConfig.InstallGoogleDrive -eq 'false') {
-            Write-Log "Uninstalling Google Drive..."
-            Write-SystemMessage -msg1 "- Uninstalling: " -msg2 "Google Drive"
+            try {
+                $driveSetupUrl = "https://dl.google.com/drive-file-stream/GoogleDriveSetup.exe"
+                $driveSetupPath = Join-Path $env:TEMP "GoogleDriveSetup.exe"
+                $script:tempFiles += $driveSetupPath
+                
+                Invoke-WebRequest -Uri $driveSetupUrl -OutFile $driveSetupPath | Out-Null
+                Start-Process -FilePath $driveSetupPath -ArgumentList "/silent /install" -Wait | Out-Null
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to install Google Drive: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+            }
+
+        }
+        
+        if ($GoogleConfig.InstallGoogleDrive -eq 'false') {
+            Write-Log "Uninstalling Google Drive..." -Level Info
+            Write-SystemMessage -msg "Uninstalling Google Drive..."
             try {
                 $uninstallString = (Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" | 
                     Where-Object { $_.DisplayName -like "*Google Drive*" }).UninstallString
                 if ($uninstallString) {
                     Start-Process -FilePath $uninstallString -ArgumentList "/silent /uninstall" -Wait | Out-Null
-                    Write-SuccessMessage -msg "Google Drive uninstalled successfully"
+                    Write-SystemMessage -successMsg
                 }
             } catch {
                 Write-Log "Failed to uninstall Google Drive: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to uninstall Google Drive"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Google Chrome
         if ($GoogleConfig.InstallGoogleChrome -eq 'true') {
-            Write-Log "Installing Google Chrome..."
-            Write-SystemMessage -msg1 "- Installing: " -msg2 "Google Chrome"
+            if (Test-ProgramInstalled 'Google Chrome') {
+                Write-Log "Google Chrome already installed. Skipping..." -Level Info
+                return $true
+            }
+
+            Write-Log "Installing Google Chrome..." -Level Info
+            Write-SystemMessage -msg "Installing Google Chrome..."
             
-            $chromeSetupUrl = "https://dl.google.com/chrome/install/latest/chrome_installer.exe"
-            $chromeSetupPath = Join-Path $env:TEMP "chrome_installer.exe"
-            $script:tempFiles += $chromeSetupPath
-            
-            Invoke-WebRequest -Uri $chromeSetupUrl -OutFile $chromeSetupPath | Out-Null
-            Start-Process -FilePath $chromeSetupPath -ArgumentList "/silent /install" -Wait | Out-Null
-            Write-SuccessMessage -msg "Google Chrome installed successfully"
-        } elseif ($GoogleConfig.InstallGoogleChrome -eq 'false') {
-            Write-Log "Uninstalling Google Chrome..."
-            Write-SystemMessage -msg1 "- Uninstalling: " -msg2 "Google Chrome"
+            try {
+                $chromeSetupUrl = "https://dl.google.com/chrome/install/latest/chrome_installer.exe"
+                $chromeSetupPath = Join-Path $env:TEMP "chrome_installer.exe"
+                $script:tempFiles += $chromeSetupPath
+                
+                Invoke-WebRequest -Uri $chromeSetupUrl -OutFile $chromeSetupPath | Out-Null
+                Start-Process -FilePath $chromeSetupPath -ArgumentList "/silent /install" -Wait | Out-Null
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to install Google Chrome: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+            }
+        }
+        
+        if ($GoogleConfig.InstallGoogleChrome -eq 'false') {
+            Write-Log "Uninstalling Google Chrome..." -Level Info
+            Write-SystemMessage -msg "Uninstalling Google Chrome..."
             try {
                 $uninstallString = (Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" | 
                     Where-Object { $_.DisplayName -like "*Google Chrome*" }).UninstallString
                 if ($uninstallString) {
                     Start-Process -FilePath $uninstallString -ArgumentList "--uninstall --force-uninstall" -Wait | Out-Null
-                    Write-SuccessMessage -msg "Google Chrome uninstalled successfully"
+                    Write-SystemMessage -successMsg
                 }
             } catch {
                 Write-Log "Failed to uninstall Google Chrome: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to uninstall Google Chrome"
+                Write-SystemMessage -errorMsg
             }
         }
 
@@ -2234,7 +2426,7 @@ function Set-GoogleConfiguration {
         if ($GoogleConfig.InstallGCPW -eq 'true') {
             if (-not $GoogleConfig.EnrollmentToken) {
                 Write-Log "GCPW installation skipped - EnrollmentToken is required but was not provided" -Level Error
-                Write-ErrorMessage -msg "GCPW installation requires an EnrollmentToken in the configuration"
+                Write-SystemMessage -errorMsg -msg "GCPW installation requires an EnrollmentToken in the configuration. Please fix your configuration file."
                 return $false
             }
 
@@ -2249,66 +2441,80 @@ function Set-GoogleConfiguration {
             if (Test-ProgramInstalled 'Credential Provider') {
                 Write-Log "GCPW already installed. Skipping..."
             } else {
-                Write-Log "Installing Google Credential Provider for Windows (GCPW)..."
-                Write-SystemMessage -msg1 "- Installing: " -msg2 "Google Credential Provider for Windows (GCPW)"
+                Write-Log "Installing Google Credential Provider for Windows (GCPW)..." -Level Info
+                Write-SystemMessage -msg "Installing Google Credential Provider for Windows (GCPW)..."
                 
-                Invoke-WebRequest -Uri $gcpwUrl -OutFile "$env:TEMP\$gcpwFileName" | Out-Null
+                try {
+                    Invoke-WebRequest -Uri $gcpwUrl -OutFile "$env:TEMP\$gcpwFileName" | Out-Null
+                } catch {
+                    Write-Log "Failed to download GCPW installer: $($_.Exception.Message)" -Level Error
+                    Write-SystemMessage -errorMsg -msg "Failed to download GCPW installer: $($_.Exception.Message)"
+                    return $false
+                }
     
                 try {
                     $arguments = "/i ""$env:TEMP\$gcpwFileName"" /quiet"
                     $installProcess = Start-Process msiexec.exe -ArgumentList $arguments -PassThru -Wait | Out-Null
     
                     if ($installProcess.ExitCode -eq 0) {
-                        Write-Log "GCPW Installation completed successfully!"
-                        
+                        Write-Log "GCPW Installation completed successfully!" -Level Info
+                        Write-SystemMessage -successMsg
+
                         # Set the required EnrollmentToken
                         Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Policies\Google\CloudManagement" -name "EnrollmentToken" -type "String" -value $GoogleConfig.EnrollmentToken | Out-Null
                         
                         # Only set domains_allowed_to_login if it was provided
                         if ($GoogleConfig.DomainsAllowedToLogin) {
                             Set-RegistryModification -action add -path "HKLM:\Software\Google\GCPW" -name "domains_allowed_to_login" -type "String" -value $GoogleConfig.DomainsAllowedToLogin | Out-Null
-                            Write-Log 'Domains allowed to login has been set successfully'
+                            Write-Log 'Domains allowed to login has been set successfully' -Level Info
                         } else {
-                            Write-Log 'DomainsAllowedToLogin not provided. Skipping setting domains.'
+                            Write-Log 'DomainsAllowedToLogin not provided. Skipping setting domains.' -Level Info
                         }
                     } else {
-                        Write-ErrorMessage -msg "- Failed to install Google Credential Provider for Windows (GCPW). Exit code: $($installProcess.ExitCode)"
-                        Write-Log "Failed to install GCPW. Exit code: $($installProcess.ExitCode)"
+                        Write-Log "Failed to install GCPW. Exit code: $($installProcess.ExitCode)" -Level Error
+                        Write-SystemMessage -errorMsg
                     }
                 } finally {
                     Remove-Item -Path "$env:TEMP\$gcpwFileName" -Force -ErrorAction SilentlyContinue | Out-Null
                 }
             }
+        }
 
-            Write-SuccessMessage -msg "Google Credential Provider for Windows (GCPW) installation completed."
-
-        } elseif ($GoogleConfig.InstallGCPW -eq 'false') {
-            Write-Log "Uninstalling Google Credential Provider for Windows (GCPW)..."
-            Write-SystemMessage -msg1 "- Uninstalling: " -msg2 "Google Credential Provider for Windows (GCPW)"
+        if ($GoogleConfig.InstallGCPW -eq 'false') {
+            Write-Log "Uninstalling Google Credential Provider for Windows (GCPW)..." -Level Info
+            Write-SystemMessage -msg "Uninstalling Google Credential Provider for Windows (GCPW)..."
             try {
                 $uninstallString = (Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" | 
                     Where-Object { $_.DisplayName -like "*Google Credential Provider*" }).UninstallString
                 if ($uninstallString) {
                     Start-Process msiexec.exe -ArgumentList "/x $uninstallString /quiet" -Wait | Out-Null
-                    Write-SuccessMessage -msg "GCPW uninstalled successfully"
+                    Write-SystemMessage -successMsg
                 }
             } catch {
                 Write-Log "Failed to uninstall GCPW: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to uninstall GCPW"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Allowed Domains
         if ($GoogleConfig.DomainsAllowedToLogin) {
-            Write-Log "Setting allowed domains..."
-            Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Google\Chrome" -Name "AuthServerAllowlist" -Type String -Value $GoogleConfig.DomainsAllowedToLogin
+            Write-Log "Setting allowed domains..." -Level Info
+            Write-SystemMessage -msg "Setting allowed domains..."
+            try {
+                Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Policies\Google\Chrome" -name "AuthServerAllowlist" -type "String" -value $GoogleConfig.DomainsAllowedToLogin
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to set allowed domains: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+            }
         }
 
-        Write-Log "Google configuration completed successfully"
+        Write-Log "Google configuration completed successfully" -Level Info
         return $true
     }
     catch {
         Write-Log "Error configuring Google products: $($_.Exception.Message)" -Level Error
+        Write-SystemMessage -errorMsg -msg "Failed to configure Google products. Check the logs for more details."
         return $false
     }
 }
@@ -2320,9 +2526,14 @@ function Set-OfficeConfiguration {
         [System.Xml.XmlElement]$OfficeConfig
     )
     
-    try {
-        Write-SystemMessage -Title "Configuring Microsoft Office"
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($OfficeConfig)) {
+        return
+    }
 
+    Write-SystemMessage -title "Configuring Microsoft Office"
+
+    try {
+        
         # Create Office configuration XML
         $configXml = @"
 <Configuration>
@@ -2342,7 +2553,7 @@ function Set-OfficeConfiguration {
         $script:tempFiles += $configPath
 
         # Download Office Deployment Tool
-        Write-SystemMessage -msg1 "- Downloading Office Deployment Tool..."
+        Write-SystemMessage -msg "Downloading Office Deployment Tool..."
         Write-Log "Downloading Office Deployment Tool..."
         
         $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_16731-20398.exe"
@@ -2351,27 +2562,41 @@ function Set-OfficeConfiguration {
         
         try {
             Invoke-WebRequest -Uri $odtUrl -OutFile $odtPath | Out-Null
-            Write-SuccessMessage -msg "Office Deployment Tool downloaded successfully"
+            Write-SystemMessage -successMsg
         } catch {
             Write-Log "Failed to download Office Deployment Tool: $($_.Exception.Message)" -Level Error
-            Write-ErrorMessage -msg "Failed to download Office Deployment Tool"
+            Write-SystemMessage -errorMsg
             return $false
         }
 
         # Extract ODT
-        Write-SystemMessage -msg1 "- Extracting Office Deployment Tool..."
+        Write-SystemMessage -msg "Extracting Office Deployment Tool..."
         Write-Log "Extracting Office Deployment Tool..."
-        Start-Process -FilePath $odtPath -ArgumentList "/quiet /extract:$env:TEMP\ODT" -Wait | Out-Null
+        try {
+            Start-Process -FilePath $odtPath -ArgumentList "/quiet /extract:$env:TEMP\ODT" -Wait | Out-Null
+            Write-SystemMessage -successMsg
+        } catch {
+            Write-Log "Failed to extract Office Deployment Tool: $($_.Exception.Message)" -Level Error
+            Write-SystemMessage -errorMsg
+            return $false
+        }
 
         # Install Office
-        Write-SystemMessage -msg1 "- Installing Microsoft Office..."
+        Write-SystemMessage -msg "Installing Microsoft Office..."
         Write-Log "Installing Microsoft Office..."
         $setupPath = Join-Path $env:TEMP "ODT\setup.exe"
-        Start-Process -FilePath $setupPath -ArgumentList "/configure `"$configPath`"" -Wait | Out-Null
+        try {
+            Start-Process -FilePath $setupPath -ArgumentList "/configure `"$configPath`"" -Wait | Out-Null
+            Write-SystemMessage -successMsg
+        } catch {
+            Write-Log "Failed to install Microsoft Office: $($_.Exception.Message)" -Level Error
+            Write-SystemMessage -errorMsg
+            return $false
+        }
 
         # Activate Office if license key provided
         if ($OfficeConfig.LicenseKey) {
-            Write-SystemMessage -msg1 "- Activating Microsoft Office..."
+            Write-SystemMessage -msg "Activating Microsoft Office..."
             Write-Log "Activating Microsoft Office..."
             
             $osppPath = "${env:ProgramFiles(x86)}\Microsoft Office\Office16\OSPP.VBS"
@@ -2380,24 +2605,23 @@ function Set-OfficeConfiguration {
                     cscript $osppPath /inpkey:$($OfficeConfig.LicenseKey) | Out-Null
                     Start-Sleep -Seconds 2
                     cscript $osppPath /act | Out-Null
-                    Write-SuccessMessage -msg "Microsoft Office activated successfully"
+                    Write-SystemMessage -successMsg
                 } catch {
                     Write-Log "Failed to activate Office: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to activate Office"
+                    Write-SystemMessage -errorMsg
                 }
             } else {
                 Write-Log "Office activation path not found: $osppPath" -Level Warning
-                Write-ErrorMessage -msg "Office activation path not found"
+                Write-SystemMessage -errorMsg -msg "Office activation path not found" -value $osppPath
             }
         }
 
-        Write-Log "Office configuration completed successfully"
-        Write-SuccessMessage -msg "Microsoft Office installation completed"
+        Write-Log "Office configuration completed successfully" -Level Info
         return $true
     }
     catch {
         Write-Log "Error configuring Office: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure Microsoft Office"
+        Write-SystemMessage -errorMsg -msg "Failed to configure Microsoft Office. Check the log for more details."
         return $false
     }
 }
@@ -2408,34 +2632,41 @@ function Set-ThemeConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$ThemeConfig
     )
+
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($ThemeConfig)) {
+        return
+    }
+
+    Write-SystemMessage -title "Configuring Theme Settings"
     
     try {
-        Write-SystemMessage -Title "Configuring Theme Settings"
 
         # Theme Mode (Dark/Light)
         if ($ThemeConfig.DarkMode) {
             if ($ThemeConfig.DarkMode -eq 'true') {
-                Write-SystemMessage -msg1 "- Enabling dark mode..."
+                Write-Log "Enabling dark mode..." -Level Info
+                Write-SystemMessage -msg "Enabling dark mode..."
                 try {
-                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Type DWord -Value 0
-                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Type DWord -Value 0
-                    Write-SuccessMessage -msg "Dark mode enabled"
+                    Set-RegistryModification -action add -path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -name "AppsUseLightTheme" -type "DWord" -value 0
+                    Set-RegistryModification -action add -path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -name "SystemUsesLightTheme" -type "DWord" -value 0
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to enable dark mode: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to enable dark mode"
+                    Write-SystemMessage -errorMsg
                 }
             }
             elseif ($ThemeConfig.DarkMode -eq 'false') {
-                Write-SystemMessage -msg1 "- Enabling light mode..."
+                Write-Log "Enabling light mode..." -Level Info
+                Write-SystemMessage -msg "Enabling light mode..."
                 try {
-                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Type DWord -Value 1
-                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Type DWord -Value 1
-                    Write-SuccessMessage -msg "Light mode enabled"
+                    Set-RegistryModification -action add -path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -name "AppsUseLightTheme" -type "DWord" -value 1
+                    Set-RegistryModification -action add -path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -name "SystemUsesLightTheme" -type "DWord" -value 1
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to enable light mode: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to enable light mode"
+                    Write-SystemMessage -errorMsg
                 }
             }
         }
@@ -2443,32 +2674,36 @@ function Set-ThemeConfiguration {
         # Transparency Effects
         if ($ThemeConfig.TransparencyEffects) {
             if ($ThemeConfig.TransparencyEffects -eq 'false') {
-                Write-SystemMessage -msg1 "- Disabling transparency effects..."
+                Write-Log "Disabling transparency effects..." -Level Info
+                Write-SystemMessage -msg "Disabling transparency effects..."
                 try {
-                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Type DWord -Value 0
-                    Write-SuccessMessage -msg "Transparency effects disabled"
+                    Set-RegistryModification -action add -path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -name "EnableTransparency" -type "DWord" -value 0
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to disable transparency effects: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to disable transparency effects"
+                    Write-SystemMessage -errorMsg
                 }
             }
             elseif ($ThemeConfig.TransparencyEffects -eq 'true') {
-                Write-SystemMessage -msg1 "- Enabling transparency effects..."
+                Write-Log "Enabling transparency effects..." -Level Info
+                Write-SystemMessage -msg "Enabling transparency effects..."
                 try {
-                    Set-RegistryModification -Action add -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Type DWord -Value 1
-                    Write-SuccessMessage -msg "Transparency effects enabled"
+                    Set-RegistryModification -action add -path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -name "EnableTransparency" -type "DWord" -value 1
+                    Write-SystemMessage -successMsg
                 }
                 catch {
                     Write-Log "Failed to enable transparency effects: $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to enable transparency effects"
+                    Write-SystemMessage -errorMsg
                 }
             }
         }
 
         # Wallpaper
         if ($ThemeConfig.WallpaperPath) {
-            Write-SystemMessage -msg1 "- Setting wallpaper from: " -msg2 $ThemeConfig.WallpaperPath
+            Write-Log "Setting wallpaper from: $ThemeConfig.WallpaperPath" -Level Info
+            Write-SystemMessage -msg "Setting wallpaper from" -value $ThemeConfig.WallpaperPath
+
             try {
                 $wallpaperPath = $ThemeConfig.WallpaperPath
                 if ($wallpaperPath -match "^https?://") {
@@ -2485,11 +2720,11 @@ function Set-ThemeConfiguration {
 
                         $wallpaperPath = "$env:TEMP\$wallpaperFileName"
                         $script:tempFiles += $wallpaperPath
-                        Write-Log "Wallpaper downloaded successfully to: $wallpaperPath"
+                        Write-Log "Wallpaper downloaded successfully to: $wallpaperPath" -Level Info
                     }
                     catch {
                         Write-Log "Failed to download wallpaper from: $wallpaperPath" -Level Error
-                        Write-ErrorMessage -msg "Failed to download wallpaper"
+                        Write-SystemMessage -errorMsg -msg "Failed to download wallpaper from" -value $wallpaperPath
                         return $false
                     }
                 }
@@ -2513,23 +2748,24 @@ public class Wallpaper
                 Add-Type -TypeDefinition $setwallpapersrc
                 [Wallpaper]::SetWallpaper($wallpaperPath)
                 
-                Write-Log "Wallpaper set successfully."
-                Write-SuccessMessage -msg "Wallpaper set successfully"
+                Write-Log "Wallpaper set successfully." -Level Info
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Error setting wallpaper: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set wallpaper"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Lock Screen
         if ($ThemeConfig.LockScreenPath) {
-            Write-SystemMessage -msg1 "- Setting lock screen from: " -msg2 $ThemeConfig.LockScreenPath
+            Write-Log "Setting lock screen from: $ThemeConfig.LockScreenPath" -Level Info
+            Write-SystemMessage -msg "Setting lock screen from" -value $ThemeConfig.LockScreenPath
             try {
                 $lockScreenPath = $ThemeConfig.LockScreenPath
                 if ($lockScreenPath -match "^https?://") {
                     try {
-                        Write-Log "Downloading lock screen from: $lockScreenPath"
+                        Write-Log "Downloading lock screen from: $lockScreenPath" -Level Info
                     
                         # Extract filename from URL or use a default
                         $lockScreenFileName = [System.IO.Path]::GetFileName($lockScreenPath)
@@ -2541,11 +2777,11 @@ public class Wallpaper
 
                         $lockScreenPath = "$env:TEMP\$lockScreenFileName"
                         $script:tempFiles += $lockScreenPath
-                        Write-Log "Lock screen downloaded successfully to: $lockScreenPath"
+                        Write-Log "Lock screen downloaded successfully to: $lockScreenPath" -Level Info
                     }
                     catch {
                         Write-Log "Failed to download lock screen from: $lockScreenPath" -Level Error
-                        Write-ErrorMessage -msg "Failed to download lock screen"
+                        Write-SystemMessage -errorMsg -msg "Failed to download lock screen from" -value $lockScreenPath
                         return $false
                     }
                 }
@@ -2585,20 +2821,20 @@ public class Wallpaper
                 # Set the lock screen image asynchronously
                 AwaitAction([Windows.System.UserProfile.LockScreen]::SetImageFileAsync($image))
         
-                Write-Log "Lock screen set successfully."
-                Write-SuccessMessage -msg "Lock screen set successfully"
+                Write-Log "Lock screen set successfully." -Level Info
+                Write-SystemMessage -successMsg
             }
         }
             catch {
                 Write-Log "Error setting lock screen: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set lock screen"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Desktop Icon Size
         if ($ThemeConfig.DesktopIconSize) {
-            Write-SystemMessage -msg1 "- Setting desktop icon size..."
-            Write-Log "Setting desktop icon size..."
+            Write-SystemMessage -msg "Setting desktop icon size..."
+            Write-Log "Setting desktop icon size..." -Level Info
             try {
                 $sizeValue = switch ($ThemeConfig.DesktopIconSize) {
                     "Small" { 0 }
@@ -2610,11 +2846,11 @@ public class Wallpaper
                     }
                 }
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop" -Name "IconSize" -Type DWord -Value $sizeValue
-                Write-SuccessMessage -msg "Desktop icon size set successfully"
+                Write-SystemMessage -successMsg
             }
             catch {
                 Write-Log "Failed to set desktop icon size: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to set desktop icon size"
+                Write-SystemMessage -errorMsg
             }
         }
 
@@ -2624,7 +2860,7 @@ public class Wallpaper
 }
     catch {
         Write-Log "Error configuring theme settings: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure theme settings"
+        Write-SystemMessage -errorMsg -msg "Failed to configure theme settings. Check the log for more details."
         return $false
     }
 }
@@ -2635,67 +2871,73 @@ function Set-TweaksConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$TweaksConfig
     )
+
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($TweaksConfig)) {
+        return
+    }
     
+    Write-SystemMessage -title "Applying System Tweaks"
+
     try {
-        Write-SystemMessage -Title "Applying System Tweaks"
 
         # Classic Right-Click Menu
         if ($TweaksConfig.ClassicRightClickMenu -eq 'true') {
-            Write-Log "Enabling classic right-click menu..."
-            Write-SystemMessage -msg1 "- Enabling classic right-click menu..."
+            Write-Log "Enabling classic right-click menu..." -Level Info
+            Write-SystemMessage -msg "Enabling classic right-click menu..."
             try {
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" -Name "(Default)" -Type String -Value ""
-                Write-SuccessMessage -msg "Classic right-click menu enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable classic right-click menu: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable classic right-click menu"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($TweaksConfig.ClassicRightClickMenu -eq 'false') {
-            Write-Log "Disabling classic right-click menu..."
-            Write-SystemMessage -msg1 "- Disabling classic right-click menu..."
+            Write-Log "Disabling classic right-click menu..." -Level Info
+            Write-SystemMessage -msg "Disabling classic right-click menu..."
             try {
                 Remove-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
-                Write-SuccessMessage -msg "Classic right-click menu disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable classic right-click menu: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable classic right-click menu"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # God Mode
         if ($TweaksConfig.EnableGodMode -eq 'true') {
-            Write-Log "Creating God Mode folder..."
-            Write-SystemMessage -msg1 "- Creating God Mode folder..."
+            Write-Log "Creating God Mode folder..." -Level Info
+            Write-SystemMessage -msg "Creating God Mode folder..."
             try {
                 $godModePath = Join-Path $env:USERPROFILE "Desktop\GodMode.{ED7BA470-8E54-465E-825C-99712043E01C}"
                 if (-not (Test-Path $godModePath)) {
                     New-Item -Path $godModePath -ItemType Directory -Force | Out-Null
-                    Write-SuccessMessage -msg "God Mode folder created"
+                    Write-SystemMessage -successMsg
                 }
             } catch {
                 Write-Log "Failed to create God Mode folder: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to create God Mode folder"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($TweaksConfig.EnableGodMode -eq 'false') {
-            Write-Log "Removing God Mode folder..."
-            Write-SystemMessage -msg1 "- Removing God Mode folder..."
+            Write-Log "Removing God Mode folder..." -Level Info
+            Write-SystemMessage -msg "Removing God Mode folder..."
             try {
                 $godModePath = Join-Path $env:USERPROFILE "Desktop\GodMode.{ED7BA470-8E54-465E-825C-99712043E01C}"
                 if (Test-Path $godModePath) {
                     Remove-Item -Path $godModePath -Force -Recurse | Out-Null
-                    Write-SuccessMessage -msg "God Mode folder removed"
+                    Write-SystemMessage -successMsg
                 }
             } catch {
                 Write-Log "Failed to remove God Mode folder: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to remove God Mode folder"
+                Write-SystemMessage -errorMsg
             }
         }
 
-        Write-Log "System tweaks applied successfully"
+        Write-Log "System tweaks applied successfully" -Level Info
         return $true
     }
     catch {
         Write-Log "Error applying system tweaks: $($_.Exception.Message)" -Level Error
+        Write-SystemMessage -errorMsg -msg "Failed to apply system tweaks. Check the log for more details."
         return $false
     }
 }
@@ -2706,82 +2948,92 @@ function Set-NetworkConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$NetworkConfig
     )
+
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($NetworkConfig)) {
+        return
+    }
     
+    Write-SystemMessage -title "Configuring Network Settings"
+
     try {
-        Write-SystemMessage -Title "Configuring Network Settings"
 
         # Network Discovery
         if ($NetworkConfig.NetworkDiscovery -eq 'true') {
-            Write-SystemMessage -msg1 "- Enabling Network Discovery..."
-            Write-Log "Enabling Network Discovery..."
+            Write-SystemMessage -msg "Enabling Network Discovery..."
+            Write-Log "Enabling Network Discovery..." -Level Info
             try {
                 Get-NetFirewallRule -Group "@FirewallAPI.dll,-32752" | Set-NetFirewallRule -Profile Private -Enabled True
                 Set-NetFirewallRule -Name "FPS-SMB-In-TCP" -Enabled True
-                Write-SuccessMessage -msg "Network Discovery enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable Network Discovery: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable Network Discovery"
+                Write-SystemMessage -errorMsg
             }
         } elseif ($NetworkConfig.NetworkDiscovery -eq 'false') {
-            Write-SystemMessage -msg1 "- Disabling Network Discovery..."
-            Write-Log "Disabling Network Discovery..."
+            Write-SystemMessage -msg "Disabling Network Discovery..."
+            Write-Log "Disabling Network Discovery..." -Level Info
             try {
                 Get-NetFirewallRule -Group "@FirewallAPI.dll,-32752" | Set-NetFirewallRule -Profile Private -Enabled False
                 Set-NetFirewallRule -Name "FPS-SMB-In-TCP" -Enabled False
-                Write-SuccessMessage -msg "Network Discovery disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable Network Discovery: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable Network Discovery"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # File and Printer Sharing
         if ($NetworkConfig.FileAndPrinterSharing -eq 'true') {
-            Write-SystemMessage -msg1 "- Enabling File and Printer Sharing..."
-            Write-Log "Enabling File and Printer Sharing..."
+            Write-Log "Enabling File and Printer Sharing..." -Level Info
+            Write-SystemMessage -msg "Enabling File and Printer Sharing..."
+
             try {
                 Set-NetFirewallRule -DisplayGroup "File and Printer Sharing" -Enabled True
-                Write-SuccessMessage -msg "File and Printer Sharing enabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable File and Printer Sharing: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to enable File and Printer Sharing"
+                Write-SystemMessage -errorMsg
             }
+            
         } elseif ($NetworkConfig.FileAndPrinterSharing -eq 'false') {
-            Write-SystemMessage -msg1 "- Disabling File and Printer Sharing..."
-            Write-Log "Disabling File and Printer Sharing..."
+            Write-Log "Disabling File and Printer Sharing..." -Level Info
+            Write-SystemMessage -msg "Disabling File and Printer Sharing..."
             try {
                 Set-NetFirewallRule -DisplayGroup "File and Printer Sharing" -Enabled False
-                Write-SuccessMessage -msg "File and Printer Sharing disabled"
+                Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable File and Printer Sharing: $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to disable File and Printer Sharing"
+                Write-SystemMessage -errorMsg
             }
         }
 
         # Network Drives
         if ($NetworkConfig.NetworkDrives) {
+            Write-Log "Mapping Network Drives..." -Level Info
+            Write-SystemMessage -title "Mapping Network Drives"
+            
             foreach ($drive in $NetworkConfig.NetworkDrives.Drive) {
                 # Validate drive letter format
                 if (-not ($drive.Letter -match "^[A-Z]$")) {
                     Write-Log "Invalid drive letter format: $($drive.Letter). Must be a single letter A-Z." -Level Error
-                    Write-ErrorMessage -msg "Invalid drive letter format: $($drive.Letter)"
+                    Write-SystemMessage -errorMsg -msg "Invalid drive letter format: $($drive.Letter)"
                     continue
                 }
 
                 # Validate network path format
                 if (-not ($drive.Path -match "^\\\\[^\/\\:*?""<>|]+\\.*")) {
                     Write-Log "Invalid network path format: $($drive.Path). Must be UNC path (\\server\share)." -Level Error
-                    Write-ErrorMessage -msg "Invalid network path format: $($drive.Path)"
+                    Write-SystemMessage -errorMsg -msg "Invalid network path format: $($drive.Path)"
                     continue
                 }
 
-                Write-SystemMessage -msg1 "- Mapping network drive $($drive.Letter) to: " -msg2 $drive.Path
-                Write-Log "Mapping network drive $($drive.Letter) to $($drive.Path)"
+                Write-SystemMessage -msg "Mapping network drive $($drive.Letter) to" -value $drive.Path
+                Write-Log "Mapping network drive $($drive.Letter) to $($drive.Path)" -Level Info
                 
                 try {
                     # Remove existing drive mapping if it exists
                     if (Test-Path "$($drive.Letter):") {
-                        Write-Log "Removing existing drive mapping for $($drive.Letter):"
+                        Write-Log "Removing existing drive mapping for $($drive.Letter):" -Level Info
                         Remove-PSDrive -Name $drive.Letter -Force -ErrorAction SilentlyContinue
                         net use "$($drive.Letter):" /delete /y
                     }
@@ -2804,24 +3056,25 @@ function Set-NetworkConfiguration {
                     # Test network path accessibility
                     if (Test-Path -Path $drive.Path -ErrorAction Stop) {
                         New-PSDrive @mappingParams
-                        Write-SuccessMessage -msg "Network drive $($drive.Letter): mapped successfully"
+                        Write-SystemMessage -successMsg
+                        Write-Log "Network drive $($drive.Letter): mapped successfully" -Level Info
                     } else {
                         Write-Log "Network path not accessible or does not exist: $($drive.Path)" -Level Error
-                        Write-ErrorMessage -msg "Network path not accessible: $($drive.Path)"
+                        Write-SystemMessage -errorMsg
                     }
                 } catch {
                     Write-Log "Failed to map drive $($drive.Letter): $($_.Exception.Message)" -Level Error
-                    Write-ErrorMessage -msg "Failed to map network drive $($drive.Letter):"
+                    Write-SystemMessage -errorMsg -msg "Failed to map network drive $($drive.Letter)"
                 }
             }
         }
 
-        Write-Log "Network configuration completed successfully"
+        Write-Log "Network configuration completed successfully" -Level Info
         return $true
     }
     catch {
         Write-Log "Error configuring network settings: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to configure network settings"
+        Write-SystemMessage -errorMsg -msg "Failed to configure network settings"
         return $false
     }
 }
@@ -2832,9 +3085,13 @@ function Set-FileOperations {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$FileConfig
     )
+
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($FileConfig)) {
+        return
+    }
     
     try {
-        Write-SystemMessage -Title "Performing File Operations"
+        Write-SystemMessage -title "Performing File Operations"
 
         # Copy Operations
         if ($FileConfig.Copy) {
@@ -2842,7 +3099,7 @@ function Set-FileOperations {
                 # Validate source and destination paths
                 if (-not $file.Source -or -not $file.Destination) {
                     Write-Log "Invalid file operation: Source or Destination missing" -Level Error
-                    Write-ErrorMessage -msg "Invalid file operation: Source or Destination missing"
+                    Write-SystemMessage -errorMsg -msg "Invalid file operation: Source or Destination missing"
                     continue
                 }
 
@@ -2850,19 +3107,19 @@ function Set-FileOperations {
                 $invalidChars = [IO.Path]::GetInvalidPathChars()
                 if (($file.Source.IndexOfAny($invalidChars) -ge 0) -or ($file.Destination.IndexOfAny($invalidChars) -ge 0)) {
                     Write-Log "Invalid characters in path: Source=$($file.Source), Destination=$($file.Destination)" -Level Error
-                    Write-ErrorMessage -msg "Invalid characters in file path"
+                    Write-SystemMessage -errorMsg -msg "Invalid characters in file path"
                     continue
                 }
 
-                Write-SystemMessage -msg1 "- Copying file from: " -msg2 $file.Source
-                Write-Log "Copying file from $($file.Source) to $($file.Destination)"
+                Write-SystemMessage -msg "Copying file from" -value $file.Source
+                Write-Log "Copying file from $($file.Source) to $($file.Destination)" -Level Info
                 
                 try {
                     # Create destination directory if it doesn't exist
                     $destinationDir = Split-Path -Parent $file.Destination
                     if (-not (Test-Path $destinationDir)) {
                         New-Item -Path $destinationDir -ItemType Directory -Force | Out-Null
-                        Write-Log "Created destination directory: $destinationDir"
+                        Write-Log "Created destination directory: $destinationDir" -Level Info
                     }
 
                     # Copy file
@@ -2872,14 +3129,14 @@ function Set-FileOperations {
                             Write-Log "Destination file already exists, overwriting: $($file.Destination)" -Level Warning
                         }
                         Copy-Item -Path $file.Source -Destination $file.Destination -Force
-                        Write-SuccessMessage -msg "File copied successfully"
+                        Write-SystemMessage -successMsg
                     } else {
                         Write-Log "Source file not found: $($file.Source)" -Level Warning
-                        Write-ErrorMessage -msg "Source file not found: $($file.Source)"
+                        Write-SystemMessage -errorMsg -msg "Source file not found" -value $($file.Source)
                     }
                 } catch {
                     Write-Log "Failed to copy file: $($_.Exception.Message)" -Level Warning
-                    Write-ErrorMessage -msg "Failed to copy file"
+                    Write-SystemMessage -errorMsg
                 }
             }
         }
@@ -2890,7 +3147,7 @@ function Set-FileOperations {
                 # Validate file path
                 if (-not $file) {
                     Write-Log "Invalid file operation: File path is empty" -Level Error
-                    Write-ErrorMessage -msg "Invalid file operation: File path is empty"
+                    Write-SystemMessage -errorMsg -msg "Invalid file operation: File path is empty"
                     continue
                 }
 
@@ -2898,12 +3155,12 @@ function Set-FileOperations {
                 $invalidChars = [IO.Path]::GetInvalidPathChars()
                 if ($file.IndexOfAny($invalidChars) -ge 0) {
                     Write-Log "Invalid characters in path: $file" -Level Error
-                    Write-ErrorMessage -msg "Invalid characters in file path"
+                    Write-SystemMessage -errorMsg -msg "Invalid characters in file path"
                     continue
                 }
 
-                Write-SystemMessage -msg1 "- Deleting file: " -msg2 $file
-                Write-Log "Deleting file: $file"
+                Write-SystemMessage -msg "Deleting file" -value $file
+                Write-Log "Deleting file: $file" -Level Info
                 
                 try {
                     if (Test-Path $file) {
@@ -2911,13 +3168,14 @@ function Set-FileOperations {
                         $fileInfo = Get-Item $file
                         if ($fileInfo.Attributes -match "ReadOnly|System") {
                             Write-Log "Warning: Attempting to delete protected file: $file" -Level Warning
+                            Write-SystemMessage -warningMsg -msg "Attempting to delete protected file" -value $file
                         }
 
                         Remove-Item -Path $file -Force
-                        Write-SuccessMessage -msg "File deleted successfully"
+                        Write-SystemMessage -successMsg
                     } else {
                         Write-Log "File not found for deletion: $file" -Level Warning
-                        Write-ErrorMessage -msg "File not found: $file"
+                        Write-SystemMessage -errorMsg -msg "File not found" -value $file
                     }
                 } catch {
                     $errorMsg = "Failed to delete file: $($_.Exception.Message)"
@@ -2925,17 +3183,17 @@ function Set-FileOperations {
                         $errorMsg += " (Access Denied)"
                     }
                     Write-Log $errorMsg -Level Warning
-                    Write-ErrorMessage -msg "Failed to delete file"
+                    Write-SystemMessage -errorMsg
                 }
             }
         }
 
-        Write-Log "File operations completed successfully"
+        Write-Log "File operations completed successfully" -Level Info
         return $true
     }
     catch {
         Write-Log "Error performing file operations: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to perform file operations"
+        Write-SystemMessage -errorMsg -msg "Failed to perform file operations"
         return $false
     }
 }
@@ -2946,27 +3204,32 @@ function Set-Shortcuts {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$ShortcutConfig
     )
+
+    if ([System.Xml.XmlElement]::IsNullOrEmpty($ShortcutConfig)) {
+        return
+    }
     
     try {
-        Write-SystemMessage -Title "Creating Shortcuts"
+        Write-SystemMessage -title "Creating Shortcuts"
 
         foreach ($shortcut in $ShortcutConfig.Shortcut) {
             # Validate required properties
             if (-not $shortcut.Name -or -not $shortcut.Target) {
                 Write-Log "Invalid shortcut configuration: Name or Target missing" -Level Error
-                Write-ErrorMessage -msg "Invalid shortcut configuration: Name or Target missing"
+                Write-SystemMessage -errorMsg -msg "Invalid shortcut configuration: Name or Target missing"
                 continue
             }
+
+            Write-SystemMessage -msg "Creating shortcut" -value $shortcut.Name
+            Write-Log "Creating shortcut: $($shortcut.Name) -> $($shortcut.Target)" -Level Info
 
             # Validate target path exists
             if (-not (Test-Path $shortcut.Target)) {
                 Write-Log "Target path does not exist: $($shortcut.Target)" -Level Error
-                Write-ErrorMessage -msg "Target path does not exist: $($shortcut.Target)"
+                Write-SystemMessage -errorMsg -msg "Target path does not exist"
                 continue
             }
 
-            Write-SystemMessage -msg1 "- Creating shortcut: " -msg2 $shortcut.Name
-            Write-Log "Creating shortcut: $($shortcut.Name) -> $($shortcut.Target)"
 
             try {
                 # Determine shortcut location
@@ -2983,7 +3246,7 @@ function Set-Shortcuts {
                 # Validate shortcut location exists
                 if (-not (Test-Path $shortcutLocation)) {
                     Write-Log "Shortcut location does not exist: $shortcutLocation" -Level Error
-                    Write-ErrorMessage -msg "Shortcut location does not exist"
+                    Write-SystemMessage -errorMsg -msg "Shortcut location does not exist"
                     continue
                 }
 
@@ -3010,6 +3273,8 @@ function Set-Shortcuts {
                     # Validate working directory exists
                     if (-not (Test-Path $shortcut.WorkingDirectory)) {
                         Write-Log "Working directory does not exist: $($shortcut.WorkingDirectory)" -Level Warning
+                        Write-SystemMessage -errorMsg -msg "Working directory does not exist"
+                        continue
                     }
                     Write-Log "Setting working directory: $($shortcut.WorkingDirectory)"
                     $Shortcut.WorkingDirectory = $shortcut.WorkingDirectory
@@ -3020,6 +3285,8 @@ function Set-Shortcuts {
                     $iconPath = ($shortcut.IconLocation -split ',')[0]
                     if (-not (Test-Path $iconPath)) {
                         Write-Log "Icon file does not exist: $iconPath" -Level Warning
+                        Write-SystemMessage -errorMsg -msg "Icon file does not exist"
+                        continue
                     }
                     Write-Log "Setting icon location: $($shortcut.IconLocation)"
                     $Shortcut.IconLocation = $shortcut.IconLocation
@@ -3027,11 +3294,11 @@ function Set-Shortcuts {
 
                 # Save shortcut
                 $Shortcut.Save()
-                Write-SuccessMessage -msg "Shortcut created successfully: $($shortcut.Name)"
+                Write-SystemMessage -successMsg
 
             } catch {
                 Write-Log "Failed to create shortcut $($shortcut.Name): $($_.Exception.Message)" -Level Error
-                Write-ErrorMessage -msg "Failed to create shortcut: $($shortcut.Name)"
+                Write-SystemMessage -errorMsg -msg "Failed to create shortcut"
             } finally {
                 if ($WScriptShell) {
                     [System.Runtime.Interopservices.Marshal]::ReleaseComObject($WScriptShell) | Out-Null
@@ -3044,7 +3311,7 @@ function Set-Shortcuts {
     }
     catch {
         Write-Log "Error creating shortcuts: $($_.Exception.Message)" -Level Error
-        Write-ErrorMessage -msg "Failed to create shortcuts"
+        Write-SystemMessage -errorMsg -msg "Failed to create shortcuts. Check the logs for details."
         return $false
     }
 }
@@ -3054,7 +3321,7 @@ function Set-Shortcuts {
 try {
 
     Clear-Host
-    Write-SystemMessage -Title "Starting Winforge Configuration"
+    Write-SystemMessage -title "Starting Winforge Configuration"
 
     # Verify running as administrator
     if (-not (Test-AdminPrivileges)) {
@@ -3170,23 +3437,27 @@ try {
         $configStatus['Shortcuts'] = Set-Shortcuts -ShortcutConfig $configXML.Shortcuts
     }
 
-    Write-SystemMessage -Title "Configuration Completed"
+    Write-SystemMessage -title "Configuration Completed"
     $cleanup = Read-Host "Would you like to cleanup temporary files? (Y/N)"
     switch ($cleanup) {
         'Y' {
+            Write-SystemMessage -msg "Cleaning up temporary files..."
+            Write-Log "Cleaning up temporary files..."
             Remove-TempFiles
+            Write-SystemMessage -successMsg
+            Write-Log "Temporary files cleaned up successfully"
         }
         'N' {
-            Write-SystemMessage -msg1 "Temporary files will not be removed."
+            Write-SystemMessage -msg "Temporary files will not be removed."
             Write-Log "Temporary files will not be removed."
         }
         default {
-            Write-SystemMessage -msg1 "Invalid input." -msg2 "Select Y or N."
+            Write-SystemMessage -errorMsg -msg "Invalid input." -value "Select Y or N."
         }
     }
 
     # Display configuration status
-    Write-SystemMessage -Title "Configuration Status"
+    Write-SystemMessage -title "Configuration Status"
     foreach ($item in $configStatus.GetEnumerator()) {
         $status = if ($item.Value) { "Success" } else { "Failed" }
         $color = if ($item.Value) { "Green" } else { "Red" }
@@ -3194,29 +3465,40 @@ try {
         Write-Host $status -ForegroundColor $color
     }
 
+
     # Check if any configurations failed
     if ($configStatus.Values -contains $false) {
-        Write-ErrorMessage -msg "Some configurations failed. Please check the logs for details."
+        Write-SystemMessage -msg "Some configurations failed. Please check the logs for details."
         Pause
         return 1
     }
     else {
-        Write-SuccessMessage -msg "All configurations completed successfully"
+        Write-SystemMessage -msg "All configurations completed successfully"
         if ($script:restartRequired) {
-            Write-SystemMessage -Title "Restart Required" -msg1 "Some changes require a system restart to take effect."
+            Write-SystemMessage -title "Restart Required" -msg "Some changes require a system restart to take effect."
             $restart = Read-Host "Would you like to restart now? (Y/N)"
-            if ($restart -eq 'Y') {
-                Restart-Computer -Force
-                return 0
+            switch ($restart) {
+                'Y' {
+                    Write-SystemMessage -msg "Restarting system..."
+                    Restart-Computer -Force
+                    return 0
+                }
+                'N' {
+                    Write-SystemMessage -msg "System restart will be performed later."
+                }
+                default {
+                    Write-SystemMessage -msg "Invalid input." -value "Select Y or N."
+                }
             }
         }
     }
 
-    Write-SystemMessage -msg1 "Winforge will now exit."
+    Write-SystemMessage -msg "Winforge will now exit."
     Pause
 }
 catch {
     Write-Log "$($_.Exception.Message)" -Level Error
-    Write-ErrorMessage -msg "$($_.Exception.Message)"
+    Write-SystemMessage -errorMsg -msg "$($_.Exception.Message)"
     Pause
+    return 1
 }
