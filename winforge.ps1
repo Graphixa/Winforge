@@ -273,9 +273,23 @@ function Write-SuccessMessage {
   #>
 
 function Test-AdminPrivileges {
-    if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-        throw "This script must be run with administrative privileges."
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    $adminRole = [Security.Principal.WindowsBuiltInRole]::Administrator
+    
+    if (-not $principal.IsInRole($adminRole)) {
+        throw "This script requires administrative privileges"
     }
+    
+    # Additional check for UAC bypass attempts
+    $elevationType = [Security.Principal.WindowsIdentity]::GetCurrent().Claims | 
+        Where-Object { $_.Type -eq "WIN://ISAUTOELEVATEPRIVILEGE" }
+    
+    if ($elevationType) {
+        throw "Please run PowerShell as Administrator explicitly."
+    }
+    
+    return $true
 }
 
 function Test-ConfigSchema {
