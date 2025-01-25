@@ -1455,12 +1455,9 @@ function Install-Applications {
                 Write-Log "Installing Chocolatey..." -Level Info
                 Write-SystemMessage -msg "Installing Chocolatey..."
                 try {
-                    $installScript = {
-                        Set-ExecutionPolicy Bypass -Scope Process -Force
-                        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-                        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-                    }
-                    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & {$installScript}" -Wait -WindowStyle Normal
+                    Set-ExecutionPolicy Bypass -Scope Process -Force
+                    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+                    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
                     Write-SystemMessage -successMsg
                 }
                 catch {
@@ -1468,14 +1465,6 @@ function Install-Applications {
                     Write-SystemMessage -errorMsg
                     return $false
                 }
-            }
-
-            # Refresh shell environment to get choco commands
-            Write-Log "Refreshing environment variables after chocolatey installation." -Level Info
-            try {
-                $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-            } catch {
-                Write-Log "Failed to refresh shell environment: $($_.Exception.Message)" -Level Error 
             }
 
             # Install Chocolatey Apps
