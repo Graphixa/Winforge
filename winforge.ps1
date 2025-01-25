@@ -1671,7 +1671,12 @@ function Remove-Applications {
                 return $false
             }
 
-            foreach ($app in $AppConfig.App) {
+            # Refresh environment variables to ensure choco command is available
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            Write-Log "Refreshed environment variables to include Chocolatey" -Level Info
+
+            foreach ($app in $AppConfig.ChildNodes) {
+                if ($app.Name -ne "App") { continue }
                 $appName = $app.InnerText.Trim()
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
@@ -1683,9 +1688,9 @@ function Remove-Applications {
                 Write-Log "Uninstalling $appName..." -Level Info
                 try {
                     # Check if app is installed first
-                    $listResult = Start-Process -FilePath "choco" -ArgumentList "list $appName -e" -Wait -NoNewWindow -PassThru | Out-Null
+                    $listResult = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco list $appName -e }" -Wait -PassThru
                     if ($listResult.ExitCode -eq 0) {
-                        $result = Start-Process -FilePath "choco" -ArgumentList "uninstall `"$appName`" -y" -Wait -NoNewWindow -PassThru | Out-Null
+                        $result = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco uninstall `"$appName`" -y }" -Wait -PassThru
                         if ($result.ExitCode -eq 0) {
                             Write-SystemMessage -successMsg
                         } else {
