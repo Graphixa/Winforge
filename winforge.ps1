@@ -2797,6 +2797,11 @@ public class Wallpaper
             }
         }
 
+        # Restart Explorer to apply changes
+        Write-Log "Restarting Explorer to apply taskbar changes..."
+        Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+        Start-Process explorer
+
         Write-Log "Theme configuration completed successfully"
         return $true
     
