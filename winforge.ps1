@@ -1434,12 +1434,12 @@ function Install-Applications {
     Write-SystemMessage -title "Installing Applications"
 
     try {
-        if (-not $AppConfig -or -not $AppConfig.Install) {
+        if (-not $AppConfig) {
             Write-Log "No applications to install" -Level Info
             return $true
         }
 
-        $packageManager = $AppConfig.Install.PackageManager
+        $packageManager = $AppConfig.PackageManager
         if (-not $packageManager) {
             Write-Log "No package manager specified for installation" -Level Error
             Write-SystemMessage -errorMsg -msg "No package manager specified"
@@ -1479,7 +1479,7 @@ function Install-Applications {
             }
 
             # Install Chocolatey Apps
-            foreach ($app in $AppConfig.Install.App) {
+            foreach ($app in $AppConfig.App) {
                 $appName = $app.InnerText.Trim()
                 $version = $app.Version
 
@@ -1523,7 +1523,7 @@ function Install-Applications {
             }
 
             # Install Winget Apps
-            foreach ($app in $AppConfig.Install.App) {
+            foreach ($app in $AppConfig.App) {
                 $appName = $app.InnerText.Trim()
                 $version = $app.Version
 
@@ -1583,12 +1583,12 @@ function Remove-Applications {
     Write-SystemMessage -title "Removing Applications"
 
     try {
-        if (-not $AppConfig -or -not $AppConfig.Uninstall) {
+        if (-not $AppConfig) {
             Write-Log "No applications to uninstall" -Level Info
             return $true
         }
 
-        $packageManager = $AppConfig.Uninstall.PackageManager
+        $packageManager = $AppConfig.PackageManager
         if (-not $packageManager) {
             Write-Log "No package manager specified for uninstallation" -Level Error
             Write-SystemMessage -errorMsg -msg "No package manager specified"
@@ -1606,7 +1606,7 @@ function Remove-Applications {
                 return $false
             }
 
-            foreach ($app in $AppConfig.Uninstall.App) {
+            foreach ($app in $AppConfig.App) {
                 $appName = $app.InnerText.Trim()
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
@@ -1650,7 +1650,7 @@ function Remove-Applications {
                 return $false
             }
 
-            foreach ($app in $AppConfig.Uninstall.App) {
+            foreach ($app in $AppConfig.App) {
                 $appName = $app.InnerText.Trim()
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
@@ -3569,11 +3569,11 @@ try {
     # Application Installation
     if ($configXML.Applications) {
         if ($configXML.Applications.Install) {
-            $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications
+            $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications.Install
         }
 
         if ($configXML.Applications.Uninstall) {
-            $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications
+            $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications.Uninstall
         }
     }
 
