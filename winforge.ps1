@@ -2893,8 +2893,26 @@ function Set-NetworkConfiguration {
 
         # Network Discovery
         if ($NetworkConfig.NetworkDiscovery -eq 'true') {
+            
             Write-SystemMessage -msg "Enabling Network Discovery..."
             Write-Log "Enabling Network Discovery..." -Level Info
+        
+            # Check if Network Discovery is already enabled
+            try {
+                $discoveryRules = Get-NetFirewallRule -Group "@FirewallAPI.dll,-32752" 
+                $smbRule = Get-NetFirewallRule -Name "FPS-SMB-In-TCP"
+                
+                if (($discoveryRules | Where-Object {$_.Enabled -eq $true}).Count -eq $discoveryRules.Count -and 
+                    $smbRule.Enabled -eq $true) {
+                    Write-Log "Network Discovery is already enabled" -Level Warning
+                    Write-SystemMessage -warningMsg -msg "Network Discovery is already enabled"
+                    return
+                }
+            } catch {
+                Write-Log "Error checking Network Discovery status: $($_.Exception.Message)" -Level Error
+            }
+        
+            # Enable Network Discovery
             try {
                 Get-NetFirewallRule -Group "@FirewallAPI.dll,-32752" | Set-NetFirewallRule -Profile Private -Enabled True
                 Set-NetFirewallRule -Name "FPS-SMB-In-TCP" -Enabled True
@@ -2903,9 +2921,29 @@ function Set-NetworkConfiguration {
                 Write-Log "Failed to enable Network Discovery: $($_.Exception.Message)" -Level Error
                 Write-SystemMessage -errorMsg
             }
-        } elseif ($NetworkConfig.NetworkDiscovery -eq 'false') {
-            Write-SystemMessage -msg "Disabling Network Discovery..."
+        } 
+        
+        if ($NetworkConfig.NetworkDiscovery -eq 'false') {
+
             Write-Log "Disabling Network Discovery..." -Level Info
+            Write-SystemMessage -msg "Disabling Network Discovery..."
+
+            # Check if Network Discovery is already disabled
+            try {
+                $discoveryRules = Get-NetFirewallRule -Group "@FirewallAPI.dll,-32752" 
+                $smbRule = Get-NetFirewallRule -Name "FPS-SMB-In-TCP"
+                
+                if (($discoveryRules | Where-Object {$_.Enabled -eq $false}).Count -eq $discoveryRules.Count -and 
+                    $smbRule.Enabled -eq $false) {
+                    Write-Log "Network Discovery is already disabled" -Level Warning
+                    Write-SystemMessage -warningMsg -msg "Network Discovery is already disabled"
+                    return
+                }
+            } catch {
+                Write-Log "Error checking Network Discovery status: $($_.Exception.Message)" -Level Error
+            }
+
+            # Disable Network Discovery
             try {
                 Get-NetFirewallRule -Group "@FirewallAPI.dll,-32752" | Set-NetFirewallRule -Profile Private -Enabled False
                 Set-NetFirewallRule -Name "FPS-SMB-In-TCP" -Enabled False
@@ -2921,6 +2959,18 @@ function Set-NetworkConfiguration {
             Write-Log "Enabling File and Printer Sharing..." -Level Info
             Write-SystemMessage -msg "Enabling File and Printer Sharing..."
 
+            # Check if File and Printer Sharing is already enabled
+            try {
+                $fileSharingRule = Get-NetFirewallRule -DisplayGroup "File and Printer Sharing"
+                if ($fileSharingRule.Enabled -eq $true) {
+                    Write-Log "File and Printer Sharing is already enabled" -Level Warning
+                    Write-SystemMessage -warningMsg -msg "File and Printer Sharing is already enabled"
+                    return
+                }
+            } catch {
+                Write-Log "Error checking File and Printer Sharing status: $($_.Exception.Message)" -Level Error
+            }
+
             try {
                 Set-NetFirewallRule -DisplayGroup "File and Printer Sharing" -Enabled True
                 Write-SystemMessage -successMsg
@@ -2929,9 +2979,26 @@ function Set-NetworkConfiguration {
                 Write-SystemMessage -errorMsg
             }
             
-        } elseif ($NetworkConfig.FileAndPrinterSharing -eq 'false') {
+        } 
+        
+        if ($NetworkConfig.FileAndPrinterSharing -eq 'false') {
+            
             Write-Log "Disabling File and Printer Sharing..." -Level Info
             Write-SystemMessage -msg "Disabling File and Printer Sharing..."
+
+            # Check if File and Printer Sharing is already disabled
+            try {
+                $fileSharingRule = Get-NetFirewallRule -DisplayGroup "File and Printer Sharing"
+                if ($fileSharingRule.Enabled -eq $false) {
+                    Write-Log "File and Printer Sharing is already disabled" -Level Warning
+                    Write-SystemMessage -warningMsg -msg "File and Printer Sharing is already disabled"
+                    return
+                }
+            } catch {
+                Write-Log "Error checking File and Printer Sharing status: $($_.Exception.Message)" -Level Error
+            }
+
+            # Disable File and Printer Sharing
             try {
                 Set-NetFirewallRule -DisplayGroup "File and Printer Sharing" -Enabled False
                 Write-SystemMessage -successMsg
