@@ -1463,18 +1463,22 @@ function Install-Applications {
     Write-SystemMessage -title "Installing Applications"
 
     try {
-        # Package Manager Selection
-        $packageManager = $AppConfig.PackageManager
+        if (-not $AppConfig.Install) {
+            Write-Log "No applications to install" -Level Info
+            return $true
+        }
+
+        $packageManager = $AppConfig.Install.PackageManager
+        Write-Log "Installing applications using $packageManager" -Level Info
 
         # Chocolatey Apps
-        if ($packageManager -eq "Chocolatey" -and $AppConfig.ChocolateyApps) {
-            Write-SystemMessage -msg "Checking Chocolatey is installed..."
-            Write-Log "Checking Chocolatey is installed..." -Level Info
+        if ($packageManager -eq "Chocolatey") {
+
 
             # Install Chocolatey if not present
             if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-                Write-SystemMessage -msg "Installing Chocolatey package manager..."
-                Write-Log "Installing Chocolatey package manager..." -Level Info
+                Write-SystemMessage -msg "Installing Chocolatey..."
+                Write-Log "Installing Chocolatey..." -Level Info
                 try {
                     $installScript = {
                         Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -1498,25 +1502,31 @@ function Install-Applications {
             }
 
             # Install Chocolatey Apps
-            foreach ($app in $AppConfig.ChocolateyApps.App) {
-                Write-SystemMessage -msg "Installing" -value $app
-                Write-Log "Installing $app..." -Level Info
+            foreach ($app in $AppConfig.Install.App) {
+                $appName = $app.InnerText
+                $version = $app.Version
+
+                Write-SystemMessage -msg "Installing" -value $appName
+                Write-Log "Installing $appName..." -Level Info
                 try {
-                    if ($app.Version) {
-                        choco install $app --version $app.Version -y
-                    } else {
-                        choco install $app -y
+                    if ($version) {
+                        choco install $appName --version $version -y
+                    }
+                    else {
+                        choco install $appName -y
                     }
                     Write-SystemMessage -successMsg
-                } catch {
-                    Write-Log "Failed to install $app : $($_.Exception.Message)" -Level Error
+                }
+                catch {
+                    $errorMessage = $_.Exception.Message
+                    Write-Log "Failed to install $appName : $errorMessage" -Level Error
                     Write-SystemMessage -errorMsg
                 }
             }
         }
 
-        # Winget Apps
-        if ($packageManager -eq "Winget" -and $AppConfig.WingetApps) {
+        # Check Winget is installed
+        if ($packageManager -eq "Winget") {
             Write-SystemMessage -msg "Checking Winget installation..."
             Write-Log "Checking Winget installation..." -Level Info
 
@@ -1527,48 +1537,105 @@ function Install-Applications {
                 return $false
             }
 
-            # Reset Winget sources and accept agreements
-            Write-SystemMessage -msg "Resetting Winget sources..."
-            Write-Log "Resetting Winget sources..." -Level Info
+            # Accept Source Agreements
+            Write-Log "Accepting source agreements..." -Level Info
             try {
-                winget source reset --force
-                Add-AppxPackage -Path "https://cdn.winget.microsoft.com/cache/source.msix"
-                Write-SystemMessage -successMsg
-            } catch {
-                Write-Log "Failed to reset Winget sources: $($_.Exception.Message)" -Level Error
-                Write-SystemMessage -errorMsg
+                winget source accept-source-agreements
+                Write-Log "Winget source agreements accepted successfully" -Level Info
+            }
+            catch {
+                Write-Log "Failed to accept winget source agreements: $($_.Exception.Message)" -Level Error
+                return $false
             }
 
             # Install Winget Apps
-            foreach ($app in $AppConfig.WingetApps.App) {
-                Write-SystemMessage -msg "Installing: " -value $app.ID
-                Write-Log "Installing $($app.ID)..." -Level Info
+            foreach ($app in $AppConfig.Install.App) {
+                $appName = $app.InnerText
+                Write-SystemMessage -msg "Installing" -value $appName
+                Write-Log "Installing $appName..." -Level Info
                 try {
-                    if ($app.Version) {
-                        winget install $app.ID --version $app.Version --accept-source-agreements --accept-package-agreements
-                    } else {
-                        winget install $app.ID --accept-source-agreements --accept-package-agreements
-                    }
+                    winget install $appName --accept-source-agreements --accept-package-agreements
                     Write-SystemMessage -successMsg
-                } catch {
-                    Write-Log "Failed to install $($app.ID): $($_.Exception.Message)" -Level Error
+                }
+                catch {
+                    Write-Log "Failed to install $appName : $($_.Exception.Message)" -Level Error
                     Write-SystemMessage -errorMsg
                 }
             }
+
         }
 
-        if ($packageManager -eq '') {
-            Write-SystemMessage -errorMsg -msg "No package manager selected, skipping application installation"
-            Write-Log "No package manager selected, skipping application installation" -Level Error
-            return
-        }
-
+   
         Write-Log "Application installation completed successfully"
         return $true
     }
     catch {
         Write-Log "Error installing applications: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to install applications. Check the log for details."
+        return $false
+    }
+}
+
+function Remove-Applications {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.Xml.XmlElement]$AppConfig
+    )
+
+    Write-SystemMessage -title "Removing Applications"
+
+    try {
+        if (-not $AppConfig.Uninstall) {
+            Write-Log "No applications to uninstall" -Level Info
+            return $true
+        }
+
+        $packageManager = $AppConfig.Uninstall.PackageManager
+        Write-Log "Uninstalling applications using $packageManager" -Level Info
+
+        # Winget Uninstall
+        if ($packageManager -eq "Winget") {
+            foreach ($app in $AppConfig.Uninstall.App) {
+                $appName = $app.InnerText
+                Write-SystemMessage -msg "Uninstalling" -value $appName
+                Write-Log "Uninstalling $appName..." -Level Info
+                try {
+                    winget uninstall $appName --accept-source-agreements
+                    Write-SystemMessage -successMsg
+                }
+                catch {
+                    $errorMessage = $_.Exception.Message
+                    Write-Log "Failed to uninstall $appName : $errorMessage" -Level Error
+                    Write-SystemMessage -errorMsg
+                }
+            }
+        }
+
+        # Chocolatey Uninstall
+        if ($packageManager -eq "Chocolatey") {
+            foreach ($app in $AppConfig.Uninstall.App) {
+                $appName = $app.InnerText
+                Write-SystemMessage -msg "Uninstalling" -value $appName
+                Write-Log "Uninstalling $appName..." -Level Info
+                try {
+                    choco uninstall $appName -y
+                    Write-SystemMessage -successMsg
+                }
+                catch {
+                    $errorMessage = $_.Exception.Message
+                    Write-Log "Failed to uninstall $appName : $errorMessage" -Level Error
+                    Write-SystemMessage -errorMsg
+                }
+            }
+        }
+
+        Write-Log "Application removal completed successfully"
+        return $true
+    }
+    catch {
+        $errorMessage = $_.Exception.Message
+        Write-Log "Error removing applications: $errorMessage" -Level Error
+        Write-SystemMessage -errorMsg -msg "Failed to remove applications. Check the log for details."
         return $false
     }
 }
@@ -3438,9 +3505,14 @@ try {
         $configStatus['Fonts'] = Install-Fonts -FontConfig $configXML.Fonts
     }
 
-    # Applications
-    if ($configXML.Applications) {
-        $configStatus['Applications'] = Install-Applications -AppConfig $configXML.Applications
+    # Application Installation
+    if ($configXML.Applications.Install) {
+        $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications.Install
+    }
+
+    # Application Uninstallation
+    if ($configXML.Applications.Uninstall) {
+        $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications.Uninstall
     }
 
     # Google Configuration
@@ -3463,8 +3535,6 @@ try {
     if ($configXML.Tasks) {
         $configStatus['Tasks'] = Set-ScheduledTasksConfiguration -TasksConfig $configXML.Tasks
     }
-
-
 
     # File Operations
     if ($configXML.Files) {

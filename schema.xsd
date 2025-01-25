@@ -102,13 +102,13 @@
                     </xs:complexType>
                 </xs:element>
 
-                <!-- Applications -->
+                <!-- Application Installation -->
                 <xs:element name="Applications" minOccurs="0">
                     <xs:complexType>
                         <xs:all>
-                            <xs:element name="PackageManager" type="PackageManagerType" minOccurs="0"/>
-                            <xs:element name="ChocolateyApps" minOccurs="0">
+                            <xs:element name="Install" minOccurs="0">
                                 <xs:complexType>
+                                    <xs:attribute name="PackageManager" type="PackageManagerType" use="required"/>
                                     <xs:sequence>
                                         <xs:element name="App" maxOccurs="unbounded">
                                             <xs:complexType>
@@ -122,20 +122,15 @@
                                     </xs:sequence>
                                 </xs:complexType>
                             </xs:element>
-                            <xs:element name="WingetApps" minOccurs="0">
+                            
+                            <xs:element name="Uninstall" minOccurs="0">
                                 <xs:complexType>
+                                    <xs:attribute name="PackageManager" type="PackageManagerType" use="required"/>
                                     <xs:sequence>
-                                        <xs:element name="App" maxOccurs="unbounded">
-                                            <xs:complexType>
-                                                <xs:attribute name="ID" type="xs:string" use="required"/>
-                                                <xs:attribute name="Version" type="xs:string"/>
-                                            </xs:complexType>
-                                        </xs:element>
+                                        <xs:element name="App" maxOccurs="unbounded" type="xs:string"/>
                                     </xs:sequence>
                                 </xs:complexType>
                             </xs:element>
-                            <xs:element name="InstallGoogleChrome" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="InstallGoogleDrive" type="xs:boolean" minOccurs="0"/>
                         </xs:all>
                     </xs:complexType>
                 </xs:element>
