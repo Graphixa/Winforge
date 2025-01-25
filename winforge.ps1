@@ -2817,12 +2817,12 @@ public class Wallpaper
             Write-Log "Setting desktop icon size..." -Level Info
             try {
                 $sizeValue = switch ($ThemeConfig.DesktopIconSize) {
-                    "Small" { 0 }
-                    "Medium" { 1 }
-                    "Large" { 2 }
+                    "Small" { 48 }  # Increased from 0
+                    "Medium" { 64 } # Increased from 1 
+                    "Large" { 96 }  # Increased from 2
                     default {
                         Write-Log "Invalid desktop icon size specified: $($ThemeConfig.DesktopIconSize). Using Medium." -Level Warning
-                        1
+                        64 # Increased default size
                     }
                 }
                 Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop" -Name "IconSize" -Type DWord -Value $sizeValue
