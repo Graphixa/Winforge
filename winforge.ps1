@@ -1798,7 +1798,6 @@ function Install-Fonts {
     try {
         $tempDownloadFolder = "$env:TEMP\google_fonts"
         $script:tempFiles += $tempDownloadFolder
-        $progressPreference = 'SilentlyContinue'
 
         foreach ($fontName in $FontConfig.Font) {
             # Correct the font names for the GitHub repository
@@ -1847,7 +1846,6 @@ function Install-Fonts {
         return $false
     }
     finally {
-        $ProgressPreference = 'Continue'
         if (Test-Path $tempDownloadFolder) {
             Remove-Item -Path $tempDownloadFolder -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
         }
