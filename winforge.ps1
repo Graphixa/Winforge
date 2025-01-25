@@ -1509,7 +1509,7 @@ function Install-Applications {
                         "install `"$appName`" -y -r --ignoredetectedreboot" 
                     }
                     
-                    $result = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco $chocoArgs }" -Wait -WindowStyle Hidden -PassThru
+                    $result = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco $chocoArgs }" -Wait -PassThru
                     
                     if ($result.ExitCode -eq 0) {
                         Write-SystemMessage -successMsg
@@ -3505,12 +3505,7 @@ function Remove-Bloatware {
     [CmdletBinding()]
     param ()
 
-    Write-Log "Starting bloatware removal process..." -Level Info
-    Write-SystemMessage -msg "Removing Bloatware From System"
-
-    try {
-        # Define list of bloatware apps to remove
-        $appxPackages = @(
+    $appxPackages = @(
             # Microsoft apps
             "Microsoft.3DBuilder",
             "Microsoft.549981C3F5F10",  # Cortana app
@@ -3598,50 +3593,76 @@ function Remove-Bloatware {
             "XING"
         )
 
-        $totalApps = $appxPackages.Count
-        Write-Log "Found $totalApps bloatware apps to process" -Level Info
-        $currentApp = 0
+    Write-Log "Starting bloatware removal process..." -Level Info
+    Write-SystemMessage -title "Removing Bloatware"
 
+    try {
+        # Get list of currently installed apps that match our bloatware list
+        $installedBloatware = @()
+        foreach ($appName in $appxPackages) {
+            if (Get-AppxPackage -AllUsers -Name $appName -ErrorAction SilentlyContinue) {
+                $installedBloatware += $appName
+            }
+            # Also check provisioned packages
+            elseif (Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq $appName }) {
+                $installedBloatware += $appName
+            }
+        }
+
+        # Update appxPackages to only contain installed bloatware
+        $appxPackages = $installedBloatware
+        $totalApps = $appxPackages.Count
+
+        Write-Log "Found $totalApps bloatware apps to process" -Level Info
+        Write-SystemMessage -msg "Total bloatware apps found to remove" -value $totalApps -msgColor Yellow
+
+        $currentApp = 0
         foreach ($appName in $appxPackages) {
             $currentApp++
             Write-Log "Processing ($currentApp/$totalApps): $appName" -Level Info
+            Write-SystemMessage -msg "Removing bloatware app" -value $appName
 
             # First remove for all users
             $appInstance = Get-AppxPackage -AllUsers -Name $appName -ErrorAction SilentlyContinue
             if ($appInstance) {
                 try {
                     Get-AppxPackage -AllUsers -Name $appName | Remove-AppxPackage -AllUsers -ErrorAction Stop
-                    Write-Log "$appName successfully removed" -Level Info
+                    Write-Log "Successfully removed $appName" -Level Info
+                    Write-SystemMessage -successMsg
                 } catch {
                     $errorMessage = "Failed to remove $appName`: $($_.Exception.Message)"
                     Write-Log $errorMessage -Level Error
+                    Write-SystemMessage -errorMsg -msg "Failed to remove app"
                     continue
                 }
             } else {
                 Write-Log "$appName not found as installed package" -Level Info
+                Write-SystemMessage -warningMsg -msg "App not found"
             }
 
             # Then remove provisioned package to prevent reinstallation
             $provPackage = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq $appName }
             if ($provPackage) {
+                Write-SystemMessage -msg "Removing provisioned package" -value $provPackage.PackageName
                 try {
                     Remove-AppxProvisionedPackage -Online -PackageName $provPackage.PackageName -ErrorAction Stop
                     Write-Log "Provisioned package $appName removed successfully" -Level Info
+                    Write-SystemMessage -successMsg
                 } catch {
                     $errorMessage = "Failed to remove provisioned package $appName`: $($_.Exception.Message)"
                     Write-Log $errorMessage -Level Error
+                    Write-SystemMessage -errorMsg -msg "Failed to remove provisioned package"
                 }
             }
         }
 
         Write-Log "Bloatware removal process completed" -Level Info
-        Write-SystemMessage -successMsg -msg "Bloatware removal completed successfully"
         return $true
 
     } catch {
         $errorMessage = "An error occurred during bloatware removal: $($_.Exception.Message)"
         Write-Log $errorMessage -Level Error
-        Write-SystemMessage -errorMsg -msg "Failed to remove bloatware"
+        Write-SystemMessage -errorMsg -msg "Failed to remove bloatware. Check the logs for details."
         return $false
     }
 }
