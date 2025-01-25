@@ -1501,7 +1501,7 @@ function Install-Applications {
                 Write-SystemMessage -msg "Installing" -value $appName
                 Write-Log "Installing $appName..." -Level Info
                 try {
-
+                    # Check if app is already installed
                     $installedApp = choco list --local-only $appName | Where-Object { $_ -match "^$appName\s+\d+" }
                         if ($installedApp) {
                             Write-Log "$appName is already installed" -Level Warning 
@@ -1510,7 +1510,7 @@ function Install-Applications {
                         }
 
                     if ($version) {
-                        # Check if app is already installed
+                        
                         $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" --version $version -y -r --ignoredetectedreboot" -Wait -NoNewWindow -PassThru | Out-Null
                     }
                     else {
