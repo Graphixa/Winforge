@@ -31,7 +31,6 @@ param (
 # Script Variables
 $script:logFile = $LogPath
 $script:configXML = $null
-$script:schemaPath = "https://raw.githubusercontent.com/Graphixa/WinforgeX/main/schema.xsd"
 $script:restartRequired = $false
 $script:tempFiles = @()
 
@@ -319,7 +318,8 @@ function Test-ConfigSchema {
 
         # Verify schema file exists
         if (-not (Test-Path $schemaPath)) {
-            throw "Schema file not found at: $schemaPath"
+            Write-Log "Schema file not found at: $schemaPath" -Level Error
+            return $false
         }
 
         Write-Log "Loading schema from: $schemaPath"
@@ -333,7 +333,8 @@ function Test-ConfigSchema {
             })
             
             if ($null -eq $schema) {
-                throw "Failed to load schema"
+                Write-Log "Failed to load schema" -Level Error
+                return $false
             }
 
             Write-Log "Schema loaded successfully"
@@ -349,7 +350,8 @@ function Test-ConfigSchema {
             })
 
             if ($validationErrors.Count -gt 0) {
-                throw "Configuration validation failed with $($validationErrors.Count) errors. Check the log file for details."
+                Write-Log "Configuration validation failed with $($validationErrors.Count) errors" -Level Error
+                return $false
             }
 
             Write-Log "Configuration validated successfully against schema"
@@ -532,7 +534,7 @@ function Get-WinforgeConfig {
         [Parameter(Mandatory = $true)]
         [string]$Path
     )
-    
+
     try {
         # Handle remote configurations
         if ($Path -match '^https?://') {
@@ -546,10 +548,9 @@ function Get-WinforgeConfig {
             Invoke-WebRequest -Uri $Path -OutFile $tempPath
             $Path = $tempPath
         }
+
         Write-SystemMessage -title "Winforge Configuration" 
-        
         Write-SystemMessage -msg "Loading configuration file..."
-      
         
         # Check if file exists
         if (-not (Test-Path $Path)) {
@@ -560,13 +561,11 @@ function Get-WinforgeConfig {
         # Check if file is encrypted
         $isEncrypted = Test-EncryptedConfig -FilePath $Path
         if ($isEncrypted) {
-            
             $maxAttempts = 5
             $attempt = 1
             $decrypted = $false
 
             while ($attempt -le $maxAttempts -and -not $decrypted) {
-                
                 Write-SystemMessage -msg "Configuration is encrypted. Please enter the password to decrypt it."
                 Write-SystemMessage -msg "Attempts remaining" -value "$($maxAttempts - $attempt + 1)" -msgColor "Yellow"
                 
@@ -623,12 +622,6 @@ function Get-WinforgeConfig {
         # Now that we've decrypted in place, $Path is a plain XML file.
         try {
             [xml]$config = Get-Content -Path $Path
-            
-            # Validate XML against schema
-            if (-not (Test-ConfigSchema -Xml $config)) {
-                throw "Configuration failed schema validation. Please check the log file for detailed errors."
-            }
-        
             return $config.WinforgeConfig
         }
         catch [System.Xml.XmlException] {
@@ -642,7 +635,7 @@ function Get-WinforgeConfig {
         # If it's a "max attempts" or "failed to decrypt," rethrow so the script can exit. 
         if ($_.Exception.Message -match "Maximum password attempts reached" -or 
             $_.Exception.Message -match "Failed to decrypt configuration after") {
-        throw
+            throw
         }
         else {
             return $null

@@ -126,7 +126,7 @@
                 <!-- Application Installation -->
                 <xs:element name="Applications" minOccurs="0">
                     <xs:complexType>
-                        <xs:sequence>
+                        <xs:all>
                             <xs:element name="Install" minOccurs="0">
                                 <xs:complexType>
                                     <xs:sequence>
@@ -134,7 +134,7 @@
                                             <xs:complexType>
                                                 <xs:simpleContent>
                                                     <xs:extension base="xs:string">
-                                                        <xs:attribute name="Version" type="xs:string"/>
+                                                        <xs:attribute name="Version" type="xs:string" use="optional"/>
                                                     </xs:extension>
                                                 </xs:simpleContent>
                                             </xs:complexType>
@@ -159,7 +159,7 @@
                                     <xs:attribute name="PackageManager" type="PackageManagerType" use="required"/>
                                 </xs:complexType>
                             </xs:element>
-                        </xs:sequence>
+                        </xs:all>
                     </xs:complexType>
                 </xs:element>
 
