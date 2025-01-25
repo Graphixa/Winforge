@@ -1501,11 +1501,20 @@ function Install-Applications {
                 Write-SystemMessage -msg "Installing" -value $appName
                 Write-Log "Installing $appName..." -Level Info
                 try {
+
+                    $installedApp = choco list --local-only $appName | Where-Object { $_ -match "^$appName\s+\d+" }
+                        if ($installedApp) {
+                            Write-Log "$appName is already installed" -Level Warning 
+                            Write-SystemMessage -warningMsg -msg "App already installed"
+                            continue
+                        }
+
                     if ($version) {
-                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" --version $version -y" -Wait -NoNewWindow -PassThru | Out-Null
+                        # Check if app is already installed
+                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" --version $version -y -r --ignoredetectedreboot" -Wait -NoNewWindow -PassThru | Out-Null
                     }
                     else {
-                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" -y" -Wait -NoNewWindow -PassThru | Out-Null
+                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" -y -r --ignoredetectedreboot" -Wait -NoNewWindow -PassThru | Out-Null
                     }
                     
                     if ($result.ExitCode -eq 0) {
