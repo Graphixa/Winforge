@@ -779,7 +779,7 @@ function Set-SystemCheckpoint {
         Write-SystemMessage -msg "Creating System Restore Point | Snapshot Name" -value $snapshotName 
         
        
-        Checkpoint-Computer -Description $snapshotName -RestorePointType "MODIFY_SETTINGS" -WarningAction SilentlyContinue
+        Checkpoint-Computer -Description $snapshotName -RestorePointType "MODIFY_SETTINGS" -WarningAction SilentlyContinue | Out-Null
         Write-SystemMessage -successMsg
             
         return $true
