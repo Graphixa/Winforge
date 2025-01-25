@@ -2396,6 +2396,7 @@ function Set-GoogleConfiguration {
                 
                 try {
                     Invoke-WebRequest -Uri $gcpwUrl -OutFile "$env:TEMP\$gcpwFileName" | Out-Null
+                    Write-Log "GCPW installer downloaded successfully" -Level Info
                 } catch {
                     Write-Log "Failed to download GCPW installer: $($_.Exception.Message)" -Level Error
                     Write-SystemMessage -errorMsg -msg "Failed to download GCPW installer: $($_.Exception.Message)"
@@ -2421,7 +2422,7 @@ function Set-GoogleConfiguration {
                             Write-Log 'DomainsAllowedToLogin not provided. Skipping setting domains.' -Level Info
                         }
                     } else {
-                        Write-Log "Failed to install GCPW. Exit code: $($installProcess.ExitCode)" -Level Error
+                        Write-Log "Failed to install GCPW. $($_.Exception.Message)" -Level Error
                         Write-SystemMessage -errorMsg
                     }
                 } finally {
