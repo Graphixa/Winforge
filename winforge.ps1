@@ -99,8 +99,10 @@ function Write-SystemMessage {
     
     # Handle title blocks
     if ($PSBoundParameters.ContainsKey('title')) {
-        Write-Host "`n`n $($title.ToUpper()) " -ForegroundColor White -BackgroundColor $titleColor 
-        Write-Host ""
+        Write-Host "`n"
+        $titleText = " $($title.ToUpper()) "
+        Write-Host $titleText -ForegroundColor White -BackgroundColor $titleColor -NoNewline
+        Write-Host "`n`n"
         $script:lastMessageCursorPosition = $null
         $script:lastMessage = $null
         $script:lastValue = $null
