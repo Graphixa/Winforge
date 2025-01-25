@@ -2,43 +2,60 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:element name="WinforgeConfig">
         <xs:complexType>
-            <xs:all>
-                <!-- System Configuration -->
+            <xs:sequence>
                 <xs:element name="System" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="ComputerName" type="xs:string" minOccurs="0"/>
-                            <xs:element name="Locale" type="xs:string" minOccurs="0"/>
-                            <xs:element name="Timezone" type="xs:string" minOccurs="0"/>
                             <xs:element name="DisableWindowsStore" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="DisableOneDrive" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="DisableCopilot" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="EnableRemoteDesktop" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="ShowFileExtensions" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="ShowHiddenFiles" type="xs:boolean" minOccurs="0"/>
-                        </xs:all>
-                    </xs:complexType>
-                </xs:element>
-
-                <!-- Environment Variables -->
-                <xs:element name="EnvironmentVariables" minOccurs="0">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+                            <xs:element name="DisableXboxFeatures" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableConsumerFeatures" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsSearch" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsDefender" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableSmartScreen" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableGameDVR" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsInk" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHello" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloFace" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloFingerprint" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloBiometrics" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloPin" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloSecurityKey" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloSmartCard" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloTPM" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloVirtualTPM" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloVirtualSecurityKey" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloVirtualSmartCard" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloVirtualBiometrics" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloVirtualFingerprint" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsHelloVirtualFace" type="xs:boolean" minOccurs="0"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
-
-                <!-- Activation -->
                 <xs:element name="Activation" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
-                            <xs:element name="ProductKey" type="xs:string" minOccurs="0"/>
-                            <xs:element name="Version" type="xs:string" minOccurs="0"/>
-                        </xs:all>
+                        <xs:sequence>
+                            <xs:element name="Key" type="xs:string"/>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
-
+                <xs:element name="EnvironmentVariables" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Variable" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="Name" type="xs:string"/>
+                                        <xs:element name="Value" type="xs:string"/>
+                                        <xs:element name="Target" type="EnvironmentVariableTargetType"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
                 <!-- Windows Update -->
                 <xs:element name="WindowsUpdate" minOccurs="0">
                     <xs:complexType>
@@ -55,50 +72,54 @@
                 <!-- Taskbar -->
                 <xs:element name="Taskbar" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="TaskbarAlignment" type="TaskbarAlignmentType" minOccurs="0"/>
-                            <xs:element name="DisableMeetNow" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisableWidgets" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisableTaskView" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisableSearch" type="xs:boolean" minOccurs="0"/>
-                        </xs:all>
+                            <xs:element name="ShowTaskViewButton" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="ShowWidgetsButton" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="ShowChatButton" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="ShowSearchButton" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="ShowCopilotButton" type="xs:boolean" minOccurs="0"/>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
                 <!-- Privacy -->
                 <xs:element name="Privacy" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="DisableTelemetry" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisableDiagTrack" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisableAppPrivacy" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisablePersonalisedAdvertising" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableLocationTracking" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableAdvertisingID" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWebSearch" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="DisableStartMenuTracking" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="DisableActivityHistory" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisableClipboardDataCollection" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisableStartMenuSuggestions" type="xs:boolean" minOccurs="0"/>
-                        </xs:all>
+                            <xs:element name="DisableFeedback" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableDiagnostics" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableCompatibilityTelemetry" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWiFiSense" type="xs:boolean" minOccurs="0"/>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
                 <!-- Security -->
                 <xs:element name="Security" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
-                            <xs:element name="DisableDefender" type="xs:boolean" minOccurs="0"/>
+                        <xs:sequence>
                             <xs:element name="DisableUAC" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="UACLevel" type="UACLevelType" minOccurs="0"/>
-                            <xs:element name="DisableSMB1" type="xs:boolean" minOccurs="0"/>
-                            <xs:element name="DisableAutoPlay" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableWindowsDefender" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableSmartScreen" type="xs:boolean" minOccurs="0"/>
+                            <xs:element name="DisableFirewall" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="BitLocker" minOccurs="0">
                                 <xs:complexType>
-                                    <xs:all>
+                                    <xs:sequence>
                                         <xs:element name="Enable" type="xs:boolean" minOccurs="0"/>
-                                        <xs:element name="Target" type="DrivePathType" minOccurs="0"/>
-                                    </xs:all>
+                                        <xs:element name="RecoveryKey" type="xs:string" minOccurs="0"/>
+                                        <xs:element name="EncryptionMethod" type="BitLockerEncryptionType" minOccurs="0"/>
+                                    </xs:sequence>
                                 </xs:complexType>
                             </xs:element>
-                        </xs:all>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
@@ -154,7 +175,7 @@
                 <!-- Power -->
                 <xs:element name="Power" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="PowerPlan" type="PowerPlanType" minOccurs="0"/>
                             <xs:element name="DisableSleep" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="DisableHibernate" type="xs:boolean" minOccurs="0"/>
@@ -162,7 +183,7 @@
                             <xs:element name="MonitorTimeout" type="TimeoutType" minOccurs="0"/>
                             <xs:element name="SleepTimeout" type="TimeoutType" minOccurs="0"/>
                             <xs:element name="HibernateTimeout" type="TimeoutType" minOccurs="0"/>
-                        </xs:all>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
@@ -207,20 +228,20 @@
                 <!-- Google -->
                 <xs:element name="Google" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="InstallGoogleDrive" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="InstallGoogleChrome" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="InstallGCPW" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="EnrollmentToken" type="xs:string" minOccurs="0"/>
                             <xs:element name="DomainsAllowedToLogin" type="xs:string" minOccurs="0"/>
-                        </xs:all>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
                 <!-- Office -->
                 <xs:element name="Office" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="LicenseKey" type="xs:string" minOccurs="0"/>
                             <xs:element name="ProductID" type="xs:string" minOccurs="0"/>
                             <xs:element name="LanguageID" type="xs:string" minOccurs="0"/>
@@ -229,19 +250,19 @@
                             <xs:element name="Channel" type="OfficeChannelType" minOccurs="0"/>
                             <xs:element name="OfficeClientEdition" type="xs:integer" minOccurs="0"/>
                             <xs:element name="UpdatesEnabled" type="xs:boolean" minOccurs="0"/>
-                        </xs:all>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
                 <!-- Theme -->
                 <xs:element name="Theme" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="DarkMode" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="DesktopIconSize" type="DesktopIconSizeType" minOccurs="0"/>
                             <xs:element name="TransparencyEffects" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="WallpaperPath" type="xs:string" minOccurs="0"/>
-                        </xs:all>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
@@ -270,7 +291,7 @@
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
-            </xs:all>
+            </xs:sequence>
         </xs:complexType>
     </xs:element>
 
