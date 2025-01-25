@@ -1164,35 +1164,6 @@ function Set-SecurityConfiguration {
             
             }
 
-
-            # SMB1 Protocol
-            if ($SecurityConfig.DisableSMB1 -eq 'true') {
-                Write-SystemMessage -msg "Disabling SMB1 protocol..."
-                Write-Log "Disabling SMB1 protocol..." -Level Info
-                try {
-                    Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -WarningAction SilentlyContinue | Out-Null
-                    $script:restartRequired = $true
-                    Write-SystemMessage -successMsg
-                }
-                catch {
-                    Write-Log "Failed to disable SMB1 protocol: $($_.Exception.Message)" -Level Error
-                    Write-SystemMessage -errorMsg
-                }
-            }
-            elseif ($SecurityConfig.DisableSMB1 -eq 'false') {
-                Write-SystemMessage -msg "Enabling SMB1 protocol..."
-                Write-Log "Enabling SMB1 protocol..." -Level Info
-                try {
-                    Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -WarningAction SilentlyContinue | Out-Null
-                    $script:restartRequired = $true
-                    Write-SystemMessage -successMsg
-                }
-                catch {
-                    Write-Log "Failed to enable SMB1 protocol: $($_.Exception.Message)" -Level Error
-                    Write-SystemMessage -errorMsg
-                }
-            }
-
             # AutoPlay
             if ($SecurityConfig.DisableAutoPlay -eq 'true') {
                 Write-SystemMessage -msg "Disabling AutoPlay..."
