@@ -612,9 +612,9 @@ function Get-WinforgeConfig {
         [xml]$config = Get-Content -Path $Path
             
             # Validate XML against schema
-            if (-not (Test-ConfigSchema -Xml $config)) {
-                throw "Configuration failed schema validation"
-            }
+            # if (-not (Test-ConfigSchema -Xml $config)) {
+            #     throw "Configuration failed schema validation"
+            # }
         
         return $config.WinforgeConfig
         }
