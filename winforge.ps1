@@ -1146,7 +1146,7 @@ function Set-SecurityConfiguration {
                 Write-SystemMessage -msg "Disabling SMB1 protocol..."
                 Write-Log "Disabling SMB1 protocol..." -Level Info
                 try {
-                    Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+                    Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart | Out-Null
                     $script:restartRequired = $true
                     Write-SystemMessage -successMsg
                 }
@@ -1159,7 +1159,7 @@ function Set-SecurityConfiguration {
                 Write-SystemMessage -msg "Enabling SMB1 protocol..."
                 Write-Log "Enabling SMB1 protocol..." -Level Info
                 try {
-                    Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+                    Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart | Out-Null
                     $script:restartRequired = $true
                     Write-SystemMessage -successMsg
                 }
