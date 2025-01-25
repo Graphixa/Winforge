@@ -773,10 +773,10 @@ function Set-SystemCheckpoint {
         $snapshotName = "Winforge - $date - $time"
         
         Write-Log "Creating system restore point. Snapshot Name: $snapshotName"
-        Write-SystemMessage -msg "Creating System Restore Point | Snapshot Name" -value $snapshotName
+        Write-SystemMessage -msg "Creating System Restore Point | Snapshot Name" -value $snapshotName 
         
        
-        Checkpoint-Computer -Description $snapshotName -RestorePointType "MODIFY_SETTINGS" -Verbose
+        Checkpoint-Computer -Description $snapshotName -RestorePointType "MODIFY_SETTINGS" -WarningAction SilentlyContinue
         Write-SystemMessage -successMsg
             
         return $true
@@ -806,7 +806,7 @@ function Set-SystemConfiguration {
         # Computer Name
         if ($SystemConfig.ComputerName) {
             try {
-                Write-SystemMessage -msg "Setting computer name to:" -value $SystemConfig.ComputerName
+                Write-SystemMessage -msg "Setting computer name to" -value $SystemConfig.ComputerName
                 $currentName = $env:COMPUTERNAME
                 if ($currentName -ne $SystemConfig.ComputerName) {
                     Write-Log "Setting computer name to: $($SystemConfig.ComputerName)" -Level Info
@@ -1269,8 +1269,8 @@ function Set-PrivacyConfiguration {
             Write-SystemMessage -msg "Disabling diagnostic tracking..."
             Write-Log "Disabling diagnostic tracking..." -Level Info
             try {
-                Stop-Service "DiagTrack" -Force
-                Set-Service "DiagTrack" -StartupType Disabled
+                Stop-Service "DiagTrack" -Force | Out-Null
+                Set-Service "DiagTrack" -StartupType Disabled | Out-Null
                 Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to disable diagnostic tracking: $($_.Exception.Message)" -Level Error
@@ -1280,8 +1280,8 @@ function Set-PrivacyConfiguration {
             Write-SystemMessage -msg "Enabling diagnostic tracking..."
             Write-Log "Enabling diagnostic tracking..." -Level Info
             try {
-                Set-Service "DiagTrack" -StartupType Automatic
-                Start-Service "DiagTrack"
+                Set-Service "DiagTrack" -StartupType Automatic | Out-Null
+                Start-Service "DiagTrack" | Out-Null
                 Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to enable diagnostic tracking: $($_.Exception.Message)" -Level Error
@@ -1452,9 +1452,12 @@ function Install-Applications {
                 Write-SystemMessage -msg "Installing Chocolatey package manager..."
                 Write-Log "Installing Chocolatey package manager..." -Level Info
                 try {
-                    Set-ExecutionPolicy Bypass -Scope Process -Force
-                    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-                    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+                    $installScript = {
+                        Set-ExecutionPolicy Bypass -Scope Process -Force
+                        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+                        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+                    }
+                    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & {$installScript}" -Wait -WindowStyle Normal
                     Write-SystemMessage -successMsg
                 } catch {
                     Write-Log "Failed to install Chocolatey: $($_.Exception.Message)" -Level Error
@@ -1465,7 +1468,7 @@ function Install-Applications {
 
             # Install Chocolatey Apps
             foreach ($app in $AppConfig.ChocolateyApps.App) {
-                Write-SystemMessage -msg "Installing: " -value $app
+                Write-SystemMessage -msg "Installing" -value $app
                 Write-Log "Installing $app..." -Level Info
                 try {
                     if ($app.Version) {
@@ -2224,7 +2227,7 @@ function Set-WindowsFeaturesConfiguration {
                         $currentState = Get-WindowsOptionalFeature -Online -FeatureName $feature.Name
                         if ($currentState.State -eq 'Enabled') {
                             Write-Log "Feature $($feature.Name) is already enabled" -Level Warning
-                            Write-SystemMessage -warningMsg -msg "Feature already enabled" -value $feature.Name
+                            Write-SystemMessage -warningMsg -msg "Feature already enabled"
                             continue
                         }
                         $result = Enable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart | Out-Null
@@ -2240,7 +2243,7 @@ function Set-WindowsFeaturesConfiguration {
                         $currentState = Get-WindowsOptionalFeature -Online -FeatureName $feature.Name
                         if ($currentState.State -eq 'Disabled') {
                             Write-Log "Feature $($feature.Name) is already disabled" -Level Warning
-                            Write-SystemMessage -warningMsg -msg "Feature already disabled" -value $feature.Name
+                            Write-SystemMessage -warningMsg -msg "Feature already disabled"
                             continue
                         }
                         $result = Disable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart | Out-Null
@@ -2302,7 +2305,7 @@ function Set-GoogleConfiguration {
                 $script:tempFiles += $driveSetupPath
                 
                 Invoke-WebRequest -Uri $driveSetupUrl -OutFile $driveSetupPath | Out-Null
-                Start-Process -FilePath $driveSetupPath -ArgumentList "/silent /install" -Wait | Out-Null
+                Start-Process -FilePath $driveSetupPath -ArgumentList "--silent" -Wait | Out-Null
                 Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to install Google Drive: $($_.Exception.Message)" -Level Error
