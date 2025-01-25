@@ -1451,7 +1451,7 @@ function Install-Applications {
             return $true
         }
 
-        $packageManager = $AppConfig.PackageManager
+        $packageManager = $AppConfig.GetAttribute("PackageManager")
         if (-not $packageManager) {
             Write-Log "No package manager specified for installation" -Level Error
             Write-SystemMessage -errorMsg -msg "No package manager specified"
@@ -1482,7 +1482,7 @@ function Install-Applications {
             # Install Chocolatey Apps
             foreach ($app in $AppConfig.App) {
                 $appName = $app.InnerText.Trim()
-                $version = $app.Version
+                $version = $app.GetAttribute("Version")
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
                     Write-Log "Empty application name found. Skipping..." -Level Warning
@@ -1526,7 +1526,7 @@ function Install-Applications {
             # Install Winget Apps
             foreach ($app in $AppConfig.App) {
                 $appName = $app.InnerText.Trim()
-                $version = $app.Version
+                $version = $app.GetAttribute("Version")
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
                     Write-Log "Empty application name found. Skipping..." -Level Warning
@@ -1596,7 +1596,7 @@ function Remove-Applications {
             return $true
         }
 
-        $packageManager = $AppConfig.PackageManager
+        $packageManager = $AppConfig.GetAttribute("PackageManager")
         if (-not $packageManager) {
             Write-Log "No package manager specified for uninstallation" -Level Error
             Write-SystemMessage -errorMsg -msg "No package manager specified"
@@ -3579,7 +3579,6 @@ try {
         if ($configXML.Applications.Install) {
             $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications.Install
         }
-
         if ($configXML.Applications.Uninstall) {
             $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications.Uninstall
         }
