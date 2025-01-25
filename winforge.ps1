@@ -1549,7 +1549,15 @@ function Set-EnvironmentVariables {
 
     try {
         foreach ($variable in $EnvConfig.ChildNodes) {
-            [System.Environment]::SetEnvironmentVariable($variable.Name, $variable.InnerText, [System.EnvironmentVariableTarget]::Machine)
+            Write-Log "Setting environment variable: $($variable.Name) = $($variable.InnerText)" -Level Info
+            Write-SystemMessage -msg "Setting environment variable: " -value $variable.Name
+            try {
+                [System.Environment]::SetEnvironmentVariable($variable.Name, $variable.InnerText, [System.EnvironmentVariableTarget]::Machine)
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to set environment variable: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+            }
         }
         Write-SystemMessage -successMsg
         return $true
