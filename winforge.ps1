@@ -3432,23 +3432,7 @@ try {
     }
 
     Write-SystemMessage -title "Configuration Completed"
-    $cleanup = Read-Host "Would you like to cleanup temporary files? (Y/N)"
-    switch ($cleanup) {
-        'Y' {
-            Write-SystemMessage -msg "Cleaning up temporary files..."
-            Write-Log "Cleaning up temporary files..."
-            Remove-TempFiles
-            Write-SystemMessage -successMsg
-            Write-Log "Temporary files cleaned up successfully"
-        }
-        'N' {
-            Write-SystemMessage -msg "Temporary files will not be removed."
-            Write-Log "Temporary files will not be removed."
-        }
-        default {
-            Write-SystemMessage -errorMsg -msg "Invalid input." -value "Select Y or N."
-        }
-    }
+
 
     # Display configuration status
     Write-SystemMessage -title "Configuration Status"
@@ -3486,6 +3470,27 @@ try {
             }
         }
     }
+
+    Write-SystemMessage -title "Cleanup Temporary Files"
+
+    $cleanup = Read-Host "Would you like to cleanup temporary files? (Y/N)"
+    switch ($cleanup) {
+        'Y' {
+            Write-SystemMessage -msg "Cleaning up temporary files..."
+            Write-Log "Cleaning up temporary files..."
+            Remove-TempFiles
+            Write-SystemMessage -successMsg
+            Write-Log "Temporary files cleaned up successfully"
+        }
+        'N' {
+            Write-SystemMessage -msg "Temporary files will not be removed."
+            Write-Log "Temporary files will not be removed."
+        }
+        default {
+            Write-SystemMessage -errorMsg -msg "Invalid input." -value "Select Y or N."
+        }
+    }
+
 
     Write-SystemMessage -msg "Winforge will now exit."
     Pause
