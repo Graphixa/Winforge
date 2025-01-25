@@ -1688,9 +1688,9 @@ function Remove-Applications {
                 Write-Log "Uninstalling $appName..." -Level Info
                 try {
                     # Check if app is installed first
-                    $listResult = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco list $appName -e }" -Wait -PassThru
+                    $listResult = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco list $appName -e }" -Wait -PassThru -WindowStyle Hidden
                     if ($listResult.ExitCode -eq 0) {
-                        $result = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco uninstall `"$appName`" -y }" -Wait -PassThru
+                        $result = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco uninstall `"$appName`" -y -r --ignoredetectedreboot}" -Wait -PassThru -WindowStyle Hidden
                         if ($result.ExitCode -eq 0) {
                             Write-SystemMessage -successMsg
                         } else {
