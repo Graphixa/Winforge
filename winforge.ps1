@@ -1467,9 +1467,13 @@ function Install-Applications {
                 Write-Log "Installing Chocolatey..." -Level Info
                 Write-SystemMessage -msg "Installing Chocolatey..."
                 try {
-                    Set-ExecutionPolicy Bypass -Scope Process -Force
-                    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-                    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+                    $installScript = {
+                        $ProgressPreference = 'SilentlyContinue'
+                        Set-ExecutionPolicy Bypass -Scope Process -Force
+                        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+                        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+                    }
+                    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & {$installScript}" -Wait -WindowStyle Hidden
                     Write-SystemMessage -successMsg
                 }
                 catch {
@@ -1478,6 +1482,10 @@ function Install-Applications {
                     return $false
                 }
             }
+
+            # Refresh environment variables to ensure choco command is available
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            Write-Log "Refreshed environment variables to include Chocolatey" -Level Info
 
             # Install
             foreach ($app in $AppConfig.ChildNodes) {
