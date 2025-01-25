@@ -3632,7 +3632,7 @@ function Remove-Bloatware {
         foreach ($appName in $appxPackages) {
             $currentApp++
             Write-Log "Processing ($currentApp/$totalApps): $appName" -Level Info
-            Write-SystemMessage -msg "Removing bloatware app" -value $appName
+            Write-SystemMessage -msg "Removing app" -value $appName
 
             # First remove for all users
             $appInstance = Get-AppxPackage -AllUsers -Name $appName -ErrorAction SilentlyContinue
