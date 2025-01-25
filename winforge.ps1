@@ -1451,7 +1451,7 @@ function Install-Applications {
             return $true
         }
 
-        $packageManager = $AppConfig.GetAttribute("PackageManager")
+        $packageManager = $AppConfig.Attributes["PackageManager"].Value
         if (-not $packageManager) {
             Write-Log "No package manager specified for installation" -Level Error
             Write-SystemMessage -errorMsg -msg "No package manager specified"
@@ -1479,10 +1479,11 @@ function Install-Applications {
                 }
             }
 
-            # Install Chocolatey Apps
-            foreach ($app in $AppConfig.App) {
+            # Install
+            foreach ($app in $AppConfig.ChildNodes) {
+                if ($app.Name -ne "App") { continue }
                 $appName = $app.InnerText.Trim()
-                $version = $app.GetAttribute("Version")
+                $version = if ($app.Attributes["Version"]) { $app.Attributes["Version"].Value } else { $null }
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
                     Write-Log "Empty application name found. Skipping..." -Level Warning
@@ -1596,7 +1597,7 @@ function Remove-Applications {
             return $true
         }
 
-        $packageManager = $AppConfig.GetAttribute("PackageManager")
+        $packageManager = $AppConfig.Attributes["PackageManager"].Value
         if (-not $packageManager) {
             Write-Log "No package manager specified for uninstallation" -Level Error
             Write-SystemMessage -errorMsg -msg "No package manager specified"
@@ -1614,7 +1615,8 @@ function Remove-Applications {
                 return $false
             }
 
-            foreach ($app in $AppConfig.App) {
+            foreach ($app in $AppConfig.ChildNodes) {
+                if ($app.Name -ne "App") { continue }
                 $appName = $app.InnerText.Trim()
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
