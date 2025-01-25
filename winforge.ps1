@@ -2545,7 +2545,7 @@ function Set-OfficeConfiguration {
             Write-SystemMessage -msg "Activating Microsoft Office..."
             Write-Log "Activating Microsoft Office..."
             
-            $osppPath = "${env:ProgramFiles(x86)}\Microsoft Office\Office16\OSPP.VBS"
+            $osppPath = "${env:ProgramFiles}\Microsoft Office\Office16\OSPP.VBS"
             if (Test-Path $osppPath) {
                 try {
                     cscript $osppPath /inpkey:$($OfficeConfig.LicenseKey) | Out-Null
@@ -3062,7 +3062,7 @@ function Set-FileOperations {
                         Write-SystemMessage -successMsg
                     } else {
                         Write-Log "Source file not found: $($file.Source)" -Level Warning
-                        Write-SystemMessage -errorMsg -msg "Source file not found" -value $($file.Source)
+                        Write-SystemMessage -errorMsg -msg "Source file not found"
                     }
                 } catch {
                     Write-Log "Failed to copy file: $($_.Exception.Message)" -Level Warning
@@ -3098,14 +3098,14 @@ function Set-FileOperations {
                         $fileInfo = Get-Item $file
                         if ($fileInfo.Attributes -match "ReadOnly|System") {
                             Write-Log "Warning: Attempting to delete protected file: $file" -Level Warning
-                            Write-SystemMessage -warningMsg -msg "Attempting to delete protected file" -value $file
+                            Write-SystemMessage -warningMsg -msg "Attempting to delete protected file"
                         }
 
                         Remove-Item -Path $file -Force
                         Write-SystemMessage -successMsg
                     } else {
                         Write-Log "File not found for deletion: $file" -Level Warning
-                        Write-SystemMessage -errorMsg -msg "File not found" -value $file
+                        Write-SystemMessage -errorMsg -msg "File not found"
                     }
                 } catch {
                     $errorMsg = "Failed to delete file: $($_.Exception.Message)"
