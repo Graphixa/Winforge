@@ -796,11 +796,6 @@ function Set-SystemConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$SystemConfig
     )
-
-    # Return if no system config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($SystemConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Configuring System Settings"
 
@@ -1058,11 +1053,6 @@ function Set-SecurityConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$SecurityConfig
     )
-    
-    # Return if no security config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($SecurityConfig)) {
-        return
-    }
 
     Write-SystemMessage -title "Configuring Security Settings"
 
@@ -1248,10 +1238,6 @@ function Set-PrivacyConfiguration {
         [System.Xml.XmlElement]$PrivacyConfig
     )
     
-    # Return if no privacy config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($PrivacyConfig)) {
-        return
-    }
     Write-SystemMessage -title "Configuring Privacy Settings"
 
     try {
@@ -1450,11 +1436,6 @@ function Install-Applications {
         [System.Xml.XmlElement]$AppConfig
     )
 
-    # Return if no app config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($AppConfig)) {
-        return
-    }
-
     Write-SystemMessage -title "Installing Applications"
 
     try {
@@ -1563,11 +1544,6 @@ function Set-EnvironmentVariables {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$EnvConfig
     )
-
-    # Return if no env config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($EnvConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Setting Environment Variables"
 
@@ -1590,11 +1566,6 @@ function Set-WindowsActivation {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$ActivationConfig
     )
-
-    # Return if no activation config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($ActivationConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Windows Activation"
 
@@ -1625,11 +1596,6 @@ function Set-WindowsUpdateConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$UpdateConfig
     )
-
-    # Return if no update config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($UpdateConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Configuring Windows Update"
 
@@ -1713,11 +1679,6 @@ function Set-ScheduledTasksConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$TasksConfig
     )
-
-    # Return if no tasks config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($TasksConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Configuring Scheduled Tasks"
 
@@ -1831,11 +1792,6 @@ function Install-Fonts {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$FontConfig
     )
-
-    # Return if no font config is provided
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($FontConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Installing Fonts"
 
@@ -1904,10 +1860,6 @@ function Set-TaskbarConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$TaskbarConfig
     )
-
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($TaskbarConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Configuring Taskbar"
 
@@ -2046,10 +1998,6 @@ function Set-PowerConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$PowerConfig
     )
-
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($PowerConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Configuring Power Settings"
 
@@ -2179,10 +2127,6 @@ function Set-RegistryEntries {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$RegistryConfig
     )
-
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($RegistryConfig)) {
-        return
-    }
     
     try {
         
@@ -2257,10 +2201,6 @@ function Set-WindowsFeaturesConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$FeaturesConfig
     )
-
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($FeaturesConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Configuring Windows Features"
 
@@ -2343,10 +2283,6 @@ function Set-GoogleConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$GoogleConfig
     )
-    
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($GoogleConfig)) {
-        return
-    }
 
     Write-SystemMessage -title "Configuring Google Workspace"
 
@@ -2537,10 +2473,6 @@ function Set-OfficeConfiguration {
         [System.Xml.XmlElement]$OfficeConfig
     )
     
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($OfficeConfig)) {
-        return
-    }
-
     Write-SystemMessage -title "Configuring Microsoft Office"
 
     try {
@@ -2643,10 +2575,6 @@ function Set-ThemeConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$ThemeConfig
     )
-
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($ThemeConfig)) {
-        return
-    }
 
     Write-SystemMessage -title "Configuring Theme Settings"
     
@@ -2882,10 +2810,6 @@ function Set-TweaksConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$TweaksConfig
     )
-
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($TweaksConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Applying System Tweaks"
 
@@ -2959,10 +2883,6 @@ function Set-NetworkConfiguration {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$NetworkConfig
     )
-
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($NetworkConfig)) {
-        return
-    }
     
     Write-SystemMessage -title "Configuring Network Settings"
 
@@ -3097,10 +3017,6 @@ function Set-FileOperations {
         [System.Xml.XmlElement]$FileConfig
     )
 
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($FileConfig)) {
-        return
-    }
-    
     try {
         Write-SystemMessage -title "Performing File Operations"
 
@@ -3215,10 +3131,6 @@ function Set-Shortcuts {
         [Parameter(Mandatory = $true)]
         [System.Xml.XmlElement]$ShortcutConfig
     )
-
-    if ([System.Xml.XmlElement]::IsNullOrEmpty($ShortcutConfig)) {
-        return
-    }
     
     try {
         Write-SystemMessage -title "Creating Shortcuts"
@@ -3511,5 +3423,5 @@ catch {
     Write-Log "$($_.Exception.Message)" -Level Error
     Write-SystemMessage -errorMsg -msg "$($_.Exception.Message)"
     Pause
-    return 1
+    return
 }
