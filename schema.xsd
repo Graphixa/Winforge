@@ -105,10 +105,9 @@
                 <!-- Application Installation -->
                 <xs:element name="Applications" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="Install" minOccurs="0">
                                 <xs:complexType>
-                                    <xs:attribute name="PackageManager" type="PackageManagerType" use="required"/>
                                     <xs:sequence>
                                         <xs:element name="App" maxOccurs="unbounded">
                                             <xs:complexType>
@@ -120,18 +119,26 @@
                                             </xs:complexType>
                                         </xs:element>
                                     </xs:sequence>
+                                    <xs:attribute name="PackageManager" type="PackageManagerType" use="required"/>
                                 </xs:complexType>
                             </xs:element>
-                            
                             <xs:element name="Uninstall" minOccurs="0">
                                 <xs:complexType>
-                                    <xs:attribute name="PackageManager" type="PackageManagerType" use="required"/>
                                     <xs:sequence>
-                                        <xs:element name="App" maxOccurs="unbounded" type="xs:string"/>
+                                        <xs:element name="App" maxOccurs="unbounded">
+                                            <xs:complexType>
+                                                <xs:simpleContent>
+                                                    <xs:extension base="xs:string">
+                                                        <xs:attribute name="Comment" type="xs:string" use="optional"/>
+                                                    </xs:extension>
+                                                </xs:simpleContent>
+                                            </xs:complexType>
+                                        </xs:element>
                                     </xs:sequence>
+                                    <xs:attribute name="PackageManager" type="PackageManagerType" use="required"/>
                                 </xs:complexType>
                             </xs:element>
-                        </xs:all>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
