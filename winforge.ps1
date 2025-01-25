@@ -301,10 +301,18 @@ function Test-ConfigSchema {
         # Download schema if it's a URL
         if ($script:schemaPath -match '^https?://') {
             $tempSchemaPath = Join-Path $env:TEMP "winforge_schema.xsd"
-            Write-Log "Downloading schema to: $tempSchemaPath"
-            Invoke-WebRequest -Uri $script:schemaPath -OutFile $tempSchemaPath
-            $script:tempFiles += $tempSchemaPath
-            $schemaPath = $tempSchemaPath
+            Write-Log "Downloading schema from: $($script:schemaPath)"
+            Write-Log "Saving to: $tempSchemaPath"
+            
+            try {
+                Invoke-WebRequest -Uri $script:schemaPath -OutFile $tempSchemaPath
+                $script:tempFiles += $tempSchemaPath
+                $schemaPath = $tempSchemaPath
+            }
+            catch {
+                Write-Log "Failed to download schema: $($_.Exception.Message)" -Level Error
+                throw
+            }
         } else {
             $schemaPath = $script:schemaPath
         }
@@ -314,33 +322,38 @@ function Test-ConfigSchema {
             throw "Schema file not found at: $schemaPath"
         }
 
+        Write-Log "Loading schema from: $schemaPath"
+        
         # Load and validate schema
         $schemaReader = New-Object System.Xml.XmlTextReader $schemaPath
         try {
-        $schema = [System.Xml.Schema.XmlSchema]::Read($schemaReader, {
-            param($sender, $e)
-            Write-Log "Schema Load Error: $($e.Message)" -Level Error
-        })
-        
-        if ($null -eq $schema) {
-            throw "Failed to load schema"
-        }
+            $schema = [System.Xml.Schema.XmlSchema]::Read($schemaReader, {
+                param($sender, $e)
+                Write-Log "Schema Load Error: $($e.Message)" -Level Error
+            })
+            
+            if ($null -eq $schema) {
+                throw "Failed to load schema"
+            }
 
-        $Xml.Schemas.Add($schema) | Out-Null
-        
-        $validationErrors = @()
-        $Xml.Validate({
-            param($sender, $e)
-            $validationErrors += $e
+            Write-Log "Schema loaded successfully"
+            
+            $Xml.Schemas.Add($schema) | Out-Null
+            
+            $validationErrors = @()
+            $Xml.Validate({
+                param($sender, $e)
+                $validationErrors += $e
                 Write-Log "Configuration Validation Error: $($e.Message)" -Level Error
-            Write-Log "Line: $($e.Exception.LineNumber), Position: $($e.Exception.LinePosition)" -Level Error
-        })
+                Write-Log "Line: $($e.Exception.LineNumber), Position: $($e.Exception.LinePosition)" -Level Error
+            })
 
-        if ($validationErrors.Count -gt 0) {
-                throw "Configuration validation failed with $($validationErrors.Count) errors"
-        }
+            if ($validationErrors.Count -gt 0) {
+                throw "Configuration validation failed with $($validationErrors.Count) errors. Check the log file for details."
+            }
 
-        return $true
+            Write-Log "Configuration validated successfully against schema"
+            return $true
         }
         finally {
             $schemaReader.Close()
@@ -609,14 +622,14 @@ function Get-WinforgeConfig {
         
         # Now that we've decrypted in place, $Path is a plain XML file.
         try {
-        [xml]$config = Get-Content -Path $Path
+            [xml]$config = Get-Content -Path $Path
             
             # Validate XML against schema
-            # if (-not (Test-ConfigSchema -Xml $config)) {
-            #     throw "Configuration failed schema validation"
-            # }
+            if (-not (Test-ConfigSchema -Xml $config)) {
+                throw "Configuration failed schema validation. Please check the log file for detailed errors."
+            }
         
-        return $config.WinforgeConfig
+            return $config.WinforgeConfig
         }
         catch [System.Xml.XmlException] {
             throw "Invalid XML in configuration file: $($_.Exception.Message)"
@@ -1434,6 +1447,12 @@ function Install-Applications {
     Write-SystemMessage -title "Installing Applications"
 
     try {
+        # Debug logging
+        Write-Log "Debug: AppConfig type: $($AppConfig.GetType().FullName)" -Level Info
+        Write-Log "Debug: AppConfig content: $($AppConfig | Format-List | Out-String)" -Level Info
+        Write-Log "Debug: PackageManager value: $($AppConfig.PackageManager)" -Level Info
+        Write-Log "Debug: Number of apps: $($AppConfig.App.Count)" -Level Info
+
         if (-not $AppConfig) {
             Write-Log "No applications to install" -Level Info
             return $true
@@ -1558,6 +1577,7 @@ function Install-Applications {
     }
     catch {
         Write-Log "Error installing applications: $($_.Exception.Message)" -Level Error
+        Write-Log "Error installing applications: $($_.ScriptStackTrace)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to install applications. Check the log for details."
         return $false
     }
@@ -1572,6 +1592,12 @@ function Remove-Applications {
     Write-SystemMessage -title "Removing Applications"
 
     try {
+        # Debug logging
+        Write-Log "Debug: AppConfig type: $($AppConfig.GetType().FullName)" -Level Info
+        Write-Log "Debug: AppConfig content: $($AppConfig | Format-List | Out-String)" -Level Info
+        Write-Log "Debug: PackageManager value: $($AppConfig.PackageManager)" -Level Info
+        Write-Log "Debug: Number of apps: $($AppConfig.App.Count)" -Level Info
+
         if (-not $AppConfig) {
             Write-Log "No applications to uninstall" -Level Info
             return $true
@@ -1678,8 +1704,8 @@ function Remove-Applications {
         return $true
     }
     catch {
-        $errorMessage = $_.Exception.Message
-        Write-Log "Error removing applications: $errorMessage" -Level Error
+        Write-Log "Error removing applications: $($_.Exception.Message)" -Level Error
+        Write-Log "Error removing applications: $($_.ScriptStackTrace)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to remove applications. Check the log for details."
         return $false
     }
