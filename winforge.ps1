@@ -3497,12 +3497,12 @@ try {
 
     # Application Installation
     if ($configXML.Applications.Install) {
-        $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications.Install
+        $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications
     }
 
     # Application Uninstallation
     if ($configXML.Applications.Uninstall) {
-        $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications.Uninstall
+        $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications
     }
 
     # Google Configuration
