@@ -765,9 +765,9 @@ function Set-SystemCheckpoint {
             return $false
         }
 
-        $date = Get-Date -Format "dd/MM/yyyy"
+        $date = Get-Date -Format "MM/dd/yyyy"
         $time = Get-Date -Format "HH:mm:ss"
-        $snapshotName = "Winforge - $date - $time"
+        $snapshotName = "Winforge - $date"
         
         Write-Log "Creating system restore point. Snapshot Name: $snapshotName"
         Write-SystemMessage -msg "Creating System Restore Point | Snapshot Name" -value $snapshotName 
@@ -1665,7 +1665,7 @@ function Set-EnvironmentVariables {
     try {
         foreach ($variable in $EnvConfig.ChildNodes) {
             Write-Log "Setting environment variable: $($variable.Name) = $($variable.InnerText)" -Level Info
-            Write-SystemMessage -msg "Setting environment variable: " -value $variable.Name
+            Write-SystemMessage -msg "Setting environment variable" -value $variable.Name
             try {
                 [System.Environment]::SetEnvironmentVariable($variable.Name, $variable.InnerText, [System.EnvironmentVariableTarget]::Machine)
                 Write-SystemMessage -successMsg
@@ -1724,11 +1724,15 @@ function Set-WindowsUpdateConfiguration {
 
     try {        
         # Auto Update Settings
-        if ($UpdateConfig.NoAutoUpdate) {
+        if ($UpdateConfig.AutomaticUpdates) {
             Write-SystemMessage -msg "Configuring automatic updates..."
-            Write-Log "Setting automatic updates to: $($UpdateConfig.NoAutoUpdate)"
+            Write-Log "Setting automatic updates to: $($UpdateConfig.AutomaticUpdates)"
             try {
-                Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoUpdate" -Type DWord -Value ([int]$UpdateConfig.NoAutoUpdate)
+                if ($UpdateConfig.AutomaticUpdates -eq 'true') {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AutomaticUpdates" -Type DWord -Value 0
+                } elseif ($UpdateConfig.AutomaticUpdates -eq 'false') {
+                    Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AutomaticUpdates" -Type DWord -Value 1
+                }
                 Write-SystemMessage -successMsg
             } catch {
                 Write-Log "Failed to configure automatic updates: $($_.Exception.Message)" -Level Error
@@ -2207,6 +2211,7 @@ function Set-PowerConfiguration {
             Write-SystemMessage -msg "Setting monitor timeout to" -value "$($PowerConfig.MonitorTimeout) minutes"
             powercfg /change monitor-timeout-ac $PowerConfig.MonitorTimeout
             powercfg /change monitor-timeout-dc $PowerConfig.MonitorTimeout
+            Write-SystemMessage -successMsg
         }
 
         # Fast Startup
@@ -2898,9 +2903,9 @@ public class Wallpaper
             Write-Log "Setting desktop icon size..." -Level Info
             try {
                 $sizeValue = switch ($ThemeConfig.DesktopIconSize) {
-                    "Small" { 48 }  # Increased from 0
-                    "Medium" { 64 } # Increased from 1 
-                    "Large" { 96 }  # Increased from 2
+                    "Small" { 16 }  # Increased from 0
+                    "Medium" { 24 } # Increased from 1 
+                    "Large" { 32 }  # Increased from 2
                     default {
                         Write-Log "Invalid desktop icon size specified: $($ThemeConfig.DesktopIconSize). Using Medium." -Level Warning
                         64 # Increased default size
