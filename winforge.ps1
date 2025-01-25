@@ -1600,8 +1600,15 @@ function Remove-Applications {
                 Write-SystemMessage -msg "Uninstalling" -value $appName
                 Write-Log "Uninstalling $appName..." -Level Info
                 try {
-                    winget uninstall $appName --accept-source-agreements
-                    Write-SystemMessage -successMsg
+                    #check if app is installed first
+                    if (winget list $appName -e) {
+                        winget uninstall $appName --accept-source-agreements
+                        Write-SystemMessage -successMsg
+                    }
+                    else {
+                        Write-Log "App $appName is not installed" -Level Info
+                        Write-SystemMessage -warningMsg -msg "$appName is not installed on this system"
+                    }
                 }
                 catch {
                     $errorMessage = $_.Exception.Message
@@ -1618,8 +1625,15 @@ function Remove-Applications {
                 Write-SystemMessage -msg "Uninstalling" -value $appName
                 Write-Log "Uninstalling $appName..." -Level Info
                 try {
-                    choco uninstall $appName -y
-                    Write-SystemMessage -successMsg
+                    #check if app is installed first
+                    if (choco list $appName -e) {
+                        choco uninstall $appName -y
+                        Write-SystemMessage -successMsg
+                    }
+                    else {
+                        Write-Log "App $appName is not installed" -Level Info
+                        Write-SystemMessage -warningMsg -msg "$appName is not installed on this system"
+                    }
                 }
                 catch {
                     $errorMessage = $_.Exception.Message
