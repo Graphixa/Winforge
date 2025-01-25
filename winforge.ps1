@@ -3378,74 +3378,19 @@ try {
         $configStatus['System'] = Set-SystemConfiguration -SystemConfig $configXML.System
     }
 
-    # Environment Variables
-    if ($configXML.EnvironmentVariables) {
-        $configStatus['Environment'] = Set-EnvironmentVariables -EnvConfig $configXML.EnvironmentVariables
-    }
-
     # Windows Activation
     if ($configXML.Activation) {
         $configStatus['Activation'] = Set-WindowsActivation -ActivationConfig $configXML.Activation
     }
 
-    # Windows Update
-    if ($configXML.WindowsUpdate) {
-        $configStatus['WindowsUpdate'] = Set-WindowsUpdateConfiguration -UpdateConfig $configXML.WindowsUpdate
+    # Environment Variables
+    if ($configXML.EnvironmentVariables) {
+        $configStatus['Environment'] = Set-EnvironmentVariables -EnvConfig $configXML.EnvironmentVariables
     }
 
-    # Taskbar
+    # Taskbar Configuration
     if ($configXML.Taskbar) {
         $configStatus['Taskbar'] = Set-TaskbarConfiguration -TaskbarConfig $configXML.Taskbar
-    }
-
-    # Privacy
-    if ($configXML.Privacy) {
-        $configStatus['Privacy'] = Set-PrivacyConfiguration -PrivacyConfig $configXML.Privacy
-    }
-
-    # Security
-    if ($configXML.Security) {
-        $configStatus['Security'] = Set-SecurityConfiguration -SecurityConfig $configXML.Security
-    }
-
-    # Applications
-    if ($configXML.Applications) {
-        $configStatus['Applications'] = Install-Applications -AppConfig $configXML.Applications
-    }
-
-    # Fonts
-    if ($configXML.Fonts) {
-        $configStatus['Fonts'] = Install-Fonts -FontConfig $configXML.Fonts
-    }
-
-    # Power
-    if ($configXML.Power) {
-        $configStatus['Power'] = Set-PowerConfiguration -PowerConfig $configXML.Power
-    }
-
-    # Registry
-    if ($configXML.Registry) {
-        $configStatus['Registry'] = Set-RegistryEntries -RegistryConfig $configXML.Registry
-    }
-
-    # Scheduled Tasks
-    if ($configXML.Tasks) {
-        $configStatus['Tasks'] = Set-ScheduledTasksConfiguration -TasksConfig $configXML.Tasks
-    }
-
-    # Windows Features
-    if ($configXML.WindowsFeatures) {
-        $configStatus['WindowsFeatures'] = Set-WindowsFeaturesConfiguration -FeaturesConfig $configXML.WindowsFeatures
-    }
-
-    # Google Configuration
-    if ($configXML.Google) {
-        $configStatus['Google'] = Set-GoogleConfiguration -GoogleConfig $configXML.Google
-    }
-
-    # Office Configuration
-    if ($configXML.Office) {
-        $configStatus['Office'] = Set-OfficeConfiguration -OfficeConfig $configXML.Office
     }
 
     # Theme Configuration
@@ -3458,10 +3403,68 @@ try {
         $configStatus['Tweaks'] = Set-TweaksConfiguration -TweaksConfig $configXML.Tweaks
     }
 
+    # Power
+    if ($configXML.Power) {
+        $configStatus['Power'] = Set-PowerConfiguration -PowerConfig $configXML.Power
+    }
+
     # Network Configuration
     if ($configXML.Network) {
         $configStatus['Network'] = Set-NetworkConfiguration -NetworkConfig $configXML.Network
     }
+
+    # Privacy
+    if ($configXML.Privacy) {
+        $configStatus['Privacy'] = Set-PrivacyConfiguration -PrivacyConfig $configXML.Privacy
+    }
+
+    # Security
+    if ($configXML.Security) {
+        $configStatus['Security'] = Set-SecurityConfiguration -SecurityConfig $configXML.Security
+    }
+
+    # Windows Update
+    if ($configXML.WindowsUpdate) {
+        $configStatus['WindowsUpdate'] = Set-WindowsUpdateConfiguration -UpdateConfig $configXML.WindowsUpdate
+    }
+
+    # Windows Features
+    if ($configXML.WindowsFeatures) {
+        $configStatus['WindowsFeatures'] = Set-WindowsFeaturesConfiguration -FeaturesConfig $configXML.WindowsFeatures
+    }
+
+    # Fonts installation
+    if ($configXML.Fonts) {
+        $configStatus['Fonts'] = Install-Fonts -FontConfig $configXML.Fonts
+    }
+
+    # Applications
+    if ($configXML.Applications) {
+        $configStatus['Applications'] = Install-Applications -AppConfig $configXML.Applications
+    }
+
+    # Google Configuration
+    if ($configXML.Google) {
+        $configStatus['Google'] = Set-GoogleConfiguration -GoogleConfig $configXML.Google
+    }
+
+    # Office Configuration
+    if ($configXML.Office) {
+        $configStatus['Office'] = Set-OfficeConfiguration -OfficeConfig $configXML.Office
+    }
+
+
+    # Registry modifications
+    if ($configXML.Registry) {
+        $configStatus['Registry'] = Set-RegistryEntries -RegistryConfig $configXML.Registry
+    }
+
+    # Scheduled Tasks
+    if ($configXML.Tasks) {
+        $configStatus['Tasks'] = Set-ScheduledTasksConfiguration -TasksConfig $configXML.Tasks
+    }
+
+
 
     # File Operations
     if ($configXML.Files) {
