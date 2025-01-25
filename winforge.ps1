@@ -35,6 +35,7 @@ $script:schemaPath = "https://raw.githubusercontent.com/Graphixa/WinforgeX/main/
 $script:restartRequired = $false
 $script:tempFiles = @()
 
+$winforgeVersion = '0.2.1'
 
 
 $ProgressPreference = 'SilentlyContinue'
@@ -236,43 +237,37 @@ function Write-SystemMessage {
     }
 }
 
-<#
-function Write-ErrorMessage {
+Function Show-SplashScreen {
     param (
         [Parameter()]
-        [string]$msg = '',
-
-        [Parameter()]
-        [string]$value = ''
+        [string]$version = ''
     )
+Write-Host @"
+-----------------------------------------  
+"@ -ForegroundColor Cyan
+Write-Host @"
+           _     ___                 
+     _ _ _|_|___|  _|___ ___ ___ ___ 
+    | | | | |   |  _| . |  _| . | -_|
+    |_____|_|_|_|_| |___|_| |_  |___|
+                            |___|                    
+"@ -ForegroundColor DarkMagenta
 
-    # Write the error header with optional message
-    if ($PSBoundParameters.ContainsKey('msg') -and $PSBoundParameters.ContainsKey('value')) {
-        Write-Host " x ERROR | ${msg}: " -ForegroundColor Red -NoNewline
-        Write-Host "$value" -ForegroundColor White
-    } elseif ($PSBoundParameters.ContainsKey('msg')) {
-        Write-Host " x ERROR | ${msg}" -ForegroundColor Red
-    } else {
-        Write-Host " x ERROR" -ForegroundColor Red
-        Write-Host $_.Exception.Message -ForegroundColor Red
-    }
+Write-Host @"
+-----------------------------------------
+"@ -ForegroundColor Cyan
+Write-Host @"
+          FORGE YOUR OWN SYSTEM
+"@ -ForegroundColor White
+Write-Host @"
+-----------------------------------------
+"@ -ForegroundColor Cyan
+Write-Host @"
+                ver $version
+           
+"@ -ForegroundColor DarkGray
 }
 
-function Write-SuccessMessage {
-    param (
-      [Parameter()]
-      $msg = "SUCCESS",
-  
-      [Parameter()]
-      $msgColor = 'Green'
-    )
-  
-    Write-Host
-    Write-Host "Success: $msg " -ForegroundColor $msgColor -BackgroundColor Black
-    Write-Host
-  }
-
-  #>
 
 function Test-AdminPrivileges {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -3320,7 +3315,7 @@ function Set-Shortcuts {
 try {
 
     Clear-Host
-    Write-SystemMessage -title "Starting Winforge Configuration"
+    Show-SplashScreen -version $winforgeVersion
 
     # Verify running as administrator
     if (-not (Test-AdminPrivileges)) {
