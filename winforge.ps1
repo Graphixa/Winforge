@@ -1464,8 +1464,8 @@ function Install-Applications {
         if ($packageManager -eq "Chocolatey") {
             # Check if Chocolatey is installed
             if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-                Write-Log "Installing Chocolatey..." -Level Info
-                Write-SystemMessage -msg "Installing Chocolatey..."
+                Write-Log "Installing Chocolatey Package Manager..." -Level Info
+                Write-SystemMessage -msg "Installing Chocolatey Package Manager..."
                 try {
                     $installScript = {
                         $ProgressPreference = 'SilentlyContinue'
