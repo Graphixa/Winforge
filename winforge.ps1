@@ -1444,12 +1444,10 @@ function Install-Applications {
 
         # Chocolatey Apps
         if ($packageManager -eq "Chocolatey") {
-
-
-            # Install Chocolatey if not present
+            # Check if Chocolatey is installed
             if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-                Write-SystemMessage -msg "Installing Chocolatey..."
                 Write-Log "Installing Chocolatey..." -Level Info
+                Write-SystemMessage -msg "Installing Chocolatey..."
                 try {
                     $installScript = {
                         Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -1458,12 +1456,14 @@ function Install-Applications {
                     }
                     Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & {$installScript}" -Wait -WindowStyle Normal
                     Write-SystemMessage -successMsg
-                } catch {
+                }
+                catch {
                     Write-Log "Failed to install Chocolatey: $($_.Exception.Message)" -Level Error
                     Write-SystemMessage -errorMsg
                     return $false
                 }
             }
+
             # Refresh shell environment to get choco commands
             Write-Log "Refreshing environment variables after chocolatey installation." -Level Info
             try {
@@ -1474,19 +1474,30 @@ function Install-Applications {
 
             # Install Chocolatey Apps
             foreach ($app in $AppConfig.Install.App) {
-                $appName = $app.InnerText
+                $appName = $app.InnerText.Trim()
                 $version = $app.Version
+
+                if ([string]::IsNullOrWhiteSpace($appName)) {
+                    Write-Log "Empty application name found. Skipping..." -Level Warning
+                    continue
+                }
 
                 Write-SystemMessage -msg "Installing" -value $appName
                 Write-Log "Installing $appName..." -Level Info
                 try {
                     if ($version) {
-                        choco install $appName --version $version -y
+                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" --version $version -y" -Wait -NoNewWindow -PassThru
                     }
                     else {
-                        choco install $appName -y
+                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" -y" -Wait -NoNewWindow -PassThru
                     }
-                    Write-SystemMessage -successMsg
+                    
+                    if ($result.ExitCode -eq 0) {
+                        Write-SystemMessage -successMsg
+                    } else {
+                        Write-Log "Failed to install $appName. Exit code: $($result.ExitCode)" -Level Error
+                        Write-SystemMessage -errorMsg
+                    }
                 }
                 catch {
                     $errorMessage = $_.Exception.Message
@@ -1496,47 +1507,57 @@ function Install-Applications {
             }
         }
 
-        # Check Winget is installed
+        # Winget Apps
         if ($packageManager -eq "Winget") {
-            Write-SystemMessage -msg "Checking Winget installation..."
-            Write-Log "Checking Winget installation..." -Level Info
-
-            # Check if Winget is available
+            # Check if winget is available
             if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-                Write-SystemMessage -errorMsg -msg "Winget is not installed. Please install winget"
-                Write-Log "Winget is not installed. Please install winget" -Level Error
-                return $false
-            }
-
-            # Accept Source Agreements
-            Write-Log "Accepting source agreements..." -Level Info
-            try {
-                winget source accept-source-agreements
-                Write-Log "Winget source agreements accepted successfully" -Level Info
-            }
-            catch {
-                Write-Log "Failed to accept winget source agreements: $($_.Exception.Message)" -Level Error
+                Write-Log "Winget is not installed. Please install App Installer from the Microsoft Store." -Level Error
+                Write-SystemMessage -errorMsg -msg "Winget is not installed"
                 return $false
             }
 
             # Install Winget Apps
             foreach ($app in $AppConfig.Install.App) {
-                $appName = $app.InnerText
+                $appName = $app.InnerText.Trim()
+                $version = $app.Version
+
+                if ([string]::IsNullOrWhiteSpace($appName)) {
+                    Write-Log "Empty application name found. Skipping..." -Level Warning
+                    continue
+                }
+
                 Write-SystemMessage -msg "Installing" -value $appName
                 Write-Log "Installing $appName..." -Level Info
                 try {
-                    winget install $appName --accept-source-agreements --accept-package-agreements
-                    Write-SystemMessage -successMsg
+                    # Search for exact package first
+                    $searchResult = winget search --exact --query $appName --accept-source-agreements | Out-String
+                    if ($searchResult -notmatch $appName) {
+                        Write-Log "Package $appName not found in winget repository" -Level Warning
+                        Write-SystemMessage -warningMsg -msg "Package not found in repository"
+                        continue
+                    }
+
+                    if ($version) {
+                        $result = Start-Process -FilePath "winget" -ArgumentList "install --exact --id $appName --version $version --accept-source-agreements --accept-package-agreements" -Wait -NoNewWindow -PassThru
+                    }
+                    else {
+                        $result = Start-Process -FilePath "winget" -ArgumentList "install --exact --id $appName --accept-source-agreements --accept-package-agreements" -Wait -NoNewWindow -PassThru
+                    }
+                    
+                    if ($result.ExitCode -eq 0) {
+                        Write-SystemMessage -successMsg
+                    } else {
+                        Write-Log "Failed to install $appName. Exit code: $($result.ExitCode)" -Level Error
+                        Write-SystemMessage -errorMsg
+                    }
                 }
                 catch {
                     Write-Log "Failed to install $appName : $($_.Exception.Message)" -Level Error
                     Write-SystemMessage -errorMsg
                 }
             }
-
         }
 
-   
         Write-Log "Application installation completed successfully"
         return $true
     }
@@ -1566,15 +1587,34 @@ function Remove-Applications {
 
         # Winget Uninstall
         if ($packageManager -eq "Winget") {
+            # Check if winget is available
+            if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+                Write-Log "Winget is not installed. Please install App Installer from the Microsoft Store." -Level Error
+                Write-SystemMessage -errorMsg -msg "Winget is not installed"
+                return $false
+            }
+
             foreach ($app in $AppConfig.Uninstall.App) {
-                $appName = $app.InnerText
+                $appName = $app.InnerText.Trim()
+
+                if ([string]::IsNullOrWhiteSpace($appName)) {
+                    Write-Log "Empty application name found. Skipping..." -Level Warning
+                    continue
+                }
+
                 Write-SystemMessage -msg "Uninstalling" -value $appName
                 Write-Log "Uninstalling $appName..." -Level Info
                 try {
-                    #check if app is installed first
-                    if (winget list $appName -e) {
-                        winget uninstall $appName --accept-source-agreements
-                        Write-SystemMessage -successMsg
+                    # Check if app is installed first
+                    $listResult = winget list --exact --query $appName --accept-source-agreements | Out-String
+                    if ($listResult -match $appName) {
+                        $result = Start-Process -FilePath "winget" -ArgumentList "uninstall --exact --id $appName --accept-source-agreements" -Wait -NoNewWindow -PassThru
+                        if ($result.ExitCode -eq 0) {
+                            Write-SystemMessage -successMsg
+                        } else {
+                            Write-Log "Failed to uninstall $appName. Exit code: $($result.ExitCode)" -Level Error
+                            Write-SystemMessage -errorMsg
+                        }
                     }
                     else {
                         Write-Log "App $appName is not installed" -Level Info
@@ -1591,15 +1631,34 @@ function Remove-Applications {
 
         # Chocolatey Uninstall
         if ($packageManager -eq "Chocolatey") {
+            # Check if Chocolatey is installed
+            if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+                Write-Log "Chocolatey is not installed" -Level Error
+                Write-SystemMessage -errorMsg -msg "Chocolatey is not installed"
+                return $false
+            }
+
             foreach ($app in $AppConfig.Uninstall.App) {
-                $appName = $app.InnerText
+                $appName = $app.InnerText.Trim()
+
+                if ([string]::IsNullOrWhiteSpace($appName)) {
+                    Write-Log "Empty application name found. Skipping..." -Level Warning
+                    continue
+                }
+
                 Write-SystemMessage -msg "Uninstalling" -value $appName
                 Write-Log "Uninstalling $appName..." -Level Info
                 try {
-                    #check if app is installed first
-                    if (choco list $appName -e) {
-                        choco uninstall $appName -y
-                        Write-SystemMessage -successMsg
+                    # Check if app is installed first
+                    $listResult = Start-Process -FilePath "choco" -ArgumentList "list $appName -e" -Wait -NoNewWindow -PassThru
+                    if ($listResult.ExitCode -eq 0) {
+                        $result = Start-Process -FilePath "choco" -ArgumentList "uninstall `"$appName`" -y" -Wait -NoNewWindow -PassThru
+                        if ($result.ExitCode -eq 0) {
+                            Write-SystemMessage -successMsg
+                        } else {
+                            Write-Log "Failed to uninstall $appName. Exit code: $($result.ExitCode)" -Level Error
+                            Write-SystemMessage -errorMsg
+                        }
                     }
                     else {
                         Write-Log "App $appName is not installed" -Level Info
