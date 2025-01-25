@@ -1143,7 +1143,7 @@ function Set-SecurityConfiguration {
                 Write-SystemMessage -msg "Disabling SMB1 protocol..."
                 Write-Log "Disabling SMB1 protocol..." -Level Info
                 try {
-                    Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart | Out-Null
+                    Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -WarningAction SilentlyContinue | Out-Null
                     $script:restartRequired = $true
                     Write-SystemMessage -successMsg
                 }
@@ -1156,7 +1156,7 @@ function Set-SecurityConfiguration {
                 Write-SystemMessage -msg "Enabling SMB1 protocol..."
                 Write-Log "Enabling SMB1 protocol..." -Level Info
                 try {
-                    Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart | Out-Null
+                    Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -WarningAction SilentlyContinue | Out-Null
                     $script:restartRequired = $true
                     Write-SystemMessage -successMsg
                 }
@@ -1461,6 +1461,13 @@ function Install-Applications {
                     Write-SystemMessage -errorMsg
                     return $false
                 }
+            }
+            # Refresh shell environment to get choco commands
+            Write-Log "Refreshing environment variables after chocolatey installation." -Level Info
+            try {
+                $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            } catch {
+                Write-Log "Failed to refresh shell environment: $($_.Exception.Message)" -Level Error 
             }
 
             # Install Chocolatey Apps
@@ -2235,7 +2242,7 @@ function Set-WindowsFeaturesConfiguration {
                             Write-SystemMessage -warningMsg -msg "Feature already enabled"
                             continue
                         }
-                        $result = Enable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart | Out-Null
+                        $result = Enable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart -WarningAction SilentlyContinue | Out-Null
                         if ($result.RestartNeeded) {
                             $script:restartRequired = $true
                             Write-Log "Restart will be required for feature: $($feature.Name)"
@@ -2251,7 +2258,7 @@ function Set-WindowsFeaturesConfiguration {
                             Write-SystemMessage -warningMsg -msg "Feature already disabled"
                             continue
                         }
-                        $result = Disable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart | Out-Null
+                        $result = Disable-WindowsOptionalFeature -Online -FeatureName $feature.Name -NoRestart -WarningAction SilentlyContinue | Out-Null
                         if ($result.RestartNeeded) {
                             $script:restartRequired = $true
                             Write-Log "Restart will be required for feature: $($feature.Name)"
