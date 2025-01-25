@@ -1434,12 +1434,18 @@ function Install-Applications {
     Write-SystemMessage -title "Installing Applications"
 
     try {
-        if (-not $AppConfig.Install) {
+        if (-not $AppConfig -or -not $AppConfig.Install) {
             Write-Log "No applications to install" -Level Info
             return $true
         }
 
         $packageManager = $AppConfig.Install.PackageManager
+        if (-not $packageManager) {
+            Write-Log "No package manager specified for installation" -Level Error
+            Write-SystemMessage -errorMsg -msg "No package manager specified"
+            return $false
+        }
+
         Write-Log "Installing applications using $packageManager" -Level Info
 
         # Chocolatey Apps
@@ -1577,12 +1583,18 @@ function Remove-Applications {
     Write-SystemMessage -title "Removing Applications"
 
     try {
-        if (-not $AppConfig.Uninstall) {
+        if (-not $AppConfig -or -not $AppConfig.Uninstall) {
             Write-Log "No applications to uninstall" -Level Info
             return $true
         }
 
         $packageManager = $AppConfig.Uninstall.PackageManager
+        if (-not $packageManager) {
+            Write-Log "No package manager specified for uninstallation" -Level Error
+            Write-SystemMessage -errorMsg -msg "No package manager specified"
+            return $false
+        }
+
         Write-Log "Uninstalling applications using $packageManager" -Level Info
 
         # Winget Uninstall
@@ -3555,13 +3567,14 @@ try {
     }
 
     # Application Installation
-    if ($configXML.Applications.Install) {
-        $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications
-    }
+    if ($configXML.Applications) {
+        if ($configXML.Applications.Install) {
+            $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications
+        }
 
-    # Application Uninstallation
-    if ($configXML.Applications.Uninstall) {
-        $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications
+        if ($configXML.Applications.Uninstall) {
+            $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications
+        }
     }
 
     # Google Configuration
