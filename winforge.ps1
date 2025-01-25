@@ -985,7 +985,7 @@ function Set-SystemConfiguration {
             }
         }
 
-        # File Explorer Settings
+        # Show File Extensions
         if ($SystemConfig.ShowFileExtensions -eq 'true') {
             Write-SystemMessage -msg "Showing file extensions..."
             Write-Log "Showing file extensions..." -Level Info
@@ -1011,6 +1011,7 @@ function Set-SystemConfiguration {
             }
         }
 
+        # Show Hidden Files
         if ($SystemConfig.ShowHiddenFiles -eq 'true') {
             Write-SystemMessage -msg "Showing hidden files..."
             Write-Log "Showing hidden files..." -Level Info
@@ -1032,6 +1033,32 @@ function Set-SystemConfiguration {
             }
             catch {
                 Write-Log "Failed to hide hidden files: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+            }
+        }
+
+        # Disable Setup Device Prompt
+        if ($SystemConfig.DisableSetupDevicePrompt -eq 'true') {
+            Write-SystemMessage -msg "Disabling Setup Device Prompt..."
+            Write-Log "Disabling Setup Device Prompt..." -Level Info
+            try {
+                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagemen" -Name "ScoobeSystemSettingEnabled" -Type DWord -Value 0
+                Write-SystemMessage -successMsg
+            }
+            catch {
+                Write-Log "Failed to disable Setup Device Prompt: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+            }
+        }
+        elseif ($SystemConfig.DisableSetupDevicePrompt -eq 'false') {
+            Write-SystemMessage -msg "Enabling Setup Device Prompt..."
+            Write-Log "Enabling Setup Device Prompt..." -Level Info
+            try {
+                Set-RegistryModification -Action add -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagemen" -Name "ScoobeSystemSettingEnabled" -Type DWord -Value 1
+                Write-SystemMessage -successMsg
+            }
+            catch {
+                Write-Log "Failed to enable Setup Device Prompt: $($_.Exception.Message)" -Level Error
                 Write-SystemMessage -errorMsg
             }
         }
