@@ -169,18 +169,18 @@
                 <!-- Registry -->
                 <xs:element name="Registry" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="Add" minOccurs="0">
                                 <xs:complexType>
                                     <xs:sequence>
                                         <xs:element name="Entry" maxOccurs="unbounded">
                                             <xs:complexType>
-                                                <xs:all>
+                                                <xs:sequence>
                                                     <xs:element name="Path" type="xs:string"/>
                                                     <xs:element name="Name" type="xs:string"/>
                                                     <xs:element name="Type" type="RegistryValueType"/>
                                                     <xs:element name="Value" type="xs:string"/>
-                                                </xs:all>
+                                                </xs:sequence>
                                             </xs:complexType>
                                         </xs:element>
                                     </xs:sequence>
@@ -191,16 +191,16 @@
                                     <xs:sequence>
                                         <xs:element name="Entry" maxOccurs="unbounded">
                                             <xs:complexType>
-                                                <xs:all>
+                                                <xs:sequence>
                                                     <xs:element name="Path" type="xs:string"/>
                                                     <xs:element name="Name" type="xs:string"/>
-                                                </xs:all>
+                                                </xs:sequence>
                                             </xs:complexType>
                                         </xs:element>
                                     </xs:sequence>
                                 </xs:complexType>
                             </xs:element>
-                        </xs:all>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
 
@@ -248,7 +248,7 @@
                 <!-- Network Configuration -->
                 <xs:element name="Network" minOccurs="0">
                     <xs:complexType>
-                        <xs:all>
+                        <xs:sequence>
                             <xs:element name="NetworkDiscovery" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="FileAndPrinterSharing" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="NetworkDrives" minOccurs="0">
@@ -256,18 +256,18 @@
                                     <xs:sequence>
                                         <xs:element name="Drive" maxOccurs="unbounded">
                                             <xs:complexType>
-                                                <xs:all>
+                                                <xs:sequence>
                                                     <xs:element name="Letter" type="DriveLetter"/>
                                                     <xs:element name="Path" type="UNCPath"/>
                                                     <xs:element name="Username" type="xs:string" minOccurs="0"/>
                                                     <xs:element name="Password" type="xs:string" minOccurs="0"/>
-                                                </xs:all>
+                                                </xs:sequence>
                                             </xs:complexType>
                                         </xs:element>
                                     </xs:sequence>
                                 </xs:complexType>
                             </xs:element>
-                        </xs:all>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
             </xs:all>
