@@ -127,6 +127,7 @@
                 <xs:element name="Applications" minOccurs="0">
                     <xs:complexType>
                         <xs:all>
+                            <xs:element name="RemoveBloatware" type="xs:boolean" minOccurs="0"/>
                             <xs:element name="Install" minOccurs="0">
                                 <xs:complexType>
                                     <xs:sequence>

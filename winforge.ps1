@@ -1494,10 +1494,10 @@ function Install-Applications {
                 Write-Log "Installing $appName..." -Level Info
                 try {
                     if ($version) {
-                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" --version $version -y" -Wait -NoNewWindow -PassThru
+                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" --version $version -y" -Wait -NoNewWindow -PassThru | Out-Null
                     }
                     else {
-                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" -y" -Wait -NoNewWindow -PassThru
+                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" -y" -Wait -NoNewWindow -PassThru | Out-Null
                     }
                     
                     if ($result.ExitCode -eq 0) {
@@ -1640,7 +1640,7 @@ function Remove-Applications {
                     }
                     else {
                         Write-Log "App $appName is not installed" -Level Info
-                        Write-SystemMessage -warningMsg -msg "$appName is not installed on this system"
+                        Write-SystemMessage -warningMsg -msg "Not installed on this system"
                     }
                 }
                 catch {
@@ -1672,9 +1672,9 @@ function Remove-Applications {
                 Write-Log "Uninstalling $appName..." -Level Info
                 try {
                     # Check if app is installed first
-                    $listResult = Start-Process -FilePath "choco" -ArgumentList "list $appName -e" -Wait -NoNewWindow -PassThru
+                    $listResult = Start-Process -FilePath "choco" -ArgumentList "list $appName -e" -Wait -NoNewWindow -PassThru | Out-Null
                     if ($listResult.ExitCode -eq 0) {
-                        $result = Start-Process -FilePath "choco" -ArgumentList "uninstall `"$appName`" -y" -Wait -NoNewWindow -PassThru
+                        $result = Start-Process -FilePath "choco" -ArgumentList "uninstall `"$appName`" -y" -Wait -NoNewWindow -PassThru | Out-Null
                         if ($result.ExitCode -eq 0) {
                             Write-SystemMessage -successMsg
                         } else {
@@ -1684,7 +1684,7 @@ function Remove-Applications {
                     }
                     else {
                         Write-Log "App $appName is not installed" -Level Info
-                        Write-SystemMessage -warningMsg -msg "$appName is not installed on this system"
+                        Write-SystemMessage -warningMsg -msg "Not installed on this system"
                     }
                 }
                 catch {
@@ -3490,6 +3490,150 @@ function Set-Shortcuts {
     }
 }
 
+function Remove-Bloatware {
+    [CmdletBinding()]
+    param ()
+
+    Write-Log "Starting bloatware removal process..." -Level Info
+    Write-SystemMessage -msg "Removing Bloatware From System"
+
+    try {
+        # Define list of bloatware apps to remove
+        $appxPackages = @(
+            # Microsoft apps
+            "Microsoft.3DBuilder",
+            "Microsoft.549981C3F5F10",  # Cortana app
+            "Microsoft.Copilot",
+            "Microsoft.Messaging",
+            "Microsoft.BingFinance",
+            "Microsoft.BingFoodAndDrink",
+            "Microsoft.BingHealthAndFitness",
+            "Microsoft.BingNews",
+            "Microsoft.BingSports",
+            "Microsoft.BingTravel",
+            "Microsoft.MicrosoftOfficeHub",
+            "Microsoft.MicrosoftSolitaireCollection",
+            "Microsoft.News",
+            "Microsoft.MixedReality.Portal",
+            "Microsoft.Office.OneNote",
+            "Microsoft.OutlookForWindows",
+            "Microsoft.Office.Sway",
+            "Microsoft.OneConnect",
+            "Microsoft.People",
+            "Microsoft.SkypeApp",
+            "Microsoft.Todos",
+            "Microsoft.WindowsMaps",
+            "Microsoft.ZuneVideo",
+            "Microsoft.ZuneMusic",
+            "MicrosoftCorporationII.MicrosoftFamily",  # Family Safety App
+            "MSTeams",
+            "Outlook",  # New Outlook app
+            "LinkedInforWindows",  # LinkedIn app
+            "Microsoft.XboxApp",
+            "Microsoft.XboxGamingOverlay",
+            "Microsoft.Xbox.TCUI",
+            "Microsoft.XboxGameOverlay",
+            "Microsoft.WindowsCommunicationsApps",  # Mail app
+            "Microsoft.YourPhone",  # Phone Link (Your Phone)
+            "MicrosoftCorporationII.QuickAssist",  # Quick Assist
+
+            # Third-party apps
+            "ACGMediaPlayer",
+            "ActiproSoftwareLLC",
+            "AdobeSystemsIncorporated.AdobePhotoshopExpress",
+            "Amazon.com.Amazon",
+            "AmazonVideo.PrimeVideo",
+            "Asphalt8Airborne",
+            "AutodeskSketchBook",
+            "CaesarsSlotsFreeCasino",
+            "COOKINGFEVER",
+            "CyberLinkMediaSuiteEssentials",
+            "DisneyMagicKingdoms",
+            "Disney",
+            "DrawboardPDF",
+            "Duolingo-LearnLanguagesforFree",
+            "EclipseManager",
+            "Facebook",
+            "FarmVille2CountryEscape",
+            "fitbit",
+            "Flipboard",
+            "HiddenCity",
+            "HULULLC.HULUPLUS",
+            "iHeartRadio",
+            "Instagram",
+            "king.com.BubbleWitch3Saga",
+            "king.com.CandyCrushSaga",
+            "king.com.CandyCrushSodaSaga",
+            "MarchofEmpires",
+            "Netflix",
+            "NYTCrossword",
+            "OneCalendar",
+            "PandoraMediaInc",
+            "PhototasticCollage",
+            "PicsArt-PhotoStudio",
+            "Plex",
+            "PolarrPhotoEditorAcademicEdition",
+            "RoyalRevolt",
+            "Shazam",
+            "Sidia.LiveWallpaper",
+            "SlingTV",
+            "Spotify",
+            "TikTok",
+            "TuneInRadio",
+            "Twitter",
+            "Viber",
+            "WinZipUniversal",
+            "Wunderlist",
+            "XING"
+        )
+
+        $totalApps = $appxPackages.Count
+        Write-Log "Found $totalApps bloatware apps to process" -Level Info
+        $currentApp = 0
+
+        foreach ($appName in $appxPackages) {
+            $currentApp++
+            Write-Log "Processing ($currentApp/$totalApps): $appName" -Level Info
+
+            # First remove for all users
+            $appInstance = Get-AppxPackage -AllUsers -Name $appName -ErrorAction SilentlyContinue
+            if ($appInstance) {
+                try {
+                    Get-AppxPackage -AllUsers -Name $appName | Remove-AppxPackage -AllUsers -ErrorAction Stop
+                    Write-Log "$appName successfully removed" -Level Info
+                } catch {
+                    $errorMessage = "Failed to remove $appName`: $($_.Exception.Message)"
+                    Write-Log $errorMessage -Level Error
+                    continue
+                }
+            } else {
+                Write-Log "$appName not found as installed package" -Level Info
+            }
+
+            # Then remove provisioned package to prevent reinstallation
+            $provPackage = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq $appName }
+            if ($provPackage) {
+                try {
+                    Remove-AppxProvisionedPackage -Online -PackageName $provPackage.PackageName -ErrorAction Stop
+                    Write-Log "Provisioned package $appName removed successfully" -Level Info
+                } catch {
+                    $errorMessage = "Failed to remove provisioned package $appName`: $($_.Exception.Message)"
+                    Write-Log $errorMessage -Level Error
+                }
+            }
+        }
+
+        Write-Log "Bloatware removal process completed" -Level Info
+        Write-SystemMessage -successMsg -msg "Bloatware removal completed successfully"
+        return $true
+
+    } catch {
+        $errorMessage = "An error occurred during bloatware removal: $($_.Exception.Message)"
+        Write-Log $errorMessage -Level Error
+        Write-SystemMessage -errorMsg -msg "Failed to remove bloatware"
+        return $false
+    }
+}
 
 # Main Execution Block
 try {
@@ -3576,7 +3720,7 @@ try {
         $configStatus['Fonts'] = Install-Fonts -FontConfig $configXML.Fonts
     }
 
-    # Application Installation
+    # Application Management
     if ($configXML.Applications) {
         if ($configXML.Applications.Install) {
             $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configXML.Applications.Install
@@ -3584,6 +3728,11 @@ try {
         if ($configXML.Applications.Uninstall) {
             $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configXML.Applications.Uninstall
         }
+
+        if ($configXML.Applications.RemoveBloatware -eq "true") {
+            $configStatus['Bloatware'] = Remove-Bloatware
+        }
+
     }
 
     # Google Configuration
@@ -3616,6 +3765,8 @@ try {
     if ($configXML.Shortcuts) {
         $configStatus['Shortcuts'] = Set-Shortcuts -ShortcutConfig $configXML.Shortcuts
     }
+
+
 
     Write-SystemMessage -title "Configuration Completed"
 
