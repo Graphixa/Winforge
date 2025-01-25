@@ -1500,22 +1500,16 @@ function Install-Applications {
 
                 Write-SystemMessage -msg "Installing" -value $appName
                 Write-Log "Installing $appName..." -Level Info
+                
                 try {
-                    # Check if app is already installed
-                    $installedApp = choco list --local-only $appName | Where-Object { $_ -match "^$appName\s+\d+" }
-                        if ($installedApp) {
-                            Write-Log "$appName is already installed" -Level Warning 
-                            Write-SystemMessage -warningMsg -msg "App already installed"
-                            continue
-                        }
 
-                    if ($version) {
-                        
-                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" --version $version -y -r --ignoredetectedreboot" -Wait -NoNewWindow -PassThru | Out-Null
+                    $chocoArgs = if ($version) {
+                        "install `"$appName`" --version $version -y -r --ignoredetectedreboot"
+                    } else {
+                        "install `"$appName`" -y -r --ignoredetectedreboot" 
                     }
-                    else {
-                        $result = Start-Process -FilePath "choco" -ArgumentList "install `"$appName`" -y -r --ignoredetectedreboot" -Wait -NoNewWindow -PassThru | Out-Null
-                    }
+                    
+                    $result = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco $chocoArgs }" -Wait -WindowStyle Hidden -PassThru
                     
                     if ($result.ExitCode -eq 0) {
                         Write-SystemMessage -successMsg
