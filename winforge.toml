@@ -1,0 +1,202 @@
+[System]
+ComputerName = "WINFORGE-PC"
+Locale = "en-US"
+Timezone = "AU"
+DisableWindowsStore = true
+DisableOneDrive = true
+DisableCopilot = true
+DisableWindowsRecall = true
+DisableRemoteDesktop = true
+DisableSetupDevicePrompt = true
+
+[Activation]
+ProductKey = "VK7JG-NPHTM-C97JM-9MPGT-3V66T"
+Version = "Pro"
+
+[Applications]
+PackageManager = "winget" # Winget or Chocolatey
+Install = ["7zip", "firefox", "vscode", "nodejs"]
+Uninstall = ["7zip", "MSEdge"]
+RemoveBloatware = true
+
+[EnvironmentVariables]
+# Setting environment variables for the user scope
+Set.User = [
+    {VariableName = "TestUserVar", Value = "TestUserVarValue"},
+    {VariableName = "TestUserVar2", Value = "TestUserVar2Value"}
+]
+
+# Setting environment variables for the system scope
+Set.System = [
+    {VariableName = "CompanyName", Value = "Zebra Corp"},
+    {VariableName = "Department", Value = "Stripes"}
+]
+
+
+[Explorer]
+ShowFileExtensions = true
+ShowHiddenFolders = true
+
+[Taskbar]
+TaskbarAlignment = "Left" # Left or Center
+DisableMeetNow = true
+DisableWidgets = true
+DisableTaskView = true
+DisableSearch = true
+
+[Theme]
+DarkMode = true
+DesktopIconSize = "Medium" # Small, Medium, Large
+WallpaperPath = "https://images.pexels.com/photos/2085998/pexels-photo-2085998.jpeg"
+LockScreenPath = "https://images.pexels.com/photos/2341830/pexels-photo-2341830.jpeg"
+DisableTransparencyEffects = true
+DisableWindowsAnimations = true
+DisableTransparency = true
+
+[Tweaks]
+ClassicRightClickMenu = true
+GodModeFolder = true
+
+[Power]
+PowerPlan = "Balanced"
+AllowSleep = true
+AllowHibernate = true
+DisableFastStartup = true
+MonitorTimeout = 15 # minutes
+SleepTimeout = 30 # minutes
+HibernateTimeout = 60 # minutes
+
+[Network]
+AllowNetworkDiscovery = true
+AllowFileAndPrinterSharing = true
+MapNetworkDrive = [
+    {DriveLetter = "S", Path = "\\\\192.168.0.10\\Media", User = "Administrator", Password = "Password123"},
+    {DriveLetter = "T", Path = "\\\\192.168.0.10\\Media", User = "Administrator", Password = "Password123"}
+]
+
+
+[Privacy]
+DisableTelemetry = true
+DisableDiagTrack = true
+DisableAppPrivacy = true
+DisablePersonalisedAdvertising = true
+DisableStartMenuTracking = true
+DisableActivityHistory = true
+DisableClipboardDataCollection = true
+DisableStartMenuSuggestions = true
+DisableDiagnosticData = true
+DisableWindowsRecall = true
+
+[Fonts]
+Font = ["roboto", "opensans", "lato", "firasans"]
+
+[Google]
+InstallGoogleDrive = true
+InstallGoogleChrome = true
+InstallGCPW = true
+EnrollmentToken = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+DomainsAllowedToLogin = "example.com"
+
+
+
+[Security]
+MicrosoftDefender = "Enable"
+UAC = "Enable"
+UACLevel = "Default"
+AutoPlay = "Disable"
+Bitlocker = [
+  {Drive = "C:\\", EncryptionMethod = "XtsAes256", EncryptionType = "FullVolume", Password = "Password123", RecoveryKeyPath = "C:\\Bitlocker\\RecoveryKey.key"},
+  {Drive = "D:\\", EncryptionMethod = "XtsAes256", EncryptionType = "FullVolume", Password = "Password123", RecoveryKeyPath = "C:\\Bitlocker\\RecoveryKey.key"}
+]
+
+
+[WindowsUpdate]
+EnableAutomaticUpdates = true
+AUOptions = 3
+AutoInstallMinorUpdates = true
+ScheduledInstallDay = 1
+ScheduledInstallTime = 3
+
+[WindowsFeatures]
+Enable = [
+  "Microsoft-Hyper-V-All",
+  "Containers-DisposableClientVM",
+  "Microsoft-RemoteDesktopConnection",
+  "VirtualMachinePlatform"
+]
+
+Disable = [
+  "Containers-DisposableClientVM"
+]
+
+
+
+[Office]
+LicenseKey = "NMMKJ-6RK4F-KMJVX-8D9MJ-6MWKP"
+ProductID = "ProPlus2019Retail"
+LanguageID = "en-US"
+DisplayLevel = "Full"
+SetupReboot = "Never"
+Channel = "SemiAnnual"
+OfficeClientEdition = 64
+UpdatesEnabled = true
+
+[Registry]
+Add = [
+    { Description = "Disable lock screen app notifications", Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", Name = "DisableLockScreenAppNotifications", Type = "DWord", Value = 1},
+    { Description = "Set default web browser for Google Drive", Path = "HKLM:\\SOFTWARE\\Google\\DriveFS", Name = "DefaultWebBrowser", Type = "String", Value = "$env:SystemDrive\\Program Files\\Google\\Chrome\\Application\\chrome.exe"}
+]
+
+Remove = [
+    { Description = "Disable lock screen app notifications", Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", Name = "DisableLockScreenAppNotifications"},
+    { Description = "Disable Task Manager", Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", Name = "DisableTaskMgr"}
+]
+ 
+[Tasks]
+Add = [
+    {Name = "AutoShutdown", Path = "https://raw.githubusercontent.com/Graphixa/WinforgeX/main/Tasks/AutoShutdown.xml", Description = "Auto Shutdown"},
+    {Name = "Task2", Path = "C:\\Tasks\\Task2.xml", Description = "Task 2"},
+    {Name = "Task3", Path = "C:\\Tasks\\Task3.xml", Description = "Task 3"}
+]
+
+Remove = [
+    {Name = "Task2", Description = "Task 2"},
+    {Name = "Task3", Description = "Task 3"}
+]
+
+Add-Repository = "https://github.com/Graphixa/WinforgeX/tree/main/Tasks/"
+
+
+[FileOperations]
+Copy = [
+    { Source = "\\\\server\\share\\file.txt", Destination = "$env:USERPROFILE\\Documents\\file.txt" },
+    { Source = "\\\\server\\share\\data.csv", Destination = "C:\\Reports\\data.csv" },
+    { Source = "\\\\server\\share\\configs", Destination = "C:\\ProgramData\\App\\configs" }
+]
+
+Move = [
+    { Source = "C:\\Temp\\file.txt", Destination = "D:\\Temp\\file.txt" },
+    { Source = "C:\\Temp\\folder", Destination = "D:\\Backup\\folder" }
+]
+
+Rename = [
+    { Source = "C:\\Temp\\oldname.txt", NewName = "C:\\Temp\\newname.txt" },
+    { Source = "C:\\Temp\\oldfolder", NewName = "C:\\Temp\\newfolder" }
+]
+
+New = [
+    { Type = "File", Path = "C:\\Temp\\newfile.txt" },
+    { Type = "Folder", Path = "C:\\Temp\\newfolder" }
+]
+
+Delete = [
+    { Path = "C:\\Temp\\oldfolder" },
+    { Path = "C:\\Temp\\oldfile.txt" },
+    { Path = "C:\\Users\\Public\\Logs" }
+]
+
+Shortcut = [
+    { Name = "Google Chrome", Target = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", Location = "Desktop", Arguments = "--profile-directory=Default", IconLocation = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe,0", WorkingDirectory = "C:\\Program Files\\Google\\Chrome\\Application" }
+]
+
+

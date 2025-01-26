@@ -1,0 +1,109 @@
+# WinforgeX Configuration Conversion TODO List
+
+This tool will only support the TOML format for our configuration files.
+
+## Core Infrastructure
+- [CORE] Create TOML parsing function using PSToml module - https://github.com/jborean93/PSToml/tree/main
+- [CORE] Update configuration loading to support TOML
+- [CORE] Create configuration format auto-detection
+- [CORE] Update error handling for TOML specific issues
+
+## Encryption Support
+- [CORE] Update Test-EncryptedConfig to support TOML files
+- [CORE] Modify Decrypt-Config for TOML format
+- [CORE] Update encryption key handling for TOML
+- [UPDATE] Modify encrypt-config-GUI.ps1 to support TOML files
+- [TEST] Test encryption/decryption with TOML files
+- [DOC] Update encryption documentation for TOML support
+
+## Configuration Structure Changes
+- [REFACTOR] Convert XML boolean strings ("true"/"false") to TOML booleans (true/false)
+- [REFACTOR] Update array handling from XML nodes to TOML arrays
+- [REFACTOR] Convert nested XML elements to TOML dot notation
+- [REFACTOR] Standardize naming conventions (Disable/Allow prefixes)
+- [REFACTOR] Update string enums handling (Enable/Disable vs boolean)
+
+## System Configuration
+- [UPDATE] Modify Set-SystemConfiguration for TOML structure
+- [FIX] Update boolean handling for all system settings
+- [UPDATE] Add support for new system settings (WindowsRecall, SetupDevicePrompt)
+- [REFACTOR] Convert EnableRemoteDesktop to DisableRemoteDesktop
+
+## Application Management
+- [REFACTOR] Update Install-Applications for array format
+- [REFACTOR] Update Remove-Applications for array format
+- [UPDATE] Modify Remove-Bloatware to use boolean flag
+- [UPDATE] Add MSEdge uninstallation support
+- [UPDATE] Update package manager handling at Applications root level
+
+## Environment Variables
+- [UPDATE] Modify Set-EnvironmentVariables to support User/System scope
+- [REFACTOR] Update to use array of objects format
+- [UPDATE] Add path variable expansion support
+- [TEST] Validate scoped variable setting
+
+## Network Configuration
+- [UPDATE] Modify Set-NetworkConfiguration for credential support
+- [UPDATE] Add multi-drive mapping capability
+- [REFACTOR] Convert network settings to boolean format
+- [UPDATE] Update network discovery and sharing settings
+
+## Security Configuration
+- [UPDATE] Modify Set-SecurityConfiguration for enhanced BitLocker support
+  - Add encryption method selection
+  - Add recovery key path handling
+  - Add multiple drive support
+- [REFACTOR] Update UAC settings to use string enums
+- [UPDATE] Convert Defender settings to Enable/Disable format
+
+## File Operations
+- [UPDATE] Enhance Set-FileOperations for comprehensive handling
+  - Add copy operations with validation
+  - Add move operations
+  - Add rename operations
+  - Add new file/folder creation
+  - Add delete operations
+- [UPDATE] Add shortcut creation support
+
+## Google Integration
+- [UPDATE] Modify Set-GoogleConfiguration for GCPW enrollment
+- [UPDATE] Add domain login restrictions
+- [REFACTOR] Convert installation flags to boolean
+
+## Office Configuration
+- [UPDATE] Enhance Set-OfficeConfiguration
+  - Add channel selection support
+  - Add language and architecture options
+  - Add installation parameters
+  - Add update settings
+
+## Registry and Tasks
+- [REFACTOR] Update Set-RegistryModification for array of objects
+- [UPDATE] Add description field support
+- [UPDATE] Modify Import-Tasks for array format
+- [UPDATE] Add task repository URL support
+
+## Testing Requirements
+- [TEST] Create TOML validation tests
+- [TEST] Test boolean conversions
+- [TEST] Test array handling
+- [TEST] Test credential handling
+- [TEST] Test path handling with environment variables
+
+## Documentation
+- [DOC] Create TOML configuration guide
+- [DOC] Document naming conventions
+- [DOC] Create migration guide from XML
+- [DOC] Add example configurations
+- [DOC] Update function documentation
+
+## Power Management
+- [UPDATE] Modify Set-PowerConfiguration for TOML format
+- [UPDATE] Add timeout value support with comments
+- [REFACTOR] Update sleep/hibernate handling to boolean format
+
+## Privacy Settings
+- [UPDATE] Modify Set-PrivacyConfiguration for consistency
+- [REFACTOR] Standardize all privacy settings to use Disable prefix
+- [UPDATE] Add support for new privacy options
+- [UPDATE] Update telemetry settings handling 
