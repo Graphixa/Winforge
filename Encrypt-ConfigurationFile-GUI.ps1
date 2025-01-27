@@ -246,7 +246,7 @@ $form.Controls.AddRange(@(
 # Add event handlers
 $selectButton.Add_Click({
     $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-    $openFileDialog.Filter = "Configuration files (*.xml;*.config)|*.xml;*.config|All files (*.*)|*.*"
+    $openFileDialog.Filter = "Configuration files (*.toml;*.config)|*.toml;*.config|All files (*.*)|*.*"
     if ($openFileDialog.ShowDialog() -eq 'OK') {
         $script:selectedFile = $openFileDialog.FileName
         $filePathBox.Text = $script:selectedFile

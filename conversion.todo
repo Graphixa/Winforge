@@ -9,11 +9,11 @@ This tool will only support the TOML format for our configuration files.
 - [CORE] Update error handling for TOML specific issues
 
 ## Encryption Support
-- [CORE] Update Test-EncryptedConfig to support TOML files
-- [CORE] Modify Decrypt-Config for TOML format
-- [CORE] Update encryption key handling for TOML
-- [UPDATE] Modify encrypt-config-GUI.ps1 to support TOML files
-- [TEST] Test encryption/decryption with TOML files
+✓ [CORE] Update Test-EncryptedConfig to support TOML files
+✓ [CORE] Modify Decrypt-Config for TOML format
+✓ [CORE] Update encryption key handling for TOML
+✓ [UPDATE] Modify encrypt-config-GUI.ps1 to support TOML files
+✓ [TEST] Test encryption/decryption with TOML files
 - [DOC] Update encryption documentation for TOML support
 
 ## Configuration Structure Changes
