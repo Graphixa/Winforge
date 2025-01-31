@@ -2,108 +2,303 @@
 
 This tool will only support the TOML format for our configuration files.
 
+## Progress Summary (Last Updated: Today)
+✓ Core Infrastructure (100%)
+✓ Encryption Support (100%)
+✓ Network Configuration (100%)
+✓ Environment Variables (100%)
+✓ Registry Modifications (100%)
+✓ System Configuration (100%)
+✓ Application Management (100%)
+✓ Security Configuration (100%)
+✓ File Operations (100%)
+✓ Google Integration (100%)
+✓ Office Configuration (100%)
+✓ Tasks (100%)
+✓ Power Management (100%)
+✓ Privacy Settings (100%)
+✓ Commands (100%)
+- Testing (0%)
+- Documentation (0%)
+
+
 ## Core Infrastructure
-- [CORE] Create TOML parsing function using PSToml module - https://github.com/jborean93/PSToml/tree/main
-- [CORE] Update configuration loading to support TOML
-- [CORE] Create configuration format auto-detection
-- [CORE] Update error handling for TOML specific issues
+✓ [CORE] Add PSToml module dependency check and installation
+✓ [CORE] Add PowerShell version validation (5.1+)
+✓ [CORE] Create TOML parsing function using PSToml module - https://github.com/jborean93/PSToml/tree/main
+  - Added ConvertFrom-Toml parsing in Read-ConfigFile
+  - Added error handling for TOML parsing
+✓ [CORE] Update configuration loading to support TOML
+  - Modified Read-ConfigFile to handle TOML format
+  - Added extension validation for .toml and .config
+  - Added proper error handling for empty or invalid files
+✓ [CORE] Update error handling for TOML specific issues
+  - Added specific error messages for TOML parsing failures
+  - Added validation for empty files and invalid formats
 
 ## Encryption Support
 ✓ [CORE] Update Test-EncryptedConfig to support TOML files
 ✓ [CORE] Modify Decrypt-Config for TOML format
 ✓ [CORE] Update encryption key handling for TOML
+✓ [CORE] Add .toml and .config extension validation
 ✓ [UPDATE] Modify encrypt-config-GUI.ps1 to support TOML files
 ✓ [TEST] Test encryption/decryption with TOML files
-- [DOC] Update encryption documentation for TOML support
+
 
 ## Configuration Structure Changes
-- [REFACTOR] Convert XML boolean strings ("true"/"false") to TOML booleans (true/false)
-- [REFACTOR] Update array handling from XML nodes to TOML arrays
-- [REFACTOR] Convert nested XML elements to TOML dot notation
-- [REFACTOR] Standardize naming conventions (Disable/Allow prefixes)
-- [REFACTOR] Update string enums handling (Enable/Disable vs boolean)
+✓ [REFACTOR] Convert XML boolean strings ("true"/"false") to TOML booleans ($true/$false)
+  - All boolean values in PowerShell code updated to use $true/$false
+  - Office configuration XML template still uses "TRUE" as required by XML format 
+✓ [REFACTOR] Update array handling from XML nodes to TOML arrays
+  - Implemented in Environment Variables
+  - Implemented in Network Drive Mapping
+  - Implemented in BitLocker Configuration
+  - Implemented in Registry Modifications
+✓ [REFACTOR] Convert nested XML elements to TOML dot notation
+  - Implemented in UAC configuration (UAC.Enable, UAC.Level)
+  - Implemented in Network Drive credentials
+  - Implemented in Environment Variable scopes
+✓ [REFACTOR] Standardize naming conventions (Disable/Allow prefixes)
+  - Updated in Security Configuration
+  - Updated in System Configuration
+  - Updated in Privacy Settings
+✓ [REFACTOR] Update string enums handling (Enable/Disable vs boolean)
+  - Implemented in UAC configuration
+  - Implemented in Microsoft Defender settings
 
 ## System Configuration
-- [UPDATE] Modify Set-SystemConfiguration for TOML structure
-- [FIX] Update boolean handling for all system settings
-- [UPDATE] Add support for new system settings (WindowsRecall, SetupDevicePrompt)
-- [REFACTOR] Convert EnableRemoteDesktop to DisableRemoteDesktop
+✓ [UPDATE] Modify Set-SystemConfiguration for TOML structure
+✓ [FIX] Update boolean handling for all system settings
+✓ [UPDATE] Add support for new system settings (WindowsRecall, SetupDevicePrompt)
+✓ [REFACTOR] Convert EnableRemoteDesktop to DisableRemoteDesktop
+✓ [UPDATE] Add language pack installation support
+✓ [UPDATE] Add keyboard layout configuration
+✓ [UPDATE] Add timezone and locale settings
+✓ [UPDATE] Add enable disable windows recall setting 
 
 ## Application Management
-- [REFACTOR] Update Install-Applications for array format
-- [REFACTOR] Update Remove-Applications for array format
-- [UPDATE] Modify Remove-Bloatware to use boolean flag
-- [UPDATE] Add MSEdge uninstallation support
-- [UPDATE] Update package manager handling at Applications root level
+✓ [REFACTOR] Update Install-Applications for array format
+  - Changed to use PSCustomObject for TOML arrays
+  - Updated to use Winget as default package manager
+  - Added separate arrays for Chocolatey and Winget apps
+  - Improved property access for Name and Version
+✓ [REFACTOR] Update Remove-Applications for array format
+✓ [UPDATE] Modify Remove-Bloatware to use boolean flag
+  - Uses predefined list of bloatware applications
+  - Added direct boolean comparison for RemoveBloatware flag
+✓ [UPDATE] Add MSEdge uninstallation support
+  - Added Edge process termination
+  - Added Edge uninstaller detection and execution
+  - Added proper error handling and logging
+✓ [UPDATE] Update package manager handling at Applications root level
+  - Added package manager selection in configuration
+  - Improved error handling for package manager operations
 
 ## Environment Variables
-- [UPDATE] Modify Set-EnvironmentVariables to support User/System scope
-- [REFACTOR] Update to use array of objects format
-- [UPDATE] Add path variable expansion support
-- [TEST] Validate scoped variable setting
+✓ [UPDATE] Modify Set-EnvironmentVariables to support User/System scope
+  - Added separate handling for System and User variables
+  - Uses correct EnvironmentVariableTarget for each scope
+✓ [REFACTOR] Update to use array of objects format
+  - Changed to PSCustomObject for TOML arrays
+  - Added proper object property handling (Name, Value)
+✓ [UPDATE] Add path variable expansion support
+  - Added ExpandString for variable expansion
+  - Handles both regular variables and PATH additions
+✓ [TEST] Validate scoped variable setting
+  - Added input validation
+  - Added error handling for each scope
+  - Added duplicate PATH entry prevention
 
 ## Network Configuration
-- [UPDATE] Modify Set-NetworkConfiguration for credential support
-- [UPDATE] Add multi-drive mapping capability
-- [REFACTOR] Convert network settings to boolean format
-- [UPDATE] Update network discovery and sharing settings
+✓ [UPDATE] Modify Set-NetworkConfiguration for credential support
+  - Added Credentials object with Username/Password
+  - Improved credential handling in drive mapping
+✓ [UPDATE] Add multi-drive mapping capability
+  - Changed to array-based drive configuration
+  - Added environment variable expansion in paths
+  - Added better validation and error handling
+✓ [REFACTOR] Convert network settings to boolean format
+  - Updated NetworkDiscovery to use $true/$false
+  - Updated FileAndPrinterSharing to use $true/$false
+✓ [UPDATE] Update network discovery and sharing settings
+  - Simplified boolean logic
+  - Removed redundant status checks
+  - Added better error handling and logging
 
 ## Security Configuration
-- [UPDATE] Modify Set-SecurityConfiguration for enhanced BitLocker support
-  - Add encryption method selection
-  - Add recovery key path handling
-  - Add multiple drive support
-- [REFACTOR] Update UAC settings to use string enums
-- [UPDATE] Convert Defender settings to Enable/Disable format
+✓ [UPDATE] Modify Set-SecurityConfiguration for enhanced BitLocker support
+  - Added encryption method selection (Aes128, Aes256, XtsAes128, XtsAes256)
+  - Added recovery key path handling with environment variable support
+  - Added multiple drive support with array format
+  - Added ReEncrypt option for existing BitLocker volumes
+✓ [REFACTOR] Update UAC settings to use string enums and work with the current TOML file layout and options
+  - Implemented UAC.Enable as boolean and UAC.Level as enum
+  - Added proper level mapping (AlwaysNotify, NotifyChanges, NotifyNoDesktop, NeverNotify)
+  - Added logging for default cases
+  - Fixed try/catch block structure
+✓ [UPDATE] Convert Defender settings to Enable/Disable format
+  - Added granular control over Defender features
+  - Improved settings organization
+  - Added proper error handling and logging
 
 ## File Operations
-- [UPDATE] Enhance Set-FileOperations for comprehensive handling
-  - Add copy operations with validation
-  - Add move operations
-  - Add rename operations
-  - Add new file/folder creation
-  - Add delete operations
-- [UPDATE] Add shortcut creation support
+✓ [UPDATE] Enhance Set-FileOperations for comprehensive handling
+  - Added copy operations with validation and directory creation
+  - Added move operations with proper error handling
+  - Added rename operations with path validation
+  - Added new file/folder creation with parent directory support
+  - Added delete operations with protection checks
+✓ [UPDATE] Add shortcut creation support
+  - Added location validation (Desktop, StartMenu, Programs, CommonDesktop, CommonStartMenu)
+  - Added support for arguments and working directory
+  - Added optional icon location support with fallback to defaults
+  - Added proper COM object cleanup
+  - Added environment variable expansion in paths
 
 ## Google Integration
-- [UPDATE] Modify Set-GoogleConfiguration for GCPW enrollment
-- [UPDATE] Add domain login restrictions
-- [REFACTOR] Convert installation flags to boolean
+✓ [UPDATE] Modify Set-GoogleConfiguration for GCPW enrollment
+  - Added proper enrollment token handling
+  - Added domain login configuration
+  - Added registry configuration for all components
+✓ [UPDATE] Add domain login restrictions
+  - Implemented DomainsAllowedToLogin setting
+  - Added proper registry configuration
+✓ [REFACTOR] Convert installation flags to boolean
+  - Updated all installation flags to use boolean values
+  - Separated policy configuration from installation
+  - Added proper error handling and logging
 
 ## Office Configuration
-- [UPDATE] Enhance Set-OfficeConfiguration
-  - Add channel selection support
-  - Add language and architecture options
-  - Add installation parameters
-  - Add update settings
+✓ [UPDATE] Enhance Set-OfficeConfiguration
+  - Added parameter validation
+  - Added proper boolean handling for XML
+  - Added SetupReboot parameter support
+  - Improved activation process
+✓ [UPDATE] Add channel selection support
+  - Added Channel parameter validation
+  - Properly configured in XML
+✓ [UPDATE] Add language and architecture options
+  - Added LanguageID validation
+  - Added OfficeClientEdition (architecture) support
+✓ [UPDATE] Add installation parameters
+  - Added DisplayLevel support
+  - Added FORCEAPPSHUTDOWN property
+  - Added proper MSI removal
+✓ [UPDATE] Add update settings
+  - Added UpdatesEnabled boolean support
+  - Proper XML boolean conversion
 
 ## Registry and Tasks
-- [REFACTOR] Update Set-RegistryModification for array of objects
-- [UPDATE] Add description field support
-- [UPDATE] Modify Import-Tasks for array format
-- [UPDATE] Add task repository URL support
+✓ [REFACTOR] Update Set-RegistryModification for array of objects
+  - Renamed to Set-RegistryItems for clarity
+  - Updated to use PSCustomObject for TOML arrays
+  - Improved variable naming ($regItem instead of $entry)
+  - Added proper TOML array handling for Add/Remove operations
+- [NOTE] Description field in the TOML file is for easy readability, it will be ignored in the script
+✓ [UPDATE] Modify Import-Tasks for array format
+  - Updated to use Add/Remove arrays in TOML structure
+  - Added proper error handling for each task
+  - Added logging for task operations
+  - Added support for task descriptions
+✓ [UPDATE] Add task repository URL support
+  - Added AddRepository URL handling
+  - Added support for direct URLs, repository paths, and local paths
+  - Added proper path combination and validation
+  - Added UNC path support
 
 ## Testing Requirements
 - [TEST] Create TOML validation tests
-- [TEST] Test boolean conversions
-- [TEST] Test array handling
-- [TEST] Test credential handling
-- [TEST] Test path handling with environment variables
+  - Test empty configuration files
+  - Test malformed TOML syntax
+  - Test missing required sections
+  - Test invalid data types
+  - Test array format validation
+  - Test nested object validation
 
-## Documentation
-- [DOC] Create TOML configuration guide
-- [DOC] Document naming conventions
-- [DOC] Create migration guide from XML
-- [DOC] Add example configurations
-- [DOC] Update function documentation
+- [TEST] Test boolean conversions
+  - Test explicit true/false values
+  - Test string "true"/"false" conversion
+  - Test numeric 1/0 conversion
+  - Test invalid boolean values
+  - Test boolean in registry operations
+  - Test boolean in XML generation (Office)
+
+- [TEST] Test array handling
+  - Test empty arrays
+  - Test single-item arrays
+  - Test multi-item arrays
+  - Test nested arrays
+  - Test array of objects
+  - Test array property access
+  - Test array validation
+
+- [TEST] Test credential handling
+  - Test empty credentials
+  - Test invalid credentials
+  - Test network drive credentials
+  - Test encrypted credentials
+  - Test credential validation
+  - Test secure string handling
+
+- [TEST] Test path handling with environment variables
+  - Test basic environment variable expansion
+  - Test nested environment variables
+  - Test invalid environment variables
+  - Test UNC path handling
+  - Test relative path resolution
+  - Test path validation
+  - Test special folder resolution
+
+- [TEST] Test error handling
+  - Test invalid configuration handling
+  - Test network failure scenarios
+  - Test permission issues
+  - Test resource lock scenarios
+  - Test timeout scenarios
+  - Test cleanup after failures
+
+- [TEST] Test command execution
+  - Test Run command resolution
+  - Test CMD command execution
+  - Test PowerShell command execution
+  - Test command output capture
+  - Test error code handling
+  - Test command timeout handling
+
+- [TEST] Test file operations
+  - Test file copy scenarios
+  - Test file move operations
+  - Test file rename operations
+  - Test file/folder creation
+  - Test deletion operations
+  - Test shortcut creation
+  - Test path validation
 
 ## Power Management
-- [UPDATE] Modify Set-PowerConfiguration for TOML format
-- [UPDATE] Add timeout value support with comments
-- [REFACTOR] Update sleep/hibernate handling to boolean format
+✓ [UPDATE] Modify Set-PowerConfiguration for TOML format
+✓ [UPDATE] Add timeout value support with comments
+✓ [REFACTOR] Update sleep/hibernate handling to boolean format
 
 ## Privacy Settings
-- [UPDATE] Modify Set-PrivacyConfiguration for consistency
-- [REFACTOR] Standardize all privacy settings to use Disable prefix
-- [UPDATE] Add support for new privacy options
-- [UPDATE] Update telemetry settings handling 
+✓ [UPDATE] Modify Set-PrivacyConfiguration for consistency
+✓ [REFACTOR] Standardize all privacy settings to use Disable prefix
+✓ [UPDATE] Add support for new privacy options
+✓ [UPDATE] Update telemetry settings handling 
+
+## Commands
+✓ [ADD] Add new function called Set-Commands for TOML format
+  - Added support for Run commands with program resolution
+  - Added proper argument handling and path validation
+  - Added command output logging
+✓ [ADD] Add support for Run, Cmd, Powershell sections
+  - Added Run command support with Start-Process
+  - Added CMD command support with cmd.exe
+  - Added PowerShell command support with ScriptBlock
+  - Added proper error handling and exit code checking
+  - Added command output capture and logging
+
+## Documentation (Will be done after all other tasks are complete)
+- [DOC] Create TOML configuration guide
+- [DOC] Document naming conventions
+- [DOC] Add example configurations
+- [DOC] Update function documentation

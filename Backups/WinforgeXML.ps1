@@ -36,7 +36,7 @@ $script:tempFiles = @()
 
 $winforgeVersion = '0.2.1'
 
-
+# Disable progress bar (Improves speed of script)
 $ProgressPreference = 'SilentlyContinue'
 
 # Initialize Error Handling

@@ -1,5 +1,5 @@
 # About
-Winforge is a simple tool for seamless configuration deployment on Windows machines all from a simple INI configuration file hosted locally, on a network share or online via a private github repo, or google drive or dropbox link. 
+Winforge is a simple tool for seamless configuration deployment on Windows machines all from a simple toml configuration file hosted remotely, locally, or on a network share. Remote hosting can happen from a github repo or google drive or dropbox link so long as it is a direct link to the config file. Config files can be encrypted which can be decrypted locally on the machine running Winforge, not over the network. 
 
 ## Overview
 This PowerShell script automates the configuration of a Windows system using parameters specified in an INI file. It supports a wide range of configuration options, including:
@@ -24,12 +24,12 @@ This PowerShell script automates the configuration of a Windows system using par
 Download a copy of the script and run it locally, use the following command:
 
 ```powershell
-.\install.ps1 -config="path\to\config.ini"
+.\install.ps1 -config="path\to\config.toml"
 ```
 
 ### Running the Script Remotely
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.ps1))) -config "https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.config"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.ps1))) -config "https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.toml"
 ```
 
 ## INI File Setup

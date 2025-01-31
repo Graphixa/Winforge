@@ -1,0 +1,11 @@
+[Privacy]
+DisableTelemetry = true
+DisableAdvertisingID = true
+DisableWebSearch = true
+DisableAppSuggestions = true
+DisableActivityHistory = true
+DisableBackgroundApps = true
+DisableLocationServices = true
+DisableFeedback = true
+DisableWindowsTips = true
+DisableConsumerFeatures = true
