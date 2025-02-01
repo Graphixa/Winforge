@@ -1,162 +1,200 @@
-# Getting Started with WinforgeX
+# Getting Started with Winforge
 
-WinforgeX is designed to be run remotely, allowing organizations to maintain centralized configurations while enabling easy deployment across multiple machines.
+This guide will help you get up and running with Winforge quickly and efficiently. Whether you're configuring a single machine or managing multiple deployments, these instructions will get you started.
 
 ## Prerequisites
 
-- Windows PowerShell 5.1 or later
-- Administrator privileges
-- Internet connection
-- PSToml module (automatically installed)
+Before you begin, ensure you have:
 
-## Execution Methods
+1. **Windows System**
+   - Windows 11 (Windows 10 has not been tested)
+   - PowerShell 5.1 or later
+   - Administrator privileges
 
-### 1. Remote Execution (Recommended)
+2. **Optional Tools**
+   - Git (for cloning the repository)
+   - A text editor for TOML files (VS Code recommended)
 
-Run WinforgeX directly from GitHub with your configuration:
+## Quick Setup
+
+### Method 1: Direct Remote Execution (Recommended)
+
+The fastest way to get started is running Winforge directly from GitHub:
 
 ```powershell
-# Basic remote execution
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/WinforgeX/main/winforge.ps1))) -config "https://raw.githubusercontent.com/yourdomain/config.toml"
-
-# With custom log path
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/WinforgeX/main/winforge.ps1))) -config "https://raw.githubusercontent.com/yourdomain/config.toml" -LogPath "C:\CustomLogs\winforge.log"
+# Run as Administrator
+Set-ExecutionPolicy Bypass -Scope Process -Force
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/main/winforge.ps1))) -config "https://raw.githubusercontent.com/yourdomain/config.toml"
 ```
 
-#### Benefits of Remote Execution
-- No local script installation required
-- Always runs the latest version
-- Centralized configuration management
-- Easy to distribute and update
-- Consistent deployment across machines
+### Method 2: Local Installation
 
-### 2. Local Execution
+1. **Download Winforge**:
+   ```powershell
+   # Clone the repository
+   git clone https://github.com/Graphixa/Winforge.git
+   cd Winforge
+   ```
 
-If you prefer to run WinforgeX locally:
+2. **Run Locally**:
+   ```powershell
+   # Run as Administrator
+   Set-ExecutionPolicy Bypass -Scope Process -Force
+   .\winforge.ps1 -config="path\to\config.toml"
+   ```
 
-1. Clone or download the repository:
-```powershell
-git clone https://github.com/Graphixa/WinforgeX.git
-cd WinforgeX
-```
+## Creating Your First Configuration
 
-2. Run the script:
-```powershell
-.\winforge.ps1 -config="path\to\config.toml"
-```
+1. **Start with a Template**
+   - Copy the example configuration:
+     ```toml
+     # config.toml
+     [System]
+     ComputerName = "MyPC"
+     Timezone = "UTC"
+     
+     [Applications]
+     PackageManager = "winget"
+     Install = [
+         "Microsoft.VisualStudioCode",
+         "Mozilla.Firefox"
+     ]
+     
+     [Theme]
+     DarkMode = true
+     
+     [Privacy]
+     DisableTelemetry = true
+     ```
 
-## Configuration Options
+2. **Customize Your Config**
+   - Modify settings according to your needs
+   - See the [TOML Configuration Guide](TOML-Configuration-Guide) for all options
+   - Use environment-specific sections as needed
 
-### 1. Remote Configuration (Recommended)
-Host your configuration file in a centralized location:
-- GitHub repository
-- Internal web server
-- Network share
+## Common Configurations
 
-Example structure:
-```
-company-configs/
-├── departments/
-│   ├── it.toml
-│   ├── finance.toml
-│   └── hr.toml
-├── roles/
-│   ├── developer.toml
-│   ├── admin.toml
-│   └── user.toml
-└── base.toml
-```
-
-### 2. Local Configuration
-Store configuration files locally:
-```
-C:\Configs\
-├── config.toml
-└── encrypted-config.toml
-```
-
-## Basic Configuration Example
-
+### Developer Setup
 ```toml
-[System]
-DisableUAC = true
-DisableWindowsDefender = false
-
 [Applications]
 PackageManager = "winget"
-Install = ["7zip", "firefox", "vscode", "nodejs"]
-Uninstall = ["7zip", "MSEdge"]
+Install = [
+    "Microsoft.VisualStudioCode",
+    "Git.Git",
+    "Docker.DockerDesktop",
+    "Microsoft.PowerShell"
+]
 
-[Network.Drives]
-MapDrives = [
-    { Letter = "X", Path = "\\\\server\\share", Username = "domain\\user", Password = "encrypted" }
+[EnvironmentVariables]
+User = [
+    {VariableName = "Path", Value = "%USERPROFILE%\\.local\\bin"},
+    {VariableName = "Path", Value = "%USERPROFILE%\\AppData\\Local\\Programs\\Python\\Python310\\Scripts"}
 ]
 ```
 
-## Logging
+### Home User Setup
+```toml
+[Applications]
+PackageManager = "winget"
+Install = [
+    "Mozilla.Firefox",
+    "VideoLAN.VLC",
+    "7zip.7zip"
+]
 
-By default, WinforgeX logs to `C:\Winforge.log`, but you can specify your own custom log path:
+[Theme]
+DarkMode = true
+DesktopIconSize = "medium"
 
-```powershell
-# Remote execution with custom log path
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/WinforgeX/main/winforge.ps1))) -config "https://config.url/config.toml" -LogPath "C:\Logs\winforge.log"
+[Power]
+PowerPlan = "Balanced"
+AllowSleep = true
 
-# Local execution with custom log path
-.\winforge.ps1 -config="config.toml" -LogPath "C:\Logs\winforge.log"
+[Privacy]
+DisableTelemetry = true
 ```
 
-## Security Considerations
+### Work Environment
+```toml
+[Applications]
+PackageManager = "winget"
+Install = [
+    "Microsoft.Office",
+    "Microsoft.Teams",
+    "Zoom.Zoom"
+]
 
-1. **Configuration Source**
-   - Use HTTPS for remote configurations
-   - Validate configuration source URLs
-   - Consider using private repositories
+[Network]
+MapDrive = [
+    { Letter = "S", Path = "\\\\server\\share", Persistent = true }
+]
 
-2. **Credentials**
-   - Use encrypted configurations for sensitive data
-   - Store credentials securely
-   - Use environment variables where possible
+[Privacy]
+DisableTelemetry = true
+```
 
-3. **Execution**
-   - Run as administrator
-   - Use execution policy management
-   - Review logs for unauthorized changes
+## Running Winforge
+
+### Running Configuration Files
+
+1. **Remote Configuration**:
+   ```powershell
+   .\winforge.ps1 -config="https://raw.githubusercontent.com/yourdomain/config.toml"
+   ```
+
+2. **Local Configuration**:
+   ```powershell
+   .\winforge.ps1 -config="C:\path\to\config.toml"
+   ```
+
+3. **With Logging**:
+   ```powershell
+   .\winforge.ps1 -config="config.toml" -logPath "C:\path\to\log-output.txt"
+   ```
+
+## Monitoring Progress
+
+1. **Check Logs**
+   - Default log location: `%SYSTEMROOT%\winforge.log`
+   - Review for errors or warnings
+
+2. **Console Output**
+   - Watch real-time progress
+   - Error messages are in red
+   - Warnings in yellow
+   - Success messages in green
 
 ## Next Steps
 
-1. Review the [TOML Configuration Guide](TOML-Configuration-Guide)
-2. Check [Examples](Examples) for common scenarios
-3. Learn about [Security Settings](Security-Settings)
-4. Understand [Troubleshooting](Troubleshooting) procedures
+1. Review the [TOML Configuration Guide](TOML-Configuration-Guide) for all available options
+2. Check out example configurations in the [Examples](Examples) section
+3. Join the community:
+   - Star the GitHub repository
+   - Report issues or suggest features
+   - Feel free to share your configuration templates but be careful not share any sensitive information like passwords, keys, etc.
 
-## Common Issues
-
-1. **Permission Denied**
-   ```powershell
-   # Run PowerShell as Administrator
-   Start-Process powershell -Verb RunAs
-   ```
-
-2. **Module Not Found**
-   ```powershell
-   # Install PSToml manually
-   Install-Module -Name PSToml -Force -Scope CurrentUser
-   ```
-
-3. **Configuration Not Found**
-   - Verify URL/path is correct
-   - Check network path/url is correct
-   - Validate file permissions
-
-4. **Execution Policy**
-   ```powershell
-   # Set execution policy
-   Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
-   ```
-
-## Support
+## Troubleshooting
 
 If you encounter issues:
-1. Check the log file
-2. Review [Troubleshooting](Troubleshooting)
-3. Submit an issue on GitHub
+
+1. **Check Requirements**
+   - Verify PowerShell version: `$PSVersionTable.PSVersion`
+   - Confirm you are running as Administrator
+   - Make sure you're connected to the internet
+
+2. **Common Issues**
+   - Execution Policy: Run `Set-ExecutionPolicy Bypass -Scope Process`
+   - File Access: Ensure config file is accessible
+   - Network: Check proxy settings if behind corporate firewall
+
+3. **Getting Help**
+   - See [Troubleshooting Guide](Troubleshooting) for detailed solutions
+   - Search [existing issues](https://github.com/Graphixa/Winforge/issues)
+   - Submit a [new issue](https://github.com/Graphixa/Winforge/issues/new)
+
+## Security Notes
+
+- Always review configuration files before execution
+- Use secure sources for remote configurations
+- Keep your PowerShell and Windows up to date
+- Follow your organization's security policies

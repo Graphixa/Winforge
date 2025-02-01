@@ -2,6 +2,9 @@
 
 This tool will only support the TOML format for our configuration files.
 
+
+## WhatIF
+- [WhatIF] Add whatif support for all commands
 ## Progress Summary (Last Updated: Today)
 ✓ Core Infrastructure (100%)
 ✓ Encryption Support (100%)
