@@ -8,27 +8,27 @@ This guide provides a comprehensive reference for all configuration options avai
 [TOML Array Formatting Rules](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#toml-array-formatting-rules)
 
 A Winforge configuration file is divided into these main sections:
-- [System](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#system-configuration)           # System-level settings
-- [Activation](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#activation-configuration)       # Windows activation settings
-- [Applications](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#applications-configuration)     # Software installation and removal
-- [EnvironmentVariables](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#environment-variables-configuration) # Environment variable settings
-- [Explorer](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#explorer-configuration)         # File Explorer settings
-- [Taskbar](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#taskbar-configuration)         # Taskbar customization
-- [Theme](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#theme-configuration)           # Visual appearance settings
-- [Tweaks](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#tweaks-configuration)          # System tweaks and optimizations
-- [Power](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#power-configuration)           # Power management settings
-- [Network](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#network-configuration)         # Network configuration
-- [Privacy](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#privacy-configuration)         # Privacy settings
-- [Fonts](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#fonts-configuration)           # Font installation
-- [Google](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#google-configuration)          # Google product configuration
-- [Security](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#security-configuration)        # Security settings
-- [WindowsUpdate](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#windows-update-configuration)   # Windows Update configuration
-- [WindowsFeatures](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#windows-features) # Windows features management
-- [Office](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#office-configuration)          # Microsoft Office configuration
-- [Registry](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#registry-configuration)        # Registry modifications
-- [Tasks](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#tasks-configuration)           # Scheduled tasks management
-- [Commands](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#command-execution)        # Custom command execution
-- [FileOperations](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#file-operations)  # File and shortcut operations
+- [🖥️ System](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#system-configuration)
+- [🔑 Activation](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#activation-configuration)
+- [📦 Applications](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#applications-configuration)
+- [📚 Environment Variables](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#environment-variables-configuration)
+- [📂 Explorer](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#explorer-configuration)
+- [📊 Taskbar](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#taskbar-configuration)
+- [🎨 Theme](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#theme-configuration)
+- [🧩 Tweaks](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#tweaks-configuration)
+- [🔋 Power](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#power-configuration)
+- [🌐 Network Configuration](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#network-configuration)
+- [🔒 Privacy](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#privacy-configuration)
+- [🔠 Fonts](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#fonts-configuration)
+- [🏢 Google](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#google-configuration)
+- [⚠️ Security](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#security-configuration)
+- [🔃 WindowsUpdate](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#windows-update-configuration)
+- [⚙️ WindowsFeatures](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#windows-features)
+- [📄 Office](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#office-configuration)
+- [🏗️ Registry](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#registry-configuration)
+- [⏲️ Tasks](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#tasks-configuration)
+- [🧰 Command Execution](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#command-execution)
+- [🗄️ File Operations](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#file-operations)
 
 
 ## Important Notes
@@ -113,8 +113,18 @@ The `[Activation]` section manages activation settings.
 
 ```toml
 [Activation]
-ProductKey = "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"  # String: Product key for activation
+ProductKey = "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+Version = "Pro"
 ```
+
+### Available Options:
+- **ProductKey**: Windows product key
+
+- **Version**: Windows version to activate against
+  - `Pro`: Windows Pro
+  - `Home`: Windows Home
+  - `Education`: Windows Education
+  - `Enterprise`: Windows Enterprise
 
 ## 📦 Applications
 
@@ -136,7 +146,7 @@ RemoveBloatware = true   # Boolean: Remove pre-installed bloatware
 
 ### Available Options:
 - **PackageManager**:
-  - "winget": Windows Package Manager
+  - "winget": Windows Package Manager (Default)
   - "chocolatey": Chocolatey Package Manager
 
 > [!IMPORTANT]
@@ -244,6 +254,23 @@ DisableTransparency = true
 
 - **DisableTransparency**: `true` to disable, `false` to enable
 
+## 🧰 Tweaks Configuration
+
+The `[Tweaks]` section allows you to manage tweaks settings.
+
+```toml
+[Tweaks]
+ClassicRightClickMenu = true
+GodModeFolder = true
+```
+
+### Available Options:
+- **ClassicRightClickMenu**: Restores the classic right click menu like from Windows 10
+  - `true` to enable, `false` to disable
+
+- **GodModeFolder**: Creates a GodMode folder on the desktop which contains all the settings you can change in Windows
+  - `true` to enable, `false` to disable
+
 ## 🔋 Power Management
 
 The `[Power]` section configures power settings.
@@ -346,7 +373,20 @@ DisableWindowsRecall = true
 
 - **DisableWindowsRecall**: Windows recall feature - `true` to disable or `false` to enable
 
-## 🔗 Google Configuration
+## 🔠 Fonts Configuration
+
+The `[Fonts]` section allows you to manage fonts.
+
+```toml
+[Fonts]
+Font = ["roboto", "opensans", "lato", "firasans"]
+```
+
+### Available Options:
+- **Font**: Array of font names to install, must be wrapped in quotes and seperated by a comma.
+ - Find font names [here](https://github.com/google/fonts/tree/main/ofl)
+
+## 🏢 Google Configuration
 
 The `[Google]` section allows you to configure Google Workspace (if required).
 
@@ -463,7 +503,7 @@ ScheduledInstallTime = 3
 - **ScheduledInstallDay**: Day of week `(0-7)` 0 = Every day, 1 = Sunday, 2 = Monday, 3 = Tuesday, 4 = Wednesday, 5 = Thursday, 6 = Friday, 7 = Saturday
 - **ScheduledInstallTime**: Hour of day `(0-23)`
 
-## Windows Features
+## ⚙️ Windows Features
 
 The `[WindowsFeatures]` section allows you to manage Windows optional features.
 
@@ -575,7 +615,7 @@ AddRepository = "https://github.com/Graphixa/Winforge/tree/main/Tasks/" # URL to
 
 - **AddRepository**: URL to repository containing task XML files
 
-## 🧩 Command Execution
+## 🧰 Command Execution
 
 The `[Commands]` section allows custom command execution from cmd.exe, powershell.exe and can run executables.
 
