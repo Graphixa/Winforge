@@ -4,31 +4,31 @@ This guide provides a comprehensive reference for all configuration options avai
 
 ## Table of Contents
 
-[Important Notes](#important-notes)
-[TOML Array Formatting Rules](#toml-array-formatting-rules)
+[Important Notes](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#important-notes)
+[TOML Array Formatting Rules](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#toml-array-formatting-rules)
 
 A Winforge configuration file is divided into these main sections:
-[System](#system-configuration)           # System-level settings
-[Activation](#activation-configuration)       # Windows activation settings
-[Applications](#applications-configuration)     # Software installation and removal
-[EnvironmentVariables](#environment-variables-configuration) # Environment variable settings
-[Explorer](#explorer-configuration)         # File Explorer settings
-[Taskbar](#taskbar-configuration)         # Taskbar customization
-[Theme](#theme-configuration)           # Visual appearance settings
-[Tweaks](#tweaks-configuration)          # System tweaks and optimizations
-[Power](#power-configuration)           # Power management settings
-[Network](#network-configuration)         # Network configuration
-[Privacy](#privacy-configuration)         # Privacy settings
-[Fonts](#fonts-configuration)           # Font installation
-[Google](#google-configuration)          # Google product configuration
-[Security](#security-configuration)        # Security settings
-[WindowsUpdate](#windows-update-configuration)   # Windows Update configuration
-[WindowsFeatures](#windows-features) # Windows features management
-[Office](#office-configuration)          # Microsoft Office configuration
-[Registry](#registry-configuration)        # Registry modifications
-[Tasks](#tasks-configuration)           # Scheduled tasks management
-[Commands](#command-execution)        # Custom command execution
-[FileOperations](#file-operations)  # File and shortcut operations
+- [System](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#system-configuration)           # System-level settings
+- [Activation](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#activation-configuration)       # Windows activation settings
+- [Applications](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#applications-configuration)     # Software installation and removal
+- [EnvironmentVariables](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#environment-variables-configuration) # Environment variable settings
+- [Explorer](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#explorer-configuration)         # File Explorer settings
+- [Taskbar](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#taskbar-configuration)         # Taskbar customization
+- [Theme](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#theme-configuration)           # Visual appearance settings
+- [Tweaks](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#tweaks-configuration)          # System tweaks and optimizations
+- [Power](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#power-configuration)           # Power management settings
+- [Network](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#network-configuration)         # Network configuration
+- [Privacy](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#privacy-configuration)         # Privacy settings
+- [Fonts](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#fonts-configuration)           # Font installation
+- [Google](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#google-configuration)          # Google product configuration
+- [Security](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#security-configuration)        # Security settings
+- [WindowsUpdate](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#windows-update-configuration)   # Windows Update configuration
+- [WindowsFeatures](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#windows-features) # Windows features management
+- [Office](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#office-configuration)          # Microsoft Office configuration
+- [Registry](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#registry-configuration)        # Registry modifications
+- [Tasks](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#tasks-configuration)           # Scheduled tasks management
+- [Commands](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#command-execution)        # Custom command execution
+- [FileOperations](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#file-operations)  # File and shortcut operations
 
 
 ## Important Notes
