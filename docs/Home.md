@@ -1,13 +1,13 @@
 # Winforge
 
-Winforge is a powerful Windows configuration deployment tool that uses TOML-based configuration files to automate system setup and configuration. Whether you're a developer setting up your coding environment, a power user customizing your home setup, an IT professional managing multiple machines, or anyone looking to automate Windows configuration, WinforgeX makes it easy to deploy and maintain your perfect Windows setup.
+Winforge is a powerful Windows configuration deployment tool that uses TOML-based configuration files to automate system setup and configuration. Whether you're a developer setting up your coding environment, a power user customizing your home setup, an IT professional managing multiple machines, or anyone looking to automate Windows configuration, Winforge makes it easy to deploy and maintain your perfect Windows setup.
 
 ## Quick Start
 
 ### Remote Execution (Recommended)
 ```powershell
 # Run directly from GitHub with your configuration
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/WinforgeX/main/winforge.ps1))) -config "https://raw.githubusercontent.com/yourdomain/config.toml"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/main/winforge.ps1))) -config "https://raw.githubusercontent.com/yourdomain/config.toml"
 ```
 
 ### Local Execution
@@ -25,26 +25,25 @@ Winforge is a powerful Windows configuration deployment tool that uses TOML-base
 
 ## Documentation
 
-1. **[Getting Started](Getting-Started)**
+1. **[Getting Started](/docs/Getting-Started.md)**
    - Quick setup guide
    - Basic usage
    - Remote vs Local execution
    - First configuration
 
-2. **[TOML Configuration Guide](TOML-Configuration-Guide)**
+2. **[TOML Configuration Guide](/docs/Configuration-Guide.md)**
    - Complete configuration reference
    - All available options
    - Configuration examples
    - Best practices
 
 3. **Common Use Cases**
-   - [Developer Setup](Examples#developer-setup) - Development environments and tools
-   - [Home Lab](Examples#home-lab) - Personal server and network configuration
-   - [Gaming Setup](Examples#gaming-setup) - Gaming optimizations and tools
-   - [Work Environment](Examples#work-environment) - Professional workspace configuration
-   - [Security Hardening](Examples#security-hardening) - Enhanced security settings
+   - [Developer Setup](/examples/Developer-Configuration.toml) - Development environments and tools
+   - [Home Lab](/examples/Home-Lab-Configuration.toml) - Personal server and network configuration
+   - [Gaming Setup](/examples/Gaming-Configuration.toml) - Gaming optimizations and tools
+   - [Work Environment](/examples/Work-Environment-Configuration.toml) - Professional workspace configuration
 
-4. **[Troubleshooting Guide](Troubleshooting)**
+4. **[Troubleshooting Guide](/docs/Troubleshooting.md)**
    - Common issues and solutions
    - Error messages explained
    - Configuration validation
@@ -63,7 +62,7 @@ Winforge is a powerful Windows configuration deployment tool that uses TOML-base
 
 ## Configuration Sections
 
-WinforgeX supports extensive configuration options through these main sections:
+Winforge supports extensive configuration options through these main sections:
 
 - **System Settings**
   - Computer name and locale
@@ -133,9 +132,9 @@ See the [TOML Configuration Guide](TOML-Configuration-Guide) for complete detail
 Need help? Here's how to get support:
 
 1. Check the [Troubleshooting Guide](Troubleshooting)
-2. Search [existing issues](https://github.com/Graphixa/WinforgeX/issues)
+2. Search [existing issues](https://github.com/Graphixa/Winforge/issues)
 3. Review [examples](Examples) and [documentation](TOML-Configuration-Guide)
-4. [Submit a new issue](https://github.com/Graphixa/WinforgeX/issues/new)
+4. [Submit a new issue](https://github.com/Graphixa/Winforge/issues/new)
 
 ## Contributing
 

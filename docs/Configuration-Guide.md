@@ -4,31 +4,57 @@ This guide provides a comprehensive reference for all configuration options avai
 
 ## Table of Contents
 
-[Important Notes](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#important-notes)
-[TOML Array Formatting Rules](#https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#toml-array-formatting-rules)
+[Important Notes](#important-notes)
+[TOML Array Formatting Rules](#toml-array-formatting-rules)
 
 A Winforge configuration file is divided into these main sections:
-- [🖥️ System](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#system-configuration)
-- [🔑 Activation](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#activation-configuration)
-- [📦 Applications](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#applications-configuration)
-- [📚 Environment Variables](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#environment-variables-configuration)
-- [📂 Explorer](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#explorer-configuration)
-- [📊 Taskbar](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#taskbar-configuration)
-- [🎨 Theme](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#theme-configuration)
-- [🧩 Tweaks](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#tweaks-configuration)
-- [🔋 Power](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#power-configuration)
-- [🌐 Network Configuration](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#network-configuration)
-- [🔒 Privacy](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#privacy-configuration)
-- [🔠 Fonts](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#fonts-configuration)
-- [🏢 Google](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#google-configuration)
-- [⚠️ Security](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#security-configuration)
-- [🔃 WindowsUpdate](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#windows-update-configuration)
-- [⚙️ WindowsFeatures](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#windows-features)
-- [📄 Office](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#office-configuration)
-- [🏗️ Registry](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#registry-configuration)
-- [⏲️ Tasks](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#tasks-configuration)
-- [🧰 Command Execution](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#command-execution)
-- [🗄️ File Operations](https://github.com/Graphixa/Winforge/blob/main/wiki/Configuration-Guide.md#file-operations)
+- [TOML Configuration Guide](#toml-configuration-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Important Notes](#important-notes)
+    - [TOML Array Formatting Rules](#toml-array-formatting-rules)
+  - [🖥️ System Configuration](#️-system-configuration)
+    - [Available Options:](#available-options)
+  - [🔑 Activation Configuration](#-activation-configuration)
+    - [Available Options:](#available-options-1)
+  - [📦 Applications](#-applications)
+    - [Available Options:](#available-options-2)
+  - [📚 Environment Variables](#-environment-variables)
+    - [Available Options:](#available-options-3)
+  - [📂 Explorer Configuration](#-explorer-configuration)
+    - [Available Options:](#available-options-4)
+  - [📊 Taskbar Configuration](#-taskbar-configuration)
+    - [Available Options:](#available-options-5)
+  - [🎨 Theme Configuration](#-theme-configuration)
+    - [Available Options:](#available-options-6)
+  - [🧰 Tweaks Configuration](#-tweaks-configuration)
+    - [Available Options:](#available-options-7)
+  - [🔋 Power Management](#-power-management)
+    - [Available Options:](#available-options-8)
+  - [🌐 Network Configuration](#-network-configuration)
+    - [Available Options:](#available-options-9)
+  - [🔒 Privacy Settings](#-privacy-settings)
+    - [Available Options:](#available-options-10)
+  - [🔠 Fonts Configuration](#-fonts-configuration)
+    - [Available Options:](#available-options-11)
+  - [🏢 Google Configuration](#-google-configuration)
+    - [Available Options:](#available-options-12)
+  - [⚠️ Security Configuration](#️-security-configuration)
+    - [Available Options:](#available-options-13)
+  - [🔃 Windows Update Configuration](#-windows-update-configuration)
+    - [Available Options:](#available-options-14)
+  - [⚙️ Windows Features](#️-windows-features)
+    - [Available Options:](#available-options-15)
+  - [📄 Office Configuration](#-office-configuration)
+    - [Available Options:](#available-options-16)
+  - [🏗️ Registry Configuration](#️-registry-configuration)
+    - [Available Options:](#available-options-17)
+  - [⏲️ ScheduledTasks Configuration](#️-scheduledtasks-configuration)
+    - [Available Options:](#available-options-18)
+  - [🧰 Command Execution](#-command-execution)
+    - [Available Options:](#available-options-19)
+  - [🗄️ File Operations](#️-file-operations)
+    - [Available Options:](#available-options-20)
+  - [See Also](#see-also)
 
 
 ## Important Notes
@@ -710,7 +736,7 @@ Shortcut = [
 
 ## See Also
 
-- [Examples](Examples) - Real-world configuration examples
-- [Security Settings](Security-Settings) - Detailed security configuration
-- [Troubleshooting](Troubleshooting) - Configuration troubleshooting guide 
-- [Winforge.toml](winforge.toml) - Example configuration file
+- [Examples](/Docs/Examples.md) - Real-world configuration examples
+- [Encrypting Your Configuration](/Docs/Encryption-Guide.md) - Detailed security configuration
+- [Troubleshooting](/Docs/Troubleshooting.md) - Configuration troubleshooting guide 
+- [Winforge.toml](/Docs/winforge.toml) - Example configuration template
