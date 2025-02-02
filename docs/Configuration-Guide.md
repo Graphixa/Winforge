@@ -4,52 +4,52 @@ This guide provides a comprehensive reference for all configuration options avai
 
 ## Table of Contents
 
-
 - [TOML Configuration Guide](#toml-configuration-guide)
   - [Table of Contents](#table-of-contents)
   - [Important Notes](#important-notes)
-    - [TOML Array Formatting Rules](#toml-array-formatting-rules)
+  - [TOML Array Formatting Rules](#toml-array-formatting-rules)
   - [🖥️ System Configuration](#️-system-configuration)
-    - [Available Options:](#available-options)
+    - [Available Options](#available-options)
   - [🔑 Activation Configuration](#-activation-configuration)
-    - [Available Options:](#available-options-1)
+    - [Available Options](#available-options-1)
   - [📦 Applications](#-applications)
-    - [Available Options:](#available-options-2)
+    - [Available Options](#available-options-2)
   - [📚 Environment Variables](#-environment-variables)
-    - [Available Options:](#available-options-3)
+    - [Available Options](#available-options-3)
   - [📂 Explorer Configuration](#-explorer-configuration)
-    - [Available Options:](#available-options-4)
+    - [Available Options](#available-options-4)
   - [📊 Taskbar Configuration](#-taskbar-configuration)
-    - [Available Options:](#available-options-5)
+    - [Available Options](#available-options-5)
   - [🎨 Theme Configuration](#-theme-configuration)
-    - [Available Options:](#available-options-6)
+    - [Available Options](#available-options-6)
   - [🧰 Tweaks Configuration](#-tweaks-configuration)
-    - [Available Options:](#available-options-7)
+    - [Available Options](#available-options-7)
   - [🔋 Power Management](#-power-management)
-    - [Available Options:](#available-options-8)
+    - [Available Options](#available-options-8)
   - [🌐 Network Configuration](#-network-configuration)
-    - [Available Options:](#available-options-9)
+    - [Available Options](#available-options-9)
   - [🔒 Privacy Settings](#-privacy-settings)
-    - [Available Options:](#available-options-10)
+    - [Available Options](#available-options-10)
   - [🔠 Fonts Configuration](#-fonts-configuration)
-    - [Available Options:](#available-options-11)
+    - [Available Options](#available-options-11)
   - [🏢 Google Configuration](#-google-configuration)
-    - [Available Options:](#available-options-12)
+    - [Available Options](#available-options-12)
   - [⚠️ Security Configuration](#️-security-configuration)
-    - [Available Options:](#available-options-13)
+    - [Available Options](#available-options-13)
   - [🔃 Windows Update Configuration](#-windows-update-configuration)
-    - [Available Options:](#available-options-14)
+    - [Available Options](#available-options-14)
   - [⚙️ Windows Features](#️-windows-features)
-    - [Available Options:](#available-options-15)
+    - [Available Options](#available-options-15)
   - [📄 Office Configuration](#-office-configuration)
-    - [Available Options:](#available-options-16)
+    - [Available Options](#available-options-16)
   - [🏗️ Registry Configuration](#️-registry-configuration)
-    - [Available Options:](#available-options-17)
+    - [Available Options](#available-options-17)
   - [⏲️ ScheduledTasks Configuration](#️-scheduledtasks-configuration)
-    - [Available Options:](#available-options-18)
+    - [Available Options](#available-options-18)
   - [🧰 Command Execution](#-command-execution)
-    - [Available Options:](#available-options-19)
+    - [Available Options](#available-options-19)
   - [🗄️ File Operations](#️-file-operations)
+    - [Available Options](#available-options-20)
   - [Further Reading](#further-reading)
 
 ## Important Notes
@@ -63,7 +63,7 @@ This guide provides a comprehensive reference for all configuration options avai
 > When configuring arrays of objects in your TOML file, it's important to follow the correct formatting rules. 
 
 
-### TOML Array Formatting Rules
+## TOML Array Formatting Rules
 Each object in an array must be defined on a single line with all its properties. Multi-line object definitions are not supported by the parser.
 
 ❌ **Example of an incorrect Array Formatting:** - This will cause an error
@@ -107,7 +107,20 @@ DisableSetupDevicePrompt = true
 LanguagePacks = ["en-US", "en-GB"]
 ```
 
-### Available Options:
+### Available Options
+| Option | Description |
+|--------|-------------|
+| ComputerName | Sets the computer name of the system (up to 15 characters, no special chars except for hyphens `-`) |
+| Locale | Sets the locale of the system (see [Language Codes](https://learn.microsoft.com/en-us/windows/win32/intl/language-identifier-constants-and-strings) for supported locales) |
+| Timezone | Sets the time zone of the system (see [Time Zones](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/default-time-zones) for supported time zones) |
+| DisableWindowsStore | `true` to disable windows store, `false` to enable |
+| DisableOneDrive | `true` to disable one drive, `false` to enable |
+| DisableCopilot | `true` to disable copilot, `false` to enable |
+| DisableWindowsRecall | `true` to disable windows recall, `false` to enable |
+| DisableRemoteDesktop | `true` to disable remote desktop, `false` to enable |
+| DisableSetupDevicePrompt | `true` to disable setup device prompt, `false` to enable |
+| LanguagePacks | Array of valid Windows language pack codes to install (must be seperated by a comma) |
+
 - **ComputerName**: Sets the computer name of the system (up to 15 characters, no special chars except for hyphens `-`)
 
 - **Locale**: Sets the locale of the system (see [Language Codes](https://learn.microsoft.com/en-us/windows/win32/intl/language-identifier-constants-and-strings) for supported locales)
@@ -139,7 +152,7 @@ ProductKey = "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
 Version = "Pro"
 ```
 
-### Available Options:
+### Available Options
 - **ProductKey**: The Windows product key to activate the system with
 
 - **Version**: Windows version to activate as. The version must be one of the following:
@@ -167,7 +180,7 @@ Uninstall = [
 RemoveBloatware = true   # Boolean: Remove pre-installed bloatware
 ```
 
-### Available Options:
+### Available Options
 - **PackageManager**:
   - `winget`: Windows Package Manager (Default); or
   - `chocolatey`: Chocolatey Package Manager
@@ -195,7 +208,7 @@ System = [
 ]
 ```
 
-### Available Options:
+### Available Options
 - **User**: Array of environment variables to be set for the user scope
   - **VariableName**: Name of the environment variable
   - **Value**: Value to set (supports environment variable expansion)
@@ -215,7 +228,7 @@ ShowFileExtensions = true
 ShowHiddenFolders = true
 ```
 
-### Available Options:
+### Available Options
 - **ShowFileExtensions**: `true` to show file extensions, `false` to hide
 
 - **ShowHiddenFolders**: `true` to show hidden folders, `false` to hide
@@ -234,7 +247,7 @@ DisableTaskView = true
 DisableSearch = true
 ```
 
-### Available Options:
+### Available Options
 - **TaskbarAlignment**: Sets the alignment of the taskbar. The alignment must be one of the following:
   - `"Left"` for traditional left alignment
   - `"Center"` for Windows 11 style center alignment
@@ -263,7 +276,7 @@ DisableWindowsAnimations = true
 DisableTransparency = true
 ```
 
-### Available Options:
+### Available Options
 - **DarkMode**: `true` for dark mode, `false` for light mode
 
 - **DesktopIconSize**: Sets the size of the desktop icons. The size must be one of the following:
@@ -292,7 +305,7 @@ ClassicRightClickMenu = true
 GodModeFolder = true
 ```
 
-### Available Options:
+### Available Options
 - **ClassicRightClickMenu**: Restores the classic right click menu like from Windows 10
   - `true` to enable, `false` to disable
 
@@ -314,7 +327,7 @@ SleepTimeout = 30
 HibernateTimeout = 60
 ```
 
-### Available Options:
+### Available Options
 - **PowerPlan**:
   - `"Balanced"` for default balanced plan
   - `"High performance"` for maximum performance
@@ -346,7 +359,7 @@ MapNetworkDrive = [
 ]
 ```
 
-### Available Options:
+### Available Options
 - **AllowNetworkDiscovery**: `true` to enable network discovery, `false` to disable
 
 - **AllowFileAndPrinterSharing**: `true` to enable file and printer sharing, `false` to disable
@@ -378,7 +391,7 @@ DisableDiagnosticData = true
 DisableWindowsRecall = true
 ```
 
-### Available Options:
+### Available Options
 
 - **DisableTelemetry**: Windows telemetry data collection - `true` to disable, `false` to enable
 
@@ -410,7 +423,7 @@ The `[Fonts]` section allows you to manage fonts.
 Font = ["roboto", "opensans", "lato", "firasans"]
 ```
 
-### Available Options:
+### Available Options
 - **Font**: All fonts listed in the array will be installed. You can find font names [here](https://github.com/google/fonts/tree/main/ofl)
 
 
@@ -443,7 +456,7 @@ GCPW = [
 ]
 ```
 
-### Available Options:
+### Available Options
 - **Drive**: Google Drive configuration array
   - **Install**: Install Google Drive - `true` to install, `false` to uninstall (if already installed)
   - **DefaultWebBrowser**: Sets the default web browser for Google Drive. The path must be a local file path or a direct HTTP(S) URL to an executable file e.g. `"C:\Program Files\Google\Chrome\Application\chrome.exe"`
@@ -478,7 +491,7 @@ Bitlocker = [
 UAC = {Enable = true, Level = "NotifyChanges"}  # AlwaysNotify, NotifyChanges, NotifyNoDesktop, NeverNotify
 ```
 
-### Available Options:
+### Available Options
 > [!WARNING]
 > Only disable Windows Defender if you know what your doing. It is an available option but it is not recommended to include in most configurations
 - **DisableMicrosoftDefender**: Disables Windows Defender - `true` to disable, `false` to enable
@@ -521,7 +534,7 @@ ScheduledInstallDay = 1
 ScheduledInstallTime = 3
 ```
 
-### Available Options:
+### Available Options
 - **EnableAutomaticUpdates**: Enables Windows Update - `true` to enable, `false` to disable
 - **AUOptions**: Sets the Windows Update options. The options must be one of the following:
   - `2` - Notify before download
@@ -548,7 +561,7 @@ Disable = [
 ]
 ```
 
-### Available Options:
+### Available Options
 > [!NOTE]
 > Feature names must match the Windows optional feature names exactly. Use `Get-WindowsOptionalFeature -Online` in PowerShell to list available features.
 
@@ -572,7 +585,7 @@ OfficeClientEdition = 64
 UpdatesEnabled = true
 ```
 
-### Available Options:
+### Available Options
 > [!WARNING]
 > License keys are stored in plain text in the TOML file so make sure you encrypt your TOML file if you've got sensitive information in it.
 
@@ -601,7 +614,7 @@ Remove = [
 ]
 ```
 
-### Available Options:
+### Available Options
 - **Add**: Array of registry values to add/modify
   - **Name**: Registry value name
   - **Path**: Full registry path eg. `HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System`
@@ -637,7 +650,7 @@ Remove = [
 AddRepository = "https://github.com/Graphixa/Winforge/tree/main/Tasks/" # URL to repository containing task XML files
 ```
 
-### Available Options:
+### Available Options
 - **Add**: All items in this array will be added to the system
   - **Name**: Unique task name
   - **Path**: Local path or URL to task XML file
@@ -671,7 +684,8 @@ Powershell = [
 ]
 ```
 
-### Available Options:
+### Available Options
+
 - **Run**: All items in this array will be executed as an executable file
   - **Program**: Path or name of executable to be executed e.g. `\\\\server\\share\\program.msi`
   - **Arguments**: Optional command-line arguments e.g. `-silent`
@@ -715,34 +729,34 @@ Shortcut = [
 ]
 ```
 
-**Available Options:**
+### Available Options
 
-- `Copy`: All items in this array will be copied to the specified destination
-  - `Source`: Source file or folder path to copy from e.g. `\\\\server\\share\\files\\*` or `C:\\Temp\\file.txt` (supports wildcards like * and ?)
-  - `Destination`: Target path where files/folders will be copied e.g. `$env:USERPROFILE\\Documents` or `D:\\Backup` (supports environment variables)
+- **Copy**: All items in this array will be copied to the specified destination
+  - **Source**: Source file or folder path to copy from e.g. `\\\\server\\share\\files\\*` or `C:\\Temp\\file.txt` (supports wildcards like * and ?)
+  - **Destination**: Target path where files/folders will be copied e.g. `$env:USERPROFILE\\Documents` or `D:\\Backup` (supports environment variables)
 
-- `Move`: All items in this array will be moved (cut and paste) to the destination
-  - `Source`: Source file or folder path to move from e.g. `C:\\OldFolder\\file.txt` 
-  - `Destination`: Target path where files/folders will be moved to e.g. `D:\\NewFolder` (supports environment variables)
+- **Move**: All items in this array will be moved (cut and paste) to the destination
+  - **Source**: Source file or folder path to move from e.g. `C:\\OldFolder\\file.txt` 
+  - **Destination**: Target path where files/folders will be moved to e.g. `D:\\NewFolder` (supports environment variables)
 
-- `Rename`: All items in this array will have their name changed while staying in the same location
-  - `Source`: Full path to the file/folder to be renamed e.g. `C:\\Temp\\oldname.txt`
-  - `NewName`: New name for the file/folder without the path e.g. `newname.txt` (do not include full path)
+- **Rename**: All items in this array will have their name changed while staying in the same location
+  - **Source**: Full path to the file/folder to be renamed e.g. `C:\\Temp\\oldname.txt`
+  - **NewName**: New name for the file/folder without the path e.g. `newname.txt` (do not include full path)
 
-- `New`: All items in this array will be created as new files or folders
-  - `Type`: Must be either "File" or "Folder" to specify what to create
-  - `Path`: Full path where the new file/folder should be created e.g. `C:\\Temp\\newfile.txt` or `C:\\Data\\NewFolder`
+- **New**: All items in this array will be created as new files or folders
+  - **Type**: Must be either "File" or "Folder" to specify what to create
+  - **Path**: Full path where the new file/folder should be created e.g. `C:\\Temp\\newfile.txt` or `C:\\Data\\NewFolder`
 
-- `Delete`: All items in this array will be permanently deleted
-  - `Path`: Path to the file/folder to delete e.g. `C:\\Temp\\*.tmp` or `D:\\OldFolder` (supports wildcards for matching multiple items)
+- **Delete**: All items in this array will be permanently deleted
+  - **Path**: Path to the file/folder to delete e.g. `C:\\Temp\\*.tmp` or `D:\\OldFolder` (supports wildcards for matching multiple items)
 
-- `Shortcut`: All items in this array will be created as a shortcut
-  - `Name`: Name of the shortcut once created
-  - `Target`: Target program or executable to create the shortcut from e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`
-  - `Location`: Options: `Desktop`, `StartMenu`, `Programs`, `CommonDesktop`, `CommonStartMenu`, `CommonPrograms`, `Startup`, `CommonStartup` or use a literal path eg. `C:\\Users\\User\\Desktop`
-  - `Arguments`: Optional command-line arguments e.g. `--profile-directory=Default`
-  - `IconPath`: Optional path to icon file e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe,0`
-  - `WorkingDirectory`: Optional working directory e.g. `C:\\Program Files\\Google\\Chrome\\Application`
+- **Shortcut**: All items in this array will be created as a shortcut
+  - **Name**: Name of the shortcut once created
+  - **Target**: Target program or executable to create the shortcut from e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`
+  - **Location**: Options: `Desktop`, `StartMenu`, `Programs`, `CommonDesktop`, `CommonStartMenu`, `CommonPrograms`, `Startup`, `CommonStartup` or use a literal path eg. `C:\\Users\\User\\Desktop`
+  - **Arguments**: Optional command-line arguments e.g. `--profile-directory=Default`
+  - **IconPath**: Optional path to icon file e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe,0`
+  - **WorkingDirectory**: Optional working directory e.g. `C:\\Program Files\\Google\\Chrome\\Application`
 
 
 ## Further Reading
