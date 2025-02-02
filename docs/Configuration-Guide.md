@@ -130,15 +130,10 @@ ProductKey = "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
 Version = "Pro"
 ```
 
-| Option | Description |
-|--------|-------------|
-| ProductKey | The Windows product key to activate the system with |
-| Version | Windows version to activate as. The version must be one of the following: |
-|--------|-------------|
-| Pro | Windows Pro |
-| Home | Windows Home |
-| Education | Windows Education |
-| Enterprise | Windows Enterprise |
+| Option | Description | Options | Type |
+|--------|-------------|---------|------|
+| ProductKey | The Windows product key to activate the system with | | String |
+| Version | Windows version to activate as. The version must be one of the following: | `Pro`, `Home`, `Education`, `Enterprise` | String |
 
 
 ## 📦 Applications
