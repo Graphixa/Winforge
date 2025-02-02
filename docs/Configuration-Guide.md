@@ -4,10 +4,7 @@ This guide provides a comprehensive reference for all configuration options avai
 
 ## Table of Contents
 
-[Important Notes](#important-notes)
-[TOML Array Formatting Rules](#toml-array-formatting-rules)
 
-A Winforge configuration file is divided into these main sections:
 - [TOML Configuration Guide](#toml-configuration-guide)
   - [Table of Contents](#table-of-contents)
   - [Important Notes](#important-notes)
@@ -54,8 +51,7 @@ A Winforge configuration file is divided into these main sections:
     - [Available Options:](#available-options-19)
   - [🗄️ File Operations](#️-file-operations)
     - [Available Options:](#available-options-20)
-  - [See Also](#see-also)
-
+  - [Further Reading](#further-reading)
 
 ## Important Notes
 > [!NOTE]
@@ -734,7 +730,7 @@ Shortcut = [
   - **WorkingDirectory**: Optional working directory e.g. `C:\\Program Files\\Google\\Chrome\\Application`
 
 
-## See Also
+## Further Reading
 
 - [Examples](/Docs/Examples.md) - Real-world configuration examples
 - [Encrypting Your Configuration](/Docs/Encryption-Guide.md) - Detailed security configuration
