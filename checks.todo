@@ -1,1 +1,2 @@
 - Need to make sure that environment variables added that already exist are not overwritten but instead if different are appended to the list with comma as separator. According to the way windows handles environment variables.
+- Need to check that God Mode folder is created and removed for False correctly.

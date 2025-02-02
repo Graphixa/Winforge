@@ -109,25 +109,26 @@ LanguagePacks = ["en-US", "en-GB"]
 ```
 
 ### Available Options:
-- **ComputerName**: Any valid Windows computer name (up to 15 characters, no special chars except hyphens)
+- **ComputerName**: Sets the computer name of the system (up to 15 characters, no special chars except for hyphens `-`)
 
-- **Locale**: Any valid Windows locale identifier (see [Language Codes](https://learn.microsoft.com/en-us/windows/win32/intl/language-identifier-constants-and-strings))
+- **Locale**: Sets the locale of the system (see [Language Codes](https://learn.microsoft.com/en-us/windows/win32/intl/language-identifier-constants-and-strings) for supported locales)
 
-- **Timezone**: Valid Windows time zone ID (see [Time Zones](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/default-time-zones))
+- **Timezone**: Sets the time zone of the system (see [Time Zones](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/default-time-zones) for supported time zones)
 
-- **DisableWindowsStore**: `true` to disable, `false` to enable
+- **DisableWindowsStore**: `true` to disable windows store, `false` to enable
 
-- **DisableOneDrive**: `true` to disable, `false` to enable
+- **DisableOneDrive**: `true` to disable one drive, `false` to enable
 
-- **DisableCopilot**: `true` to disable, `false` to enable
+- **DisableCopilot**: `true` to disable copilot, `false` to enable
 
-- **DisableWindowsRecall**: `true` to disable, `false` to enable
+- **DisableWindowsRecall**: `true` to disable windows recall, `false` to enable
 
-- **DisableRemoteDesktop**: `true` to disable, `false` to enable
+- **DisableRemoteDesktop**: `true` to disable remote desktop, `false` to enable
 
-- **DisableSetupDevicePrompt**: `true` to disable, `false` to enable
+- **DisableSetupDevicePrompt**: `true` to disable setup device prompt, `false` to enable
 
-- **LanguagePacks**: Array of valid Windows language pack codes
+- **LanguagePacks**: Array of valid Windows language pack codes to install (must be seperated by a comma)
+
 
 ## 🔑 Activation Configuration
 
@@ -140,13 +141,14 @@ Version = "Pro"
 ```
 
 ### Available Options:
-- **ProductKey**: Windows product key
+- **ProductKey**: The Windows product key to activate the system with
 
-- **Version**: Windows version to activate against
+- **Version**: Windows version to activate as. The version must be one of the following:
   - `Pro`: Windows Pro
   - `Home`: Windows Home
   - `Education`: Windows Education
   - `Enterprise`: Windows Enterprise
+
 
 ## 📦 Applications
 
@@ -155,12 +157,12 @@ The `[Applications]` section manages software installation and removal.
 ```toml
 [Applications]
 PackageManager = "winget"  # String: Package manager to use
-Install = [               # Array: Applications to install
+Install = [
     "Microsoft.VisualStudioCode",
     "Mozilla.Firefox",
     "Git.Git"
 ]
-Uninstall = [            # Array: Applications to remove
+Uninstall = [
     "Microsoft.BingNews"
 ]
 RemoveBloatware = true   # Boolean: Remove pre-installed bloatware
@@ -168,16 +170,17 @@ RemoveBloatware = true   # Boolean: Remove pre-installed bloatware
 
 ### Available Options:
 - **PackageManager**:
-  - "winget": Windows Package Manager (Default)
-  - "chocolatey": Chocolatey Package Manager
+  - `winget`: Windows Package Manager (Default); or
+  - `chocolatey`: Chocolatey Package Manager
 
 > [!IMPORTANT]
 > Package names must be correct as per the package manager selected. You can check package names for chocolatey [here](https://community.chocolatey.org/packages) and winget [here](https://winstall.app/)
-- **Install**: Array of valid package names seperated by a comma
+- **Install**: Each package name in the array will be installed using the package manager defined in the `PackageManager` key (must be seperated by a comma)
 
-- **Uninstall**: Array of valid package names seperated by a comma
+- **Uninstall**: Each package name in the array will be unistalled (must be seperated by a comma)
 
-- **RemoveBloatware**: `true` to remove Windows bloatware, `false` to keep
+- **RemoveBloatware**: `true` to remove Windows bloatware, `false` to do nothing
+
 
 ## 📚 Environment Variables
 
@@ -195,12 +198,13 @@ System = [
 
 ### Available Options:
 - **User**: Array of environment variables to be set for the user scope
-  - **VariableName**: String: Name of the environment variable
-  - **Value**: String: Value to set (supports environment variable expansion)
+  - **VariableName**: Name of the environment variable
+  - **Value**: Value to set (supports environment variable expansion)
 
 - **System**: Array of environment variables to be set for the system scope
-  - **VariableName**: String: Name of the environment variable
-  - **Value**: String: Value to set (supports environment variable expansion)
+  - **VariableName**: Name of the environment variable
+  - **Value**: Value to set (supports environment variable expansion)
+
 
 ## 📂 Explorer Configuration
 
@@ -217,6 +221,7 @@ ShowHiddenFolders = true
 
 - **ShowHiddenFolders**: `true` to show hidden folders, `false` to hide
 
+
 ## 📊 Taskbar Configuration
 
 The `[Taskbar]` section allows you to manage the taskbar.
@@ -231,17 +236,18 @@ DisableSearch = true
 ```
 
 ### Available Options:
-- **TaskbarAlignment**: One of:
-  - `Left` for traditional left alignment
-  - `Center` for Windows 11 style center alignment
+- **TaskbarAlignment**: Sets the alignment of the taskbar. The alignment must be one of the following:
+  - `"Left"` for traditional left alignment
+  - `"Center"` for Windows 11 style center alignment
 
-- **DisableMeetNow**: `true` to disable, `false` to enable
+- **DisableMeetNow**: `true` to disable meet now button on the taskbar, `false` to enable
 
-- **DisableWidgets**: `true` to disable, `false` to enable
+- **DisableWidgets**: `true` to disable widgets on the taskbar, `false` to enable
 
-- **DisableTaskView**: `true` to disable, `false` to enable
+- **DisableTaskView**: `true` to disable task view on the taskbar, `false` to enable
 
-- **DisableSearch**: `true` to disable, `false` to enable
+- **DisableSearch**: `true` to disable search on the taskbar, `false` to enable
+
 
 ## 🎨 Theme Configuration
 
@@ -252,7 +258,7 @@ The `[Theme]` section allows you to manage the theme of the system.
 DarkMode = true
 DesktopIconSize = "Medium"
 WallpaperPath = "https://example.com/wallpaper.jpg"
-LockScreenPath = "https://example.com/lockscreen.jpg"
+LockScreenPath = "https://example.com/lockscreen.png"
 DisableTransparencyEffects = true
 DisableWindowsAnimations = true
 DisableTransparency = true
@@ -261,20 +267,21 @@ DisableTransparency = true
 ### Available Options:
 - **DarkMode**: `true` for dark mode, `false` for light mode
 
-- **DesktopIconSize**: One of:
-  - `Small` for 24x24 pixels
-  - `Medium` for 32x32 pixels
-  - `Large` for 48x48 pixels
+- **DesktopIconSize**: Sets the size of the desktop icons. The size must be one of the following:
+  - `"Small"` for 24x24 pixels
+  - `"Medium"` for 32x32 pixels
+  - `"Large"` for 48x48 pixels
 
-- **WallpaperPath**: Local file path or HTTP(S) URL to image directly
+- **WallpaperPath**: Sets the wallpaper of the system. The path must be a local file path or a direct HTTP(S) URL to an image file
 
-- **LockScreenPath**: Local file path or HTTP(S) URL to image directly
+- **LockScreenPath**: Sets the lock screen of the system. The path must be a local file path or a direct HTTP(S) URL to an image file
 
-- **DisableTransparencyEffects**: `true` to disable, `false` to enable
+- **DisableTransparencyEffects**: `true` to disable transparency effects, `false` to enable
 
-- **DisableWindowsAnimations**: `true` to disable, `false` to enable
+- **DisableWindowsAnimations**: `true` to disable windows animations, `false` to enable
 
-- **DisableTransparency**: `true` to disable, `false` to enable
+- **DisableTransparency**: `true` to disable transparency, `false` to enable
+
 
 ## 🧰 Tweaks Configuration
 
@@ -291,7 +298,7 @@ GodModeFolder = true
   - `true` to enable, `false` to disable
 
 - **GodModeFolder**: Creates a GodMode folder on the desktop which contains all the settings you can change in Windows
-  - `true` to enable, `false` to disable
+  - `true` to create, `false` to remove
 
 ## 🔋 Power Management
 
@@ -310,21 +317,21 @@ HibernateTimeout = 60
 
 ### Available Options:
 - **PowerPlan**:
-  - `Balanced` for default balanced plan
-  - `High performance` for maximum performance
-  - `Power saver` for maximum battery life
+  - `"Balanced"` for default balanced plan
+  - `"High performance"` for maximum performance
+  - `"Power saver"` for maximum battery life
 
-- **AllowSleep**: `true` to enable, `false` to disable
+- **AllowSleep**: `true` to enable sleep, `false` to disable
 
-- **AllowHibernate**: `true` to enable, `false` to disable
+- **AllowHibernate**: `true` to enable hibernate, `false` to disable
 
-- **DisableFastStartup**: `true` to disable, `false` to enable
+- **DisableFastStartup**: `true` to disable fast startup, `false` to enable
 
-- **MonitorTimeout**: Integer (minutes, 0-999, 0 = never)
+- **MonitorTimeout**: Sets the monitor timeout in minutes. The timeout must be between `1-999` or `0` to never timeout
 
-- **SleepTimeout**: Integer (minutes, 0-999, 0 = never)
+- **SleepTimeout**: Sets the sleep timeout in minutes. The timeout must be between `1-999` or `0` to never timeout
 
-- **HibernateTimeout**: Integer (minutes, 0-999, 0 = never)
+- **HibernateTimeout**: Sets the hibernate timeout in minutes. The timeout must be between `1-999` or `0` to never timeout
 
 ## 🌐 Network Configuration
 
@@ -341,18 +348,17 @@ MapNetworkDrive = [
 ```
 
 ### Available Options:
-- **AllowNetworkDiscovery**: `true` to enable, `false` to disable network discovery
+- **AllowNetworkDiscovery**: `true` to enable network discovery, `false` to disable
 
-- **AllowFileAndPrinterSharing**: `true` to enable, `false` to disable file and printer sharing
+- **AllowFileAndPrinterSharing**: `true` to enable file and printer sharing, `false` to disable
 
 > [!WARNING]
 > Passwords are stored in plain text in the TOML file so make sure you encrypt your TOML file if you've got sensitive information in it.
-- **MapNetworkDrive**: Array of drive mappings with:
-  - **DriveLetter**: Single letter `A-Z` for mapped drive
-  - **Path**: UNC path to network share (e.g. `\\\\server\\share`)
+- **MapNetworkDrive**: Array of drive mapping keys value pairs:
+  - **DriveLetter**: Single letter `"A-Z"` for mapped drive
+  - **Path**: UNC path to network share (e.g. `"\\\\server\\share"`)
   - **User**: Username for authentication (optional)
   - **Password**: Password for authentication (optional)
-
 
 
 ## 🔒 Privacy Settings
@@ -375,25 +381,26 @@ DisableWindowsRecall = true
 
 ### Available Options:
 
-- **DisableTelemetry**: Windows telemetry data collection - `true` to disable or `false` to enable
+- **DisableTelemetry**: Windows telemetry data collection - `true` to disable, `false` to enable
 
-- **DisableDiagTrack**: Diagnostic data tracking service - `true` to disable or `false` to enable
+- **DisableDiagTrack**: Diagnostic data tracking service - `true` to disable, `false` to enable
 
-- **DisableAppPrivacy**: App access to system features - `true` to disable or `false` to enable
+- **DisableAppPrivacy**: App access to system features - `true` to disable, `false` to enable
 
-- **DisablePersonalisedAdvertising**: Personalized ad delivery - `true` to disable or `false` to enable
+- **DisablePersonalisedAdvertising**: Personalized ad delivery - `true` to disable, `false` to enable
 
-- **DisableStartMenuTracking**: Start menu usage tracking - `true` to disable or `false` to enable
+- **DisableStartMenuTracking**: Start menu usage tracking - `true` to disable, `false` to enable
 
-- **DisableActivityHistory**: Windows activity history - `true` to disable or `false` to enable
+- **DisableActivityHistory**: Windows activity history - `true` to disable, `false` to enable
 
-- **DisableClipboardDataCollection**: Clipboard history feature - `true` to disable or `false` to enable
+- **DisableClipboardDataCollection**: Clipboard history feature - `true` to disable, `false` to enable
 
-- **DisableStartMenuSuggestions**: App suggestions in Start menu - `true` to disable or `false` to enable
+- **DisableStartMenuSuggestions**: App suggestions in Start menu - `true` to disable, `false` to enable
 
-- **DisableDiagnosticData**: Diagnostic data collection - `true` to disable or `false` to enable
+- **DisableDiagnosticData**: Diagnostic data collection - `true` to disable, `false` to enable
 
-- **DisableWindowsRecall**: Windows recall feature - `true` to disable or `false` to enable
+- **DisableWindowsRecall**: Windows recall feature - `true` to disable, `false` to enable
+
 
 ## 🔠 Fonts Configuration
 
@@ -405,8 +412,8 @@ Font = ["roboto", "opensans", "lato", "firasans"]
 ```
 
 ### Available Options:
-- **Font**: Array of font names to install, must be wrapped in quotes and seperated by a comma.
- - Find font names [here](https://github.com/google/fonts/tree/main/ofl)
+- **Font**: All fonts listed in the array will be installed. You can find font names [here](https://github.com/google/fonts/tree/main/ofl)
+
 
 ## 🏢 Google Configuration
 
@@ -438,24 +445,25 @@ GCPW = [
 ```
 
 ### Available Options:
-- **Drive**: Google Drive configuration
+- **Drive**: Google Drive configuration array
   - **Install**: Install Google Drive - `true` to install, `false` to uninstall (if already installed)
-  - **DefaultWebBrowser**: Path to browser executable e.g. `"C:\Program Files\Google\Chrome\Application\chrome.exe"`
-  - **DisableOnboardingDialog**: Disable first-run dialog - `true` to disable, `false` to show
-  - **DisablePhotosSync**: Disable photos sync - `true` to disable, `false` to enable
-  - **AutoStartOnLogin**: Start with Windows - `true` to enable, `false` to disable
-  - **OpenOfficeFilesInDocs**: Open Office files in Docs - `true` to enable, `false` to disable
+  - **DefaultWebBrowser**: Sets the default web browser for Google Drive. The path must be a local file path or a direct HTTP(S) URL to an executable file e.g. `"C:\Program Files\Google\Chrome\Application\chrome.exe"`
+  - **DisableOnboardingDialog**: Disables Google Drive first-run dialog - `true` to disable, `false` to show
+  - **DisablePhotosSync**: Disables photos sync - `true` to disable, `false` to enable
+  - **AutoStartOnLogin**: Starts Google Drive with Windows - `true` to enable, `false` to disable
+  - **OpenOfficeFilesInDocs**: Opens Office files in Docs - `true` to enable, `false` to disable
 
-- **Chrome**: Google Chrome configuration
+- **Chrome**: Google Chrome configuration array
   - **Install**: Install Google Chrome - `true` to install, `false` to uninstall (if already installed)
-  - **CloudManagementEnrollmentToken**: Enterprise enrollment token
-  - **AlwaysOpenPdfExternally**: Use system PDF viewer - `true` to use, `false` to use local PDF viewer
+  - **CloudManagementEnrollmentToken**: Enterprise enrollment token for Google Chrome
+  - **AlwaysOpenPdfExternally**: Uses the local PDF viewer instead of Chrome - `true` to use, `false` to use Chrome
   - **BrowserSignin**: Sign-in behavior (0=Disable, 1=Enable, 2=Force)
 
-- **GCPW**: Google Credential Provider for Windows
+- **GCPW**: Google Credential Provider for Windows array
   - **Install**: Install Google Credential Provider for Windows - `true` to install, `false` to uninstall (if already installed)
-  - **EnrollmentToken**: Enterprise enrollment token
-  - **DomainsAllowedToLogin**: Comma-separated list of allowed domains
+  - **EnrollmentToken**: Enterprise enrollment token for (GCPW) Google Credential Provider for Windows
+  - **DomainsAllowedToLogin**: Comma-separated list of allowed domains for (GCPW) Google Credential Provider for Windows
+
 
 ## ⚠️ Security Configuration
 
@@ -474,32 +482,32 @@ UAC = {Enable = true, Level = "NotifyChanges"}  # AlwaysNotify, NotifyChanges, N
 ### Available Options:
 > [!WARNING]
 > Only disable Windows Defender if you know what your doing. It is an available option but it is not recommended to include in most configurations
-- **DisableMicrosoftDefender**: `true` to disable, `false` to enable
-- 
-- **DisableAutoPlay**: `true` to disable, `false` to enable
+- **DisableMicrosoftDefender**: Disables Windows Defender - `true` to disable, `false` to enable
+- **DisableAutoPlay**: Disables AutoPlay - `true` to disable, `false` to enable
 
 > [!WARNING]
 > It is recommended to use a strong password and ensure you encrypt your configuration file and keep your config file in a secure location.
 - **Bitlocker**: Array of BitLocker configurations
   - **Drive**: Drive letter with colon (e.g., "C:")
-  - **EncryptionMethod**: One of:
+  - **EncryptionMethod**: Sets the encryption method for BitLocker. The method must be one of the following:
     - `XtsAes128`
     - `XtsAes256` (recommended)
     - `AesCbc128`
     - `AesCbc256`
-  - **EncryptionType**: One of:
+  - **EncryptionType**: Sets the encryption type for BitLocker. The type must be one of the following:
     - `FullVolume`
     - `UsedSpace`
-  - **Password**: Encrypted password string # This is the password that will be used to encrypt the drive. 
+  - **Password**: This is the password that will be used to encrypt the drive. It must be a string of characters that are 8 characters or more.
   - **RecoveryKeyPath**: Path to save recovery key e.g. `C:\\Bitlocker\\RecoveryKey.key`
 
 - **UAC**: User Account Control settings
-  - **Enable**: `true` to enable, `false` to disable UAC on the system
-  - **Level**: One of:
-    - `AlwaysNotify`: Most secure
-    - `NotifyChanges`: Default
-    - `NotifyNoDesktop`: No desktop dimming
-    - `NeverNotify`: Least secure
+  - **Enable**: Enables UAC on the system - `true` to enable, `false` to disable
+  - **Level**: Sets the UAC level. The level must be one of the following:
+    - `AlwaysNotify`: Most secure - Always notify user of elevation requests
+    - `NotifyChanges`: Notify user when programs try to make changes to the system (Default)
+    - `NotifyNoDesktop`: No desktop dimming - Notify user of elevation requests but don't dim the desktop
+    - `NeverNotify`: Least secure - Never notify user of elevation requests
+
 
 ## 🔃 Windows Update Configuration
 
@@ -515,15 +523,16 @@ ScheduledInstallTime = 3
 ```
 
 ### Available Options:
-- **EnableAutomaticUpdates**: `true` to enable, `false` to disable
-- **AUOptions** - Auto update options:
+- **EnableAutomaticUpdates**: Enables Windows Update - `true` to enable, `false` to disable
+- **AUOptions**: Sets the Windows Update options. The options must be one of the following:
   - `2` - Notify before download
   - `3` - Auto download, notify user for install
   - `4` - Auto download and schedule install
   - `5` - Allow local admin to choose setting
-- **AutoInstallMinorUpdates**: `true` to enable, `false` to disable
+- **AutoInstallMinorUpdates**: Enables automatic installation of minor updates - `true` to enable, `false` to disable
 - **ScheduledInstallDay**: Day of week `(0-7)` 0 = Every day, 1 = Sunday, 2 = Monday, 3 = Tuesday, 4 = Wednesday, 5 = Thursday, 6 = Friday, 7 = Saturday
 - **ScheduledInstallTime**: Hour of day `(0-23)`
+
 
 ## ⚙️ Windows Features
 
@@ -541,11 +550,12 @@ Disable = [
 ```
 
 ### Available Options:
-- **Enable**: Array of feature names to enable
-- **Disable**: Array of feature names to disable
-
 > [!NOTE]
 > Feature names must match the Windows optional feature names exactly. Use `Get-WindowsOptionalFeature -Online` in PowerShell to list available features.
+
+- **Enable**: All features listed in the array will be enabled.
+- **Disable**: All features listed in the array will be disabled.
+
 
 ## 📄 Office Configuration
 
@@ -566,15 +576,17 @@ UpdatesEnabled = true
 ### Available Options:
 > [!WARNING]
 > License keys are stored in plain text in the TOML file so make sure you encrypt your TOML file if you've got sensitive information in it.
+
 - **LicenseKey**: Valid Office license key
 - **ProductID**: Valid Office product ID
 - **LanguageID**: Language ID e.g. `en-US` find your language ID [here](https://learn.microsoft.com/en-us/microsoft-365-apps/deploy/overview-deploying-languages-microsoft-365-apps#languages-culture-codes-and-companion-proofing-languages)
-- **DisplayLevel**: Relates whether the office installer is shown to the user or is it hidden
+- **DisplayLevel**: Sets the display level for the Office installer
   - `None` - Hide the installer
   - `Full` - Show the installer
-- **SetupReboot**: One of:
+- **SetupReboot**: Sets the reboot behavior after installation
   - `Never` - Do not reboot the system after installation
   - `Always` - Reboot the system after installation
+
 
 ## 🏗️ Registry Configuration
 
@@ -594,7 +606,7 @@ Remove = [
 - **Add**: Array of registry values to add/modify
   - **Name**: Registry value name
   - **Path**: Full registry path eg. `HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System`
-  - **Type**: One of:
+  - **Type**: Sets the registry value type. The type must be one of the following:
     - `String`
     - `ExpandString`
     - `Binary`
@@ -607,6 +619,7 @@ Remove = [
 - **Remove**: Array of registry values to remove
   - **Name**: Registry value name to remove
   - **Path**: Full registry path eg. `HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System`
+
 
 ## ⏲️ ScheduledTasks Configuration
 
@@ -636,6 +649,7 @@ AddRepository = "https://github.com/Graphixa/Winforge/tree/main/Tasks/" # URL to
   - **Description**: Optional task description for your reference. This will not be used by the script
 
 - **AddRepository**: URL to repository containing task XML files
+
 
 ## 🧰 Command Execution
 
@@ -667,7 +681,8 @@ Powershell = [
   - **Command**: CMD command string e.g. `echo Hello, World! && pause`
 
 - **Powershell**: All items in this array will be executed using powershell.exe
-  - **Command**: Powershell command to run e.g. Get-Content of a powershell script e.g. `Get-Content C:\\Scripts\\script.ps1`
+  - **Command**: Powershell command to run e.g. `Get-Content C:\\Somefile.txt` or a powershell script e.g. `Get-Content C:\\Scripts\\script.ps1`
+
 
 ## 🗄️ File Operations
 
@@ -702,26 +717,26 @@ Shortcut = [
 ```
 
 ### Available Options:
-- **Copy**: Items in this array will be copied to the specified destination
+- **Copy**: All items in this array will be copied to the specified destination
   - **Source**: Source file or folder path to copy from e.g. `\\\\server\\share\\files\\*` or `C:\\Temp\\file.txt` (supports wildcards like * and ?)
   - **Destination**: Target path where files/folders will be copied e.g. `$env:USERPROFILE\\Documents` or `D:\\Backup` (supports environment variables)
 
-- **Move**: Items in this array will be moved (cut and paste) to the destination
+- **Move**: All items in this array will be moved (cut and paste) to the destination
   - **Source**: Source file or folder path to move from e.g. `C:\\OldFolder\\file.txt` 
   - **Destination**: Target path where files/folders will be moved to e.g. `D:\\NewFolder` (supports environment variables)
 
-- **Rename**: Items in this array will have their name changed while staying in the same location
+- **Rename**: All items in this array will have their name changed while staying in the same location
   - **Source**: Full path to the file/folder to be renamed e.g. `C:\\Temp\\oldname.txt`
   - **NewName**: New name for the file/folder without the path e.g. `newname.txt` (do not include full path)
 
-- **New**: Items in this array will be created as new files or folders
+- **New**: All items in this array will be created as new files or folders
   - **Type**: Must be either "File" or "Folder" to specify what to create
   - **Path**: Full path where the new file/folder should be created e.g. `C:\\Temp\\newfile.txt` or `C:\\Data\\NewFolder`
 
-- **Delete**: Items in this array will be permanently deleted
+- **Delete**: All items in this array will be permanently deleted
   - **Path**: Path to the file/folder to delete e.g. `C:\\Temp\\*.tmp` or `D:\\OldFolder` (supports wildcards for matching multiple items)
 
-- **Shortcut**: Items in this array will be created as a shortcut
+- **Shortcut**: All items in this array will be created as a shortcut
   - **Name**: Name of the shortcut once created
   - **Target**: Target program or executable to create the shortcut from e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`
   - **Location**: Options: `Desktop`, `StartMenu`, `Programs`, `CommonDesktop`, `CommonStartMenu`, `CommonPrograms`, `Startup`, `CommonStartup` or use a literal path eg. `C:\\Users\\User\\Desktop`
