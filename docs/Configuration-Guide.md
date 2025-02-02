@@ -9,47 +9,45 @@ This guide provides a comprehensive reference for all configuration options avai
   - [Important Notes](#important-notes)
   - [TOML Array Formatting Rules](#toml-array-formatting-rules)
   - [🖥️ System Configuration](#️-system-configuration)
-    - [Available Options](#available-options)
   - [🔑 Activation Configuration](#-activation-configuration)
-    - [Available Options](#available-options-1)
   - [📦 Applications](#-applications)
-    - [Available Options](#available-options-2)
+    - [Available Options](#available-options)
   - [📚 Environment Variables](#-environment-variables)
-    - [Available Options](#available-options-3)
+    - [Available Options](#available-options-1)
   - [📂 Explorer Configuration](#-explorer-configuration)
-    - [Available Options](#available-options-4)
+    - [Available Options](#available-options-2)
   - [📊 Taskbar Configuration](#-taskbar-configuration)
-    - [Available Options](#available-options-5)
+    - [Available Options](#available-options-3)
   - [🎨 Theme Configuration](#-theme-configuration)
-    - [Available Options](#available-options-6)
+    - [Available Options](#available-options-4)
   - [🧰 Tweaks Configuration](#-tweaks-configuration)
-    - [Available Options](#available-options-7)
+    - [Available Options](#available-options-5)
   - [🔋 Power Management](#-power-management)
-    - [Available Options](#available-options-8)
+    - [Available Options](#available-options-6)
   - [🌐 Network Configuration](#-network-configuration)
-    - [Available Options](#available-options-9)
+    - [Available Options](#available-options-7)
   - [🔒 Privacy Settings](#-privacy-settings)
-    - [Available Options](#available-options-10)
+    - [Available Options](#available-options-8)
   - [🔠 Fonts Configuration](#-fonts-configuration)
-    - [Available Options](#available-options-11)
+    - [Available Options](#available-options-9)
   - [🏢 Google Configuration](#-google-configuration)
-    - [Available Options](#available-options-12)
+    - [Available Options](#available-options-10)
   - [⚠️ Security Configuration](#️-security-configuration)
-    - [Available Options](#available-options-13)
+    - [Available Options](#available-options-11)
   - [🔃 Windows Update Configuration](#-windows-update-configuration)
-    - [Available Options](#available-options-14)
+    - [Available Options](#available-options-12)
   - [⚙️ Windows Features](#️-windows-features)
-    - [Available Options](#available-options-15)
+    - [Available Options](#available-options-13)
   - [📄 Office Configuration](#-office-configuration)
-    - [Available Options](#available-options-16)
+    - [Available Options](#available-options-14)
   - [🏗️ Registry Configuration](#️-registry-configuration)
-    - [Available Options](#available-options-17)
+    - [Available Options](#available-options-15)
   - [⏲️ ScheduledTasks Configuration](#️-scheduledtasks-configuration)
-    - [Available Options](#available-options-18)
+    - [Available Options](#available-options-16)
   - [🧰 Command Execution](#-command-execution)
-    - [Available Options](#available-options-19)
+    - [Available Options](#available-options-17)
   - [🗄️ File Operations](#️-file-operations)
-    - [Available Options](#available-options-20)
+    - [Available Options](#available-options-18)
   - [Further Reading](#further-reading)
 
 ## Important Notes
@@ -107,7 +105,6 @@ DisableSetupDevicePrompt = true
 LanguagePacks = ["en-US", "en-GB"]
 ```
 
-### Available Options
 | Option | Description |
 |--------|-------------|
 | ComputerName | Sets the computer name of the system (up to 15 characters, no special chars except for hyphens `-`) |
@@ -121,25 +118,6 @@ LanguagePacks = ["en-US", "en-GB"]
 | DisableSetupDevicePrompt | `true` to disable setup device prompt, `false` to enable |
 | LanguagePacks | Array of valid Windows language pack codes to install (must be seperated by a comma) |
 
-- **ComputerName**: Sets the computer name of the system (up to 15 characters, no special chars except for hyphens `-`)
-
-- **Locale**: Sets the locale of the system (see [Language Codes](https://learn.microsoft.com/en-us/windows/win32/intl/language-identifier-constants-and-strings) for supported locales)
-
-- **Timezone**: Sets the time zone of the system (see [Time Zones](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/default-time-zones) for supported time zones)
-
-- **DisableWindowsStore**: `true` to disable windows store, `false` to enable
-
-- **DisableOneDrive**: `true` to disable one drive, `false` to enable
-
-- **DisableCopilot**: `true` to disable copilot, `false` to enable
-
-- **DisableWindowsRecall**: `true` to disable windows recall, `false` to enable
-
-- **DisableRemoteDesktop**: `true` to disable remote desktop, `false` to enable
-
-- **DisableSetupDevicePrompt**: `true` to disable setup device prompt, `false` to enable
-
-- **LanguagePacks**: Array of valid Windows language pack codes to install (must be seperated by a comma)
 
 
 ## 🔑 Activation Configuration
@@ -152,14 +130,15 @@ ProductKey = "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
 Version = "Pro"
 ```
 
-### Available Options
-- **ProductKey**: The Windows product key to activate the system with
-
-- **Version**: Windows version to activate as. The version must be one of the following:
-  - `Pro`: Windows Pro
-  - `Home`: Windows Home
-  - `Education`: Windows Education
-  - `Enterprise`: Windows Enterprise
+| Option | Description |
+|--------|-------------|
+| ProductKey | The Windows product key to activate the system with |
+| Version | Windows version to activate as. The version must be one of the following: |
+|--------|-------------|
+| Pro | Windows Pro |
+| Home | Windows Home |
+| Education | Windows Education |
+| Enterprise | Windows Enterprise |
 
 
 ## 📦 Applications
