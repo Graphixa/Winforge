@@ -50,7 +50,6 @@ This guide provides a comprehensive reference for all configuration options avai
   - [🧰 Command Execution](#-command-execution)
     - [Available Options:](#available-options-19)
   - [🗄️ File Operations](#️-file-operations)
-    - [Available Options:](#available-options-20)
   - [Further Reading](#further-reading)
 
 ## Important Notes
@@ -716,33 +715,34 @@ Shortcut = [
 ]
 ```
 
-### Available Options:
-- **Copy**: All items in this array will be copied to the specified destination
-  - **Source**: Source file or folder path to copy from e.g. `\\\\server\\share\\files\\*` or `C:\\Temp\\file.txt` (supports wildcards like * and ?)
-  - **Destination**: Target path where files/folders will be copied e.g. `$env:USERPROFILE\\Documents` or `D:\\Backup` (supports environment variables)
+**Available Options:**
 
-- **Move**: All items in this array will be moved (cut and paste) to the destination
-  - **Source**: Source file or folder path to move from e.g. `C:\\OldFolder\\file.txt` 
-  - **Destination**: Target path where files/folders will be moved to e.g. `D:\\NewFolder` (supports environment variables)
+- `Copy`: All items in this array will be copied to the specified destination
+  - `Source`: Source file or folder path to copy from e.g. `\\\\server\\share\\files\\*` or `C:\\Temp\\file.txt` (supports wildcards like * and ?)
+  - `Destination`: Target path where files/folders will be copied e.g. `$env:USERPROFILE\\Documents` or `D:\\Backup` (supports environment variables)
 
-- **Rename**: All items in this array will have their name changed while staying in the same location
-  - **Source**: Full path to the file/folder to be renamed e.g. `C:\\Temp\\oldname.txt`
-  - **NewName**: New name for the file/folder without the path e.g. `newname.txt` (do not include full path)
+- `Move`: All items in this array will be moved (cut and paste) to the destination
+  - `Source`: Source file or folder path to move from e.g. `C:\\OldFolder\\file.txt` 
+  - `Destination`: Target path where files/folders will be moved to e.g. `D:\\NewFolder` (supports environment variables)
 
-- **New**: All items in this array will be created as new files or folders
-  - **Type**: Must be either "File" or "Folder" to specify what to create
-  - **Path**: Full path where the new file/folder should be created e.g. `C:\\Temp\\newfile.txt` or `C:\\Data\\NewFolder`
+- `Rename`: All items in this array will have their name changed while staying in the same location
+  - `Source`: Full path to the file/folder to be renamed e.g. `C:\\Temp\\oldname.txt`
+  - `NewName`: New name for the file/folder without the path e.g. `newname.txt` (do not include full path)
 
-- **Delete**: All items in this array will be permanently deleted
-  - **Path**: Path to the file/folder to delete e.g. `C:\\Temp\\*.tmp` or `D:\\OldFolder` (supports wildcards for matching multiple items)
+- `New`: All items in this array will be created as new files or folders
+  - `Type`: Must be either "File" or "Folder" to specify what to create
+  - `Path`: Full path where the new file/folder should be created e.g. `C:\\Temp\\newfile.txt` or `C:\\Data\\NewFolder`
 
-- **Shortcut**: All items in this array will be created as a shortcut
-  - **Name**: Name of the shortcut once created
-  - **Target**: Target program or executable to create the shortcut from e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`
-  - **Location**: Options: `Desktop`, `StartMenu`, `Programs`, `CommonDesktop`, `CommonStartMenu`, `CommonPrograms`, `Startup`, `CommonStartup` or use a literal path eg. `C:\\Users\\User\\Desktop`
-  - **Arguments**: Optional command-line arguments e.g. `--profile-directory=Default`
-  - **IconPath**: Optional path to icon file e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe,0`
-  - **WorkingDirectory**: Optional working directory e.g. `C:\\Program Files\\Google\\Chrome\\Application`
+- `Delete`: All items in this array will be permanently deleted
+  - `Path`: Path to the file/folder to delete e.g. `C:\\Temp\\*.tmp` or `D:\\OldFolder` (supports wildcards for matching multiple items)
+
+- `Shortcut`: All items in this array will be created as a shortcut
+  - `Name`: Name of the shortcut once created
+  - `Target`: Target program or executable to create the shortcut from e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`
+  - `Location`: Options: `Desktop`, `StartMenu`, `Programs`, `CommonDesktop`, `CommonStartMenu`, `CommonPrograms`, `Startup`, `CommonStartup` or use a literal path eg. `C:\\Users\\User\\Desktop`
+  - `Arguments`: Optional command-line arguments e.g. `--profile-directory=Default`
+  - `IconPath`: Optional path to icon file e.g. `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe,0`
+  - `WorkingDirectory`: Optional working directory e.g. `C:\\Program Files\\Google\\Chrome\\Application`
 
 
 ## Further Reading
