@@ -11,43 +11,24 @@ This guide provides a comprehensive reference for all configuration options avai
   - [🖥️ System Configuration](#️-system-configuration)
   - [🔑 Activation Configuration](#-activation-configuration)
   - [📦 Applications](#-applications)
-    - [Available Options](#available-options)
   - [📚 Environment Variables](#-environment-variables)
-    - [Available Options](#available-options-1)
   - [📂 Explorer Configuration](#-explorer-configuration)
-    - [Available Options](#available-options-2)
   - [📊 Taskbar Configuration](#-taskbar-configuration)
-    - [Available Options](#available-options-3)
   - [🎨 Theme Configuration](#-theme-configuration)
-    - [Available Options](#available-options-4)
   - [🧰 Tweaks Configuration](#-tweaks-configuration)
-    - [Available Options](#available-options-5)
   - [🔋 Power Management](#-power-management)
-    - [Available Options](#available-options-6)
   - [🌐 Network Configuration](#-network-configuration)
-    - [Available Options](#available-options-7)
   - [🔒 Privacy Settings](#-privacy-settings)
-    - [Available Options](#available-options-8)
   - [🔠 Fonts Configuration](#-fonts-configuration)
-    - [Available Options](#available-options-9)
   - [🏢 Google Configuration](#-google-configuration)
-    - [Available Options](#available-options-10)
   - [⚠️ Security Configuration](#️-security-configuration)
-    - [Available Options](#available-options-11)
   - [🔃 Windows Update Configuration](#-windows-update-configuration)
-    - [Available Options](#available-options-12)
   - [⚙️ Windows Features](#️-windows-features)
-    - [Available Options](#available-options-13)
   - [📄 Office Configuration](#-office-configuration)
-    - [Available Options](#available-options-14)
   - [🏗️ Registry Configuration](#️-registry-configuration)
-    - [Available Options](#available-options-15)
   - [⏲️ ScheduledTasks Configuration](#️-scheduledtasks-configuration)
-    - [Available Options](#available-options-16)
   - [🧰 Command Execution](#-command-execution)
-    - [Available Options](#available-options-17)
   - [🗄️ File Operations](#️-file-operations)
-    - [Available Options](#available-options-18)
   - [Further Reading](#further-reading)
 
 ## Important Notes
@@ -130,10 +111,10 @@ ProductKey = "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
 Version = "Pro"
 ```
 
-| Option | Description | Options | Type |
-|--------|-------------|---------|------|
-| ProductKey | The Windows product key to activate the system with | | String |
-| Version | Windows version to activate as. The version must be one of the following: | `Pro`, `Home`, `Education`, `Enterprise` | String |
+| Option | Description |
+|--------|-------------|
+| ProductKey | The Windows product key to activate the system with |
+| Version | Windows version to activate as. The version must be one of the following: `Pro`, `Home`, `Education`, `Enterprise` |
 
 
 ## 📦 Applications
@@ -154,18 +135,15 @@ Uninstall = [
 RemoveBloatware = true   # Boolean: Remove pre-installed bloatware
 ```
 
-### Available Options
-- **PackageManager**:
-  - `winget`: Windows Package Manager (Default); or
-  - `chocolatey`: Chocolatey Package Manager
-
 > [!IMPORTANT]
 > Package names must be correct as per the package manager selected. You can check package names for chocolatey [here](https://community.chocolatey.org/packages) and winget [here](https://winstall.app/)
-- **Install**: Each package name in the array will be installed using the package manager defined in the `PackageManager` key (must be seperated by a comma)
 
-- **Uninstall**: Each package name in the array will be unistalled (must be seperated by a comma)
-
-- **RemoveBloatware**: `true` to remove Windows bloatware, `false` to do nothing
+| Option | Description |
+|--------|-------------|
+| PackageManager | Package manager to use. Options:<br>- `winget`: Windows Package Manager (Default)<br>- `chocolatey`: Chocolatey Package Manager |
+| Install | Each package name in the array will be installed using the package manager defined in the `PackageManager` key (must be seperated by a comma) |
+| Uninstall | Each package name in the array will be unistalled (must be seperated by a comma) |
+| RemoveBloatware | `true` to remove Windows bloatware, `false` to do nothing |
 
 
 ## 📚 Environment Variables
@@ -182,14 +160,11 @@ System = [
 ]
 ```
 
-### Available Options
-- **User**: Array of environment variables to be set for the user scope
-  - **VariableName**: Name of the environment variable
-  - **Value**: Value to set (supports environment variable expansion)
 
-- **System**: Array of environment variables to be set for the system scope
-  - **VariableName**: Name of the environment variable
-  - **Value**: Value to set (supports environment variable expansion)
+| Option | Description |
+|--------|-------------|
+| User | Array of environment variables to be set for the user scope. Each item contains:<br>- `VariableName`: Name of the environment variable<br>- `Value`: Value to set (supports environment variable expansion) |
+| System | Array of environment variables to be set for the system scope. Each item contains:<br>- `VariableName`: Name of the environment variable<br>- `Value`: Value to set (supports environment variable expansion) |
 
 
 ## 📂 Explorer Configuration
@@ -202,7 +177,7 @@ ShowFileExtensions = true
 ShowHiddenFolders = true
 ```
 
-### Available Options
+
 - **ShowFileExtensions**: `true` to show file extensions, `false` to hide
 
 - **ShowHiddenFolders**: `true` to show hidden folders, `false` to hide
@@ -221,7 +196,7 @@ DisableTaskView = true
 DisableSearch = true
 ```
 
-### Available Options
+
 - **TaskbarAlignment**: Sets the alignment of the taskbar. The alignment must be one of the following:
   - `"Left"` for traditional left alignment
   - `"Center"` for Windows 11 style center alignment
@@ -250,7 +225,7 @@ DisableWindowsAnimations = true
 DisableTransparency = true
 ```
 
-### Available Options
+
 - **DarkMode**: `true` for dark mode, `false` for light mode
 
 - **DesktopIconSize**: Sets the size of the desktop icons. The size must be one of the following:
@@ -279,7 +254,7 @@ ClassicRightClickMenu = true
 GodModeFolder = true
 ```
 
-### Available Options
+
 - **ClassicRightClickMenu**: Restores the classic right click menu like from Windows 10
   - `true` to enable, `false` to disable
 
@@ -301,7 +276,7 @@ SleepTimeout = 30
 HibernateTimeout = 60
 ```
 
-### Available Options
+
 - **PowerPlan**:
   - `"Balanced"` for default balanced plan
   - `"High performance"` for maximum performance
@@ -333,7 +308,7 @@ MapNetworkDrive = [
 ]
 ```
 
-### Available Options
+
 - **AllowNetworkDiscovery**: `true` to enable network discovery, `false` to disable
 
 - **AllowFileAndPrinterSharing**: `true` to enable file and printer sharing, `false` to disable
@@ -365,7 +340,7 @@ DisableDiagnosticData = true
 DisableWindowsRecall = true
 ```
 
-### Available Options
+
 
 - **DisableTelemetry**: Windows telemetry data collection - `true` to disable, `false` to enable
 
@@ -397,7 +372,7 @@ The `[Fonts]` section allows you to manage fonts.
 Font = ["roboto", "opensans", "lato", "firasans"]
 ```
 
-### Available Options
+
 - **Font**: All fonts listed in the array will be installed. You can find font names [here](https://github.com/google/fonts/tree/main/ofl)
 
 
@@ -430,7 +405,7 @@ GCPW = [
 ]
 ```
 
-### Available Options
+
 - **Drive**: Google Drive configuration array
   - **Install**: Install Google Drive - `true` to install, `false` to uninstall (if already installed)
   - **DefaultWebBrowser**: Sets the default web browser for Google Drive. The path must be a local file path or a direct HTTP(S) URL to an executable file e.g. `"C:\Program Files\Google\Chrome\Application\chrome.exe"`
@@ -465,7 +440,7 @@ Bitlocker = [
 UAC = {Enable = true, Level = "NotifyChanges"}  # AlwaysNotify, NotifyChanges, NotifyNoDesktop, NeverNotify
 ```
 
-### Available Options
+
 > [!WARNING]
 > Only disable Windows Defender if you know what your doing. It is an available option but it is not recommended to include in most configurations
 - **DisableMicrosoftDefender**: Disables Windows Defender - `true` to disable, `false` to enable
@@ -508,7 +483,7 @@ ScheduledInstallDay = 1
 ScheduledInstallTime = 3
 ```
 
-### Available Options
+
 - **EnableAutomaticUpdates**: Enables Windows Update - `true` to enable, `false` to disable
 - **AUOptions**: Sets the Windows Update options. The options must be one of the following:
   - `2` - Notify before download
@@ -535,7 +510,7 @@ Disable = [
 ]
 ```
 
-### Available Options
+
 > [!NOTE]
 > Feature names must match the Windows optional feature names exactly. Use `Get-WindowsOptionalFeature -Online` in PowerShell to list available features.
 
@@ -559,7 +534,7 @@ OfficeClientEdition = 64
 UpdatesEnabled = true
 ```
 
-### Available Options
+
 > [!WARNING]
 > License keys are stored in plain text in the TOML file so make sure you encrypt your TOML file if you've got sensitive information in it.
 
@@ -588,7 +563,7 @@ Remove = [
 ]
 ```
 
-### Available Options
+
 - **Add**: Array of registry values to add/modify
   - **Name**: Registry value name
   - **Path**: Full registry path eg. `HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System`
@@ -624,7 +599,7 @@ Remove = [
 AddRepository = "https://github.com/Graphixa/Winforge/tree/main/Tasks/" # URL to repository containing task XML files
 ```
 
-### Available Options
+
 - **Add**: All items in this array will be added to the system
   - **Name**: Unique task name
   - **Path**: Local path or URL to task XML file
@@ -658,7 +633,7 @@ Powershell = [
 ]
 ```
 
-### Available Options
+
 
 - **Run**: All items in this array will be executed as an executable file
   - **Program**: Path or name of executable to be executed e.g. `\\\\server\\share\\program.msi`
@@ -703,7 +678,7 @@ Shortcut = [
 ]
 ```
 
-### Available Options
+
 
 - **Copy**: All items in this array will be copied to the specified destination
   - **Source**: Source file or folder path to copy from e.g. `\\\\server\\share\\files\\*` or `C:\\Temp\\file.txt` (supports wildcards like * and ?)
