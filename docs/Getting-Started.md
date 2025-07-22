@@ -13,7 +13,7 @@ Before you begin, ensure you have:
 
 2. **Optional Tools**
    - Git (for cloning the repository)
-   - A text editor for TOML files (VS Code recommended)
+   - A text editor for YAML files (VS Code recommended)
 
 ## Quick Setup
 
@@ -24,7 +24,7 @@ The fastest way to get started is running Winforge directly from GitHub:
 ```powershell
 # Run as Administrator
 Set-ExecutionPolicy Bypass -Scope Process -Force
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/main/winforge.ps1))) -config "https://raw.githubusercontent.com/yourdomain/config.toml"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/main/winforge.ps1))) -ConfigPath "https://raw.githubusercontent.com/yourdomain/config.yaml"
 ```
 
 ### Method 2: Local Installation
@@ -40,97 +40,95 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
    ```powershell
    # Run as Administrator
    Set-ExecutionPolicy Bypass -Scope Process -Force
-   .\winforge.ps1 -config="path\to\config.toml"
+   .\winforge.ps1 -ConfigPath="path\to\config.yaml"
    ```
 
 ## Creating Your First Configuration
 
 1. **Start with a Template**
    - Copy the example configuration:
-     ```toml
-     # config.toml
-     [System]
-     ComputerName = "MyPC"
-     Timezone = "UTC"
+     ```yaml
+     System:
+       ComputerName: "MyPC"
+       Timezone: "UTC"
      
-     [Applications]
-     PackageManager = "winget"
-     Install = [
-         "Microsoft.VisualStudioCode",
-         "Mozilla.Firefox"
-     ]
+     Applications:
+       PackageManager: "winget"
+       Install:
+         - App: "Microsoft.VisualStudioCode"
+         - App: "Mozilla.Firefox"
      
-     [Theme]
-     DarkMode = true
+     Theme:
+       DarkMode: true
      
-     [Privacy]
-     DisableTelemetry = true
+     Privacy:
+       DisableTelemetry: true
      ```
 
 2. **Customize Your Config**
    - Modify settings according to your needs
-   - See the [TOML Configuration Guide](TOML-Configuration-Guide) for all options
+   - See the [YAML Configuration Guide](Configuration-Guide.md) for all options
    - Use environment-specific sections as needed
 
 ## Common Configurations
 
 ### Developer Setup
-```toml
-[Applications]
-PackageManager = "winget"
-Install = [
-    "Microsoft.VisualStudioCode",
-    "Git.Git",
-    "Docker.DockerDesktop",
-    "Microsoft.PowerShell"
-]
+```yaml
+Applications:
+  PackageManager: "winget"
+  Install:
+    - App: "Microsoft.VisualStudioCode"
+    - App: "Git.Git"
+    - App: "Docker.DockerDesktop"
+    - App: "Microsoft.PowerShell"
 
-[EnvironmentVariables]
-User = [
-    {VariableName = "Path", Value = "%USERPROFILE%\\.local\\bin"},
-    {VariableName = "Path", Value = "%USERPROFILE%\\AppData\\Local\\Programs\\Python\\Python310\\Scripts"}
-]
+EnvironmentVariables:
+  User:
+    - Name: "GOPATH"
+      Value: "%USERPROFILE%\\.local\\go"
+    - Name: "PATH"
+      Value: "%USERPROFILE%\\AppData\\Local\\Programs\\Python\\Python310\\Scripts"
 ```
 
 ### Home User Setup
-```toml
-[Applications]
-PackageManager = "winget"
-Install = [
-    "Mozilla.Firefox",
-    "VideoLAN.VLC",
-    "7zip.7zip"
-]
+```yaml
+Applications:
+  PackageManager: "winget"
+  Install:
+    - App: "Mozilla.Firefox"
+    - App: "VideoLAN.VLC"
+    - App: "7zip.7zip"
 
-[Theme]
-DarkMode = true
-DesktopIconSize = "medium"
+Theme:
+  DarkMode: true
+  DesktopIconSize: "Medium"
 
-[Power]
-PowerPlan = "Balanced"
-AllowSleep = true
+Power:
+  PowerPlan: "Balanced"
+  AllowSleep: true
 
-[Privacy]
-DisableTelemetry = true
+Privacy:
+  DisableTelemetry: true
 ```
 
 ### Work Environment
-```toml
-[Applications]
-PackageManager = "winget"
-Install = [
-    "Microsoft.Office",
-    "Microsoft.Teams",
-    "Zoom.Zoom"
-]
+```yaml
+Applications:
+  PackageManager: "winget"
+  Install:
+    - App: "Microsoft.Office"
+    - App: "Microsoft.Teams"
+    - App: "Zoom.Zoom"
 
-[Network]
-MapDrive = [
-    { Letter = "S", Path = "\\\\server\\share", Persistent = true }
-]
+Network:
+  MapNetworkDrive:
+    - DriveLetter: "S"
+      Path: "\\\\server\\share"
+      Username: "domain\\user"
+      Password: "password"
 
-[Privacy]
-DisableTelemetry = true
+Privacy:
+  DisableTelemetry: true
 ```
 
 ## Running Winforge
@@ -139,17 +137,17 @@ DisableTelemetry = true
 
 1. **Remote Configuration**:
    ```powershell
-   .\winforge.ps1 -config="https://raw.githubusercontent.com/yourdomain/config.toml"
+   .\winforge.ps1 -ConfigPath="https://raw.githubusercontent.com/yourdomain/config.yaml"
    ```
 
 2. **Local Configuration**:
    ```powershell
-   .\winforge.ps1 -config="C:\path\to\config.toml"
+   .\winforge.ps1 -ConfigPath="C:\path\to\config.yaml"
    ```
 
 3. **With Logging**:
    ```powershell
-   .\winforge.ps1 -config="config.toml" -logPath "C:\path\to\log-output.txt"
+   .\winforge.ps1 -ConfigPath="config.yaml" -LogPath "C:\path\to\log-output.txt"
    ```
 
 ## Monitoring Progress
@@ -166,7 +164,7 @@ DisableTelemetry = true
 
 ## Next Steps
 
-1. Review the [TOML Configuration Guide](TOML-Configuration-Guide) for all available options
+1. Review the [YAML Configuration Guide](Configuration-Guide.md) for all available options
 2. Check out example configurations in the [Examples](Examples) section
 3. Join the community:
    - Star the GitHub repository
@@ -186,6 +184,7 @@ If you encounter issues:
    - Execution Policy: Run `Set-ExecutionPolicy Bypass -Scope Process`
    - File Access: Ensure config file is accessible
    - Network: Check proxy settings if behind corporate firewall
+   - YAML Syntax: Validate your YAML syntax
 
 3. **Getting Help**
    - See [Troubleshooting Guide](Troubleshooting) for detailed solutions
@@ -198,3 +197,12 @@ If you encounter issues:
 - Use secure sources for remote configurations
 - Keep your PowerShell and Windows up to date
 - Follow your organization's security policies
+- Consider encrypting configuration files with sensitive information
+
+## YAML Syntax Tips
+
+- **Indentation**: Use consistent spaces (typically 2) for indentation
+- **Arrays**: Use `- ` for array items
+- **Objects**: Use `key: value` format
+- **Strings**: Quote strings containing special characters
+- **Comments**: Use `#` for comments
