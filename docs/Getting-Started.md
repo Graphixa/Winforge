@@ -194,6 +194,7 @@ If you encounter issues:
 ## Security Notes
 
 - Always review configuration files before execution
+- Don't run random configuration files without reviewing thoroughly
 - Use secure sources for remote configurations
 - Keep your PowerShell and Windows up to date
 - Follow your organization's security policies

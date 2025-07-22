@@ -1,0 +1,7 @@
+﻿{
+    "Algorithm":  "AES-256-CBC",
+    "Data":  "bmS+xeMmh1Mn2gBZT+kPpPWmTR0WxnzD9UZN1YrE/z9figk7LxvdhdAmjpc8IYoCvZBdb1RNWcn+ziaDPPHF+xKYqXUTwsZB7NbhJ2JdcBq+21FqYVl4vZxLuO894nKlYa+r/kuZ9KsTuZ1nqofVPPM/t/J2cEIjEmp78e9iHZP6ZFcQh/bKE5zm2zoqL5ClBH0F20CiKmFaDcyT5oqFiLwSfAzJM8ydJ0yzD0TEAPI=",
+    "Iterations":  100000,
+    "IV":  "k8iBK3cYML9ZOMWu5isOGA==",
+    "Salt":  "VZkJeBDeF4+ShDynaTuTXnYR9+YKP5deWgtUzOHhUzc="
+}

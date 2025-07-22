@@ -34,10 +34,60 @@ function Test-EncryptedConfig {
     }
 }
 
+function Test-YAMLFile {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+    
+    try {
+        # Check file extension
+        $extension = [System.IO.Path]::GetExtension($FilePath).ToLower()
+        if ($extension -notin @('.yaml', '.yml')) {
+            Write-Warning "File extension '$extension' is not a standard YAML extension (.yaml/.yml)"
+            return $false
+        }
+        
+        # Basic YAML syntax validation
+        $content = Get-Content $FilePath -Raw
+        if ([string]::IsNullOrWhiteSpace($content)) {
+            Write-Warning "File is empty"
+            return $false
+        }
+        
+        # Check for basic YAML structure indicators
+        if ($content -match '^[\s]*[\w\-]+[\s]*:' -or $content -match '^[\s]*-[\s]+') {
+            return $true
+        }
+        
+        Write-Warning "File does not appear to contain valid YAML structure"
+        return $false
+    }
+    catch {
+        Write-Warning "Error validating YAML file: $($_.Exception.Message)"
+        return $false
+    }
+}
+
 # First check if file exists
 if (-not (Test-Path $FilePath)) {
     Write-Error "File not found: $FilePath"
     exit 1
+}
+
+# Validate YAML file format for non-encrypted files
+if ($Encrypt) {
+    $isEncrypted = Test-EncryptedConfig -FilePath $FilePath
+    if (-not $isEncrypted) {
+        $isValidYAML = Test-YAMLFile -FilePath $FilePath
+        if (-not $isValidYAML) {
+            $continue = Read-Host "File may not be valid YAML. Continue anyway? (y/N)"
+            if ($continue -ne 'y' -and $continue -ne 'Y') {
+                Write-Host "Operation cancelled by user"
+                exit 0
+            }
+        }
+    }
 }
 
 # Check encryption status based on operation
@@ -61,7 +111,9 @@ if (-not $Password) {
     if ($Encrypt) {
         # For encryption, ask for password twice
         $passwordsMatch = $false
-        while (-not $passwordsMatch) {
+        $attemptCount = 0
+        while (-not $passwordsMatch -and $attemptCount -lt 3) {
+            $attemptCount++
             $securePassword1 = Read-Host -Prompt "Enter password" -AsSecureString
             $securePassword2 = Read-Host -Prompt "Re-enter password" -AsSecureString
             
@@ -72,8 +124,14 @@ if (-not $Password) {
                 $pass1 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR1)
                 $pass2 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR2)
                 
+                # Validate password strength
+                if ($pass1.Length -lt 8) {
+                    Write-Host "Password must be at least 8 characters long. Please try again."
+                    continue
+                }
+                
                 if ($pass1 -eq $pass2) {
-                    $Password = $pass1
+                    $Password = $securePassword1
                     $passwordsMatch = $true
                 }
                 else {
@@ -90,16 +148,26 @@ if (-not $Password) {
                 Remove-Variable -Name pass2 -ErrorAction SilentlyContinue
             }
         }
+        
+        if (-not $passwordsMatch) {
+            Write-Error "Failed to set password after 3 attempts. Operation cancelled."
+            exit 1
+        }
     }
     else {
-        # For decryption, just ask once
-        $securePassword = Read-Host -Prompt "Enter password" -AsSecureString
-        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-        try {
-            $Password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+        # For decryption, just ask once with retry logic
+        $attemptCount = 0
+        $maxAttempts = 3
+        while ($attemptCount -lt $maxAttempts) {
+            $attemptCount++
+            $securePassword = Read-Host -Prompt "Enter password (Attempt $attemptCount of $maxAttempts)" -AsSecureString
+            $Password = $securePassword
+            break
         }
-        finally {
-            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+        
+        if ($attemptCount -eq $maxAttempts -and [string]::IsNullOrEmpty($Password)) {
+            Write-Error "Failed to provide password after $maxAttempts attempts. Operation cancelled."
+            exit 1
         }
     }
 }
@@ -111,7 +179,7 @@ function Convert-SecureConfig {
         [Parameter(Mandatory = $true)]
         [bool]$IsEncrypting,
         [Parameter(Mandatory = $true)]
-        [string]$Password
+        [System.Security.SecureString]$Password
     )
 
     try {
@@ -123,7 +191,7 @@ function Convert-SecureConfig {
         # Get file content
         $configContent = Get-Content $FilePath -Raw
 
-        # Generate output path (keep .config extension)
+        # Generate output path (keep original extension)
         $outputPath = $FilePath
 
         if ($IsEncrypting) {
@@ -132,9 +200,9 @@ function Convert-SecureConfig {
                 throw "File is already encrypted. Decrypt it first if you want to re-encrypt."
             }
 
-            # Generate unique random salt
+            # Generate unique random salt (32 bytes)
             $salt = New-Object byte[] 32
-            $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+            $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
             try {
                 $rng.GetBytes($salt)
             }
@@ -142,70 +210,31 @@ function Convert-SecureConfig {
                 $rng.Dispose()
             }
 
-            # Create key and IV
-            $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($Password, $salt, 1000)
+            # Generate unique random IV (16 bytes) - SECURITY FIX
+            $iv = New-Object byte[] 16
+            $rng2 = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
             try {
-                $key = $rfc.GetBytes(32) # 256 bits
-                $iv = $rfc.GetBytes(16)  # 128 bits
-
-                # Convert content to bytes
-                $bytes = [System.Text.Encoding]::UTF8.GetBytes($configContent)
-
-                # Create AES encryption object
-                $aes = [System.Security.Cryptography.Aes]::Create()
-                try {
-                    $aes.Key = $key
-                    $aes.IV = $iv
-                    $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
-                    $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
-
-                    # Create encryptor and encrypt
-                    $encryptor = $aes.CreateEncryptor()
-                    try {
-                        $encrypted = $encryptor.TransformFinalBlock($bytes, 0, $bytes.Length)
-                    }
-                    finally {
-                        $encryptor.Dispose()
-                    }
-                    
-                    # Create final encrypted package with salt
-                    $package = @{
-                        Salt = [Convert]::ToBase64String($salt)
-                        Data = [Convert]::ToBase64String($encrypted)
-                        IV = [Convert]::ToBase64String($iv)
-                    } | ConvertTo-Json
-                    
-                    # Save encrypted content
-                    $package | Set-Content $outputPath
-                    Write-Host "File encrypted successfully to: $outputPath"
-                }
-                finally {
-                    $aes.Dispose()
-                    # Securely clear sensitive data from memory
-                    for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
-                    for ($i = 0; $i -lt $iv.Length; $i++) { $iv[$i] = 0 }
-                }
+                $rng2.GetBytes($iv)
             }
             finally {
-                $rfc.Dispose()
+                $rng2.Dispose()
             }
-        }
-        else {
+
+            # Convert SecureString to plaintext only when needed for crypto operations
+            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password)
+            $plaintextPassword = $null
             try {
-                Write-Host "Attempting to decrypt file..."
+                $plaintextPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
                 
-                # Parse the encrypted package
-                $package = Get-Content $FilePath -Raw | ConvertFrom-Json
-                $salt = [Convert]::FromBase64String($package.Salt)
-                $encrypted = [Convert]::FromBase64String($package.Data)
-                $iv = [Convert]::FromBase64String($package.IV)
-
-                # Recreate key from password and stored salt
-                $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($Password, $salt, 1000)
+                # Create key using PBKDF2 with higher iteration count - SECURITY FIX
+                $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($plaintextPassword, $salt, 100000) # Increased from 1000 to 100000
                 try {
-                    $key = $rfc.GetBytes(32)
+                    $key = $rfc.GetBytes(32) # 256 bits
 
-                    # Create AES decryption object
+                    # Convert content to bytes
+                    $bytes = [System.Text.Encoding]::UTF8.GetBytes($configContent)
+
+                    # Create AES encryption object
                     $aes = [System.Security.Cryptography.Aes]::Create()
                     try {
                         $aes.Key = $key
@@ -213,37 +242,140 @@ function Convert-SecureConfig {
                         $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
                         $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
 
-                        # Create decryptor and decrypt
-                        $decryptor = $aes.CreateDecryptor()
+                        # Create encryptor and encrypt
+                        $encryptor = $aes.CreateEncryptor()
                         try {
-                            $decrypted = $decryptor.TransformFinalBlock($encrypted, 0, $encrypted.Length)
-                        }
-                        catch {
-                            throw "Incorrect password. Please try again with the correct password."
+                            $encrypted = $encryptor.TransformFinalBlock($bytes, 0, $bytes.Length)
                         }
                         finally {
-                            $decryptor.Dispose()
+                            $encryptor.Dispose()
                         }
                         
-                        # Convert back to string
-                        $decryptedText = [System.Text.Encoding]::UTF8.GetString($decrypted)
+                        # Create final encrypted package with salt and random IV
+                        $package = @{
+                            Salt = [Convert]::ToBase64String($salt)
+                            Data = [Convert]::ToBase64String($encrypted)
+                            IV = [Convert]::ToBase64String($iv)
+                            Iterations = 100000  # Store iteration count for future compatibility
+                            Algorithm = "AES-256-CBC"  # Document the algorithm used
+                        } | ConvertTo-Json -Depth 5
                         
-                        # Save decrypted content
-                        $decryptedText | Set-Content $outputPath -Encoding UTF8
-                        Write-Host "File decrypted successfully to: $outputPath"
+                        # Save encrypted content
+                        $package | Set-Content $outputPath -Encoding UTF8
+                        Write-Host "File encrypted successfully to: $outputPath" -ForegroundColor Green
+                        Write-Host "Using AES-256-CBC with PBKDF2 (100,000 iterations)" -ForegroundColor Yellow
                     }
                     finally {
                         $aes.Dispose()
                         # Securely clear sensitive data from memory
                         for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
+                        for ($i = 0; $i -lt $iv.Length; $i++) { $iv[$i] = 0 }
+                        for ($i = 0; $i -lt $bytes.Length; $i++) { $bytes[$i] = 0 }
                     }
                 }
                 finally {
                     $rfc.Dispose()
+                    # Clear salt from memory
+                    for ($i = 0; $i -lt $salt.Length; $i++) { $salt[$i] = 0 }
+                }
+            }
+            finally {
+                # Securely clear plaintext password from memory
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                if ($plaintextPassword) { 
+                    $plaintextPassword = "0" * $plaintextPassword.Length 
+                    Remove-Variable -Name plaintextPassword -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        else {
+            try {
+                Write-Host "Attempting to decrypt file..." -ForegroundColor Yellow
+                
+                # Parse the encrypted package
+                $package = Get-Content $FilePath -Raw | ConvertFrom-Json
+                
+                if (-not $package.Salt -or -not $package.Data -or -not $package.IV) {
+                    throw "Invalid encrypted file format. Required fields (Salt, Data, IV) are missing."
+                }
+                
+                $salt = [Convert]::FromBase64String($package.Salt)
+                $encrypted = [Convert]::FromBase64String($package.Data)
+                $iv = [Convert]::FromBase64String($package.IV)
+
+                # Use stored iteration count if available, otherwise default to new standard
+                $iterations = if ($package.Iterations) { $package.Iterations } else { 100000 }
+                
+                # Convert SecureString to plaintext only when needed for crypto operations
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password)
+                $plaintextPassword = $null
+                try {
+                    $plaintextPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                    
+                    # Recreate key from password and stored salt
+                    $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($plaintextPassword, $salt, $iterations)
+                    try {
+                        $key = $rfc.GetBytes(32)
+
+                        # Create AES decryption object
+                        $aes = [System.Security.Cryptography.Aes]::Create()
+                        try {
+                            $aes.Key = $key
+                            $aes.IV = $iv
+                            $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+                            $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+
+                            # Create decryptor and decrypt
+                            $decryptor = $aes.CreateDecryptor()
+                            try {
+                                $decrypted = $decryptor.TransformFinalBlock($encrypted, 0, $encrypted.Length)
+                            }
+                            catch [System.Security.Cryptography.CryptographicException] {
+                                throw "Decryption failed. This typically indicates an incorrect password."
+                            }
+                            catch {
+                                throw "Decryption error: $($_.Exception.Message)"
+                            }
+                            finally {
+                                $decryptor.Dispose()
+                            }
+                            
+                            # Convert back to string
+                            $decryptedText = [System.Text.Encoding]::UTF8.GetString($decrypted)
+                            
+                            # Validate decrypted content appears to be YAML
+                            if ($decryptedText -match '^[\s]*[\w\-]+[\s]*:' -or $decryptedText -match '^[\s]*-[\s]+') {
+                                Write-Host "Decrypted content appears to be valid YAML" -ForegroundColor Green
+                            } else {
+                                Write-Warning "Decrypted content may not be valid YAML format"
+                            }
+                            
+                            # Save decrypted content
+                            $decryptedText | Set-Content $outputPath -Encoding UTF8
+                            Write-Host "File decrypted successfully to: $outputPath" -ForegroundColor Green
+                        }
+                        finally {
+                            $aes.Dispose()
+                            # Securely clear sensitive data from memory
+                            for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
+                            for ($i = 0; $i -lt $decrypted.Length; $i++) { $decrypted[$i] = 0 }
+                        }
+                    }
+                    finally {
+                        $rfc.Dispose()
+                    }
+                }
+                finally {
+                    # Securely clear plaintext password from memory
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+                    if ($plaintextPassword) { 
+                        $plaintextPassword = "0" * $plaintextPassword.Length 
+                        Remove-Variable -Name plaintextPassword -ErrorAction SilentlyContinue
+                    }
                 }
             }
             catch {
-                Write-Error $_.Exception.Message
+                Write-Error "Decryption failed: $($_.Exception.Message)"
                 exit 1
             }
         }
@@ -264,9 +396,9 @@ try {
     }
 }
 finally {
-    # Clear password from memory
+    # Clear SecureString password from memory
     if ($Password) {
-        $Password = "0" * $Password.Length
-        Remove-Variable -Name Password
+        $Password.Dispose()
+        Remove-Variable -Name Password -ErrorAction SilentlyContinue
     }
 }
