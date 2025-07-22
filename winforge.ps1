@@ -36,6 +36,10 @@ $script:restartRequired = $false
 $script:tempFiles = @()
 $winforgeVersion = '0.2.0'
 
+# Configuration Validation Variables
+$script:validationWarnings = @()
+$script:configStatus = @{}
+
 # Initialize Error Handling
 $ErrorActionPreference = "Stop"
 
@@ -113,8 +117,8 @@ function Write-SystemMessage {
 
     # Define status message properties
     $statusTypes = @{
-        successMsg = @{ symbol = "✓"; text = "SUCCESS"; color = "Green" }
-        warningMsg = @{ symbol = "⚠ "; text = "WARNING"; color = "DarkYellow" }
+        successMsg = @{ symbol = [char]0x2713; text = "SUCCESS"; color = "Green" }
+        warningMsg = @{ symbol = [char]0x26A0; text = "WARNING"; color = "DarkYellow" }
         errorMsg = @{ symbol = "x"; text = "ERROR"; color = "Red" }
     }
 
@@ -795,6 +799,10 @@ function Read-ConfigFile {
 
         try {
             $config = Get-Content -Path $Path -Raw -ErrorAction Stop | ConvertFrom-Toml
+            
+            # Validate configuration
+            Validate-Config -Config $config
+            
             return $config
         }
         catch {
@@ -1054,6 +1062,7 @@ function Set-SystemConfiguration {
                 else {
                     Write-Log "Invalid or unsupported locale: $($SystemConfig.Locale)" -Level Warning
                     Write-SystemMessage -errorMsg
+                    $success = $false
                 }
             }
             catch {
@@ -1432,63 +1441,245 @@ function Set-SecurityConfiguration {
             }
         }
 
-        # BitLocker Configuration
-        if ($SecurityConfig.Bitlocker) {
-            Write-Log "Configuring BitLocker" -Level Info
-            Write-SystemMessage -msg "Configuring BitLocker"
-
-            foreach ($driveConfig in $SecurityConfig.Bitlocker) {
-                $driveLetter = $driveConfig.Drive
-                Write-Log "Processing BitLocker for drive $driveLetter" -Level Info
-                Write-SystemMessage -msg "Processing BitLocker" -value $driveLetter
-
-                try {
-                    # Check if drive exists
-                    if (-not (Test-Path -Path $driveLetter)) {
-                        throw "Drive $driveLetter does not exist"
-                    }
-
-                    # Convert password to secure string
-                    $securePassword = ConvertTo-SecureString $driveConfig.Password -AsPlainText -Force
-
-                    # Create recovery key directory if it doesn't exist
-                    $recoveryKeyDir = Split-Path $driveConfig.RecoveryKeyPath -Parent
-                    if (-not (Test-Path -Path $recoveryKeyDir)) {
-                        New-Item -Path $recoveryKeyDir -ItemType Directory -Force | Out-Null
-                    }
-
-                    # Check if BitLocker is already enabled
-                    $bitlockerVolume = Get-BitLockerVolume -MountPoint $driveLetter
-                    if ($bitlockerVolume.ProtectionStatus -eq "Off") {
-                        # Enable BitLocker with specified settings
-                        Enable-BitLocker -MountPoint $driveLetter `
-                            -EncryptionMethod $driveConfig.EncryptionMethod `
-                            -UsedSpaceOnly:($driveConfig.EncryptionType -eq "UsedSpace") `
-                            -PasswordProtector -Password $securePassword `
-                            -RecoveryKeyPath $driveConfig.RecoveryKeyPath `
-                            -SkipHardwareTest
-
-                        Write-SystemMessage -successMsg -msg "Enabled BitLocker on drive" -value $driveLetter
-                    }
-                    else {
-                        Write-Log "BitLocker is already enabled on drive $driveLetter" -Level Info
-                        Write-SystemMessage -msg "BitLocker already enabled on drive" -value $driveLetter
-                    }
-                }
-                catch {
-                    Write-Log "Failed to configure BitLocker for drive $driveLetter`: $($_.Exception.Message)" -Level Error
-                    Write-SystemMessage -errorMsg
-                    $success = $false
-                }
-            }
-        }
-
         Write-Log "Security configuration completed"
         return $success
     }
     catch {
         Write-Log "Error configuring security settings: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure security settings"
+        return $false
+    }
+}
+
+function Set-WindowsDefenderConfiguration {
+    param (
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$DefenderConfig
+    )
+    
+    Write-SystemMessage -title "Configuring Windows Defender"
+    $success = $true
+
+    try {
+        # Check if Windows Defender is available
+        if (-not (Get-Command "Set-MpPreference" -ErrorAction SilentlyContinue)) {
+            Write-Log "Windows Defender PowerShell module not available" -Level Warning
+            Write-SystemMessage -warningMsg -msg "Windows Defender PowerShell module not available"
+            return $false
+        }
+
+        # Real-time Protection
+        if ($DefenderConfig.RealTimeProtection -ne $null) {
+            Write-SystemMessage -msg "Configuring Real-time Protection" -value $DefenderConfig.RealTimeProtection
+            Write-Log "Setting Real-time Protection: $($DefenderConfig.RealTimeProtection)" -Level Info
+            try {
+                Set-MpPreference -DisableRealtimeMonitoring (-not $DefenderConfig.RealTimeProtection)
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to configure Real-time Protection: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+                $success = $false
+            }
+        }
+
+        # Cloud Protection
+        if ($DefenderConfig.CloudProtection -ne $null) {
+            Write-SystemMessage -msg "Configuring Cloud Protection" -value $DefenderConfig.CloudProtection
+            Write-Log "Setting Cloud Protection: $($DefenderConfig.CloudProtection)" -Level Info
+            try {
+                Set-MpPreference -MAPSReporting $(if ($DefenderConfig.CloudProtection) { 2 } else { 0 })
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to configure Cloud Protection: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+                $success = $false
+            }
+        }
+
+        # Automatic Sample Submission
+        if ($DefenderConfig.AutomaticSampleSubmission -ne $null) {
+            Write-SystemMessage -msg "Configuring Automatic Sample Submission" -value $DefenderConfig.AutomaticSampleSubmission
+            Write-Log "Setting Automatic Sample Submission: $($DefenderConfig.AutomaticSampleSubmission)" -Level Info
+            try {
+                Set-MpPreference -SubmitSamplesConsent $(if ($DefenderConfig.AutomaticSampleSubmission) { 1 } else { 2 })
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to configure Automatic Sample Submission: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+                $success = $false
+            }
+        }
+
+        # Network Protection
+        if ($DefenderConfig.NetworkProtection -ne $null) {
+            Write-SystemMessage -msg "Configuring Network Protection" -value $DefenderConfig.NetworkProtection
+            Write-Log "Setting Network Protection: $($DefenderConfig.NetworkProtection)" -Level Info
+            try {
+                Set-MpPreference -EnableNetworkProtection $(if ($DefenderConfig.NetworkProtection) { 1 } else { 0 })
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to configure Network Protection: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+                $success = $false
+            }
+        }
+
+        # Controlled Folder Access
+        if ($DefenderConfig.ControlledFolderAccess -ne $null) {
+            Write-SystemMessage -msg "Configuring Controlled Folder Access" -value $DefenderConfig.ControlledFolderAccess
+            Write-Log "Setting Controlled Folder Access: $($DefenderConfig.ControlledFolderAccess)" -Level Info
+            try {
+                Set-MpPreference -EnableControlledFolderAccess $(if ($DefenderConfig.ControlledFolderAccess) { 1 } else { 0 })
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to configure Controlled Folder Access: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+                $success = $false
+            }
+        }
+
+        # Exclusions - Paths
+        if ($DefenderConfig.ExclusionPaths -and $DefenderConfig.ExclusionPaths.Count -gt 0) {
+            Write-SystemMessage -msg "Adding path exclusions"
+            Write-Log "Adding path exclusions: $($DefenderConfig.ExclusionPaths -join ', ')" -Level Info
+            try {
+                foreach ($path in $DefenderConfig.ExclusionPaths) {
+                    Add-MpPreference -ExclusionPath $path
+                }
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to add path exclusions: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+                $success = $false
+            }
+        }
+
+        # Exclusions - Extensions
+        if ($DefenderConfig.ExclusionExtensions -and $DefenderConfig.ExclusionExtensions.Count -gt 0) {
+            Write-SystemMessage -msg "Adding extension exclusions"
+            Write-Log "Adding extension exclusions: $($DefenderConfig.ExclusionExtensions -join ', ')" -Level Info
+            try {
+                foreach ($extension in $DefenderConfig.ExclusionExtensions) {
+                    Add-MpPreference -ExclusionExtension $extension
+                }
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to add extension exclusions: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+                $success = $false
+            }
+        }
+
+        # Exclusions - Processes
+        if ($DefenderConfig.ExclusionProcesses -and $DefenderConfig.ExclusionProcesses.Count -gt 0) {
+            Write-SystemMessage -msg "Adding process exclusions"
+            Write-Log "Adding process exclusions: $($DefenderConfig.ExclusionProcesses -join ', ')" -Level Info
+            try {
+                foreach ($process in $DefenderConfig.ExclusionProcesses) {
+                    Add-MpPreference -ExclusionProcess $process
+                }
+                Write-SystemMessage -successMsg
+            } catch {
+                Write-Log "Failed to add process exclusions: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -errorMsg
+                $success = $false
+            }
+        }
+
+        # Scan Settings
+        if ($DefenderConfig.ScanSettings) {
+            $scanConfig = $DefenderConfig.ScanSettings
+            
+            if ($scanConfig.QuickScanTime) {
+                Write-SystemMessage -msg "Setting daily quick scan time" -value $scanConfig.QuickScanTime
+                Write-Log "Setting daily quick scan time: $($scanConfig.QuickScanTime)" -Level Info
+                try {
+                    Set-MpPreference -ScanScheduleQuickScanTime $scanConfig.QuickScanTime
+                    Write-SystemMessage -successMsg
+                } catch {
+                    Write-Log "Failed to set quick scan time: $($_.Exception.Message)" -Level Error
+                    Write-SystemMessage -errorMsg
+                    $success = $false
+                }
+            }
+
+            if ($scanConfig.ScanRemovableDrives -ne $null) {
+                Write-SystemMessage -msg "Configuring removable drive scanning" -value $scanConfig.ScanRemovableDrives
+                Write-Log "Setting removable drive scanning: $($scanConfig.ScanRemovableDrives)" -Level Info
+                try {
+                    Set-MpPreference -DisableRemovableDriveScanning (-not $scanConfig.ScanRemovableDrives)
+                    Write-SystemMessage -successMsg
+                } catch {
+                    Write-Log "Failed to configure removable drive scanning: $($_.Exception.Message)" -Level Error
+                    Write-SystemMessage -errorMsg
+                    $success = $false
+                }
+            }
+
+            if ($scanConfig.ScanArchives -ne $null) {
+                Write-SystemMessage -msg "Configuring archive scanning" -value $scanConfig.ScanArchives
+                Write-Log "Setting archive scanning: $($scanConfig.ScanArchives)" -Level Info
+                try {
+                    Set-MpPreference -DisableArchiveScanning (-not $scanConfig.ScanArchives)
+                    Write-SystemMessage -successMsg
+                } catch {
+                    Write-Log "Failed to configure archive scanning: $($_.Exception.Message)" -Level Error
+                    Write-SystemMessage -errorMsg
+                    $success = $false
+                }
+            }
+        }
+
+        # Threat Settings
+        if ($DefenderConfig.ThreatSettings) {
+            $threatConfig = $DefenderConfig.ThreatSettings
+            
+            if ($threatConfig.MAPSReporting) {
+                $mapsValue = switch ($threatConfig.MAPSReporting) {
+                    "Disabled" { 0 }
+                    "Basic" { 1 }
+                    "Advanced" { 2 }
+                    default { 2 }
+                }
+                Write-SystemMessage -msg "Setting MAPS reporting level" -value $threatConfig.MAPSReporting
+                Write-Log "Setting MAPS reporting level: $($threatConfig.MAPSReporting)" -Level Info
+                try {
+                    Set-MpPreference -MAPSReporting $mapsValue
+                    Write-SystemMessage -successMsg
+                } catch {
+                    Write-Log "Failed to set MAPS reporting level: $($_.Exception.Message)" -Level Error
+                    Write-SystemMessage -errorMsg
+                    $success = $false
+                }
+            }
+
+            if ($threatConfig.SubmitSamplesConsent) {
+                $consentValue = switch ($threatConfig.SubmitSamplesConsent) {
+                    "AlwaysPrompt" { 0 }
+                    "SendSafeSamples" { 1 }
+                    "NeverSend" { 2 }
+                    "SendAllSamples" { 3 }
+                    default { 1 }
+                }
+                Write-SystemMessage -msg "Setting sample submission consent" -value $threatConfig.SubmitSamplesConsent
+                Write-Log "Setting sample submission consent: $($threatConfig.SubmitSamplesConsent)" -Level Info
+                try {
+                    Set-MpPreference -SubmitSamplesConsent $consentValue
+                    Write-SystemMessage -successMsg
+                } catch {
+                    Write-Log "Failed to set sample submission consent: $($_.Exception.Message)" -Level Error
+                    Write-SystemMessage -errorMsg
+                    $success = $false
+                }
+            }
+        }
+
+        Write-Log "Windows Defender configuration completed"
+        return $success
+    }
+    catch {
+        Write-Log "Error configuring Windows Defender: $($_.Exception.Message)" -Level Error
+        Write-SystemMessage -errorMsg -msg "Failed to configure Windows Defender"
         return $false
     }
 }
@@ -4402,6 +4593,242 @@ function Set-Commands {
     }
 }
 
+# Configuration Validation Schema
+$script:WinforgeSchema = @{
+    # System settings
+    'ComputerName' = 'string'
+    'Locale' = 'string'
+    'Timezone' = 'string'
+    'DisableWindowsStore' = 'boolean'
+    'DisableOneDrive' = 'boolean'
+    'DisableCopilot' = 'boolean'
+    'DisableWindowsRecall' = 'boolean'
+    'DisableRemoteDesktop' = 'boolean'
+    'DisableSetupDevicePrompt' = 'boolean'
+    'LanguagePacks' = 'array'
+    
+    # Privacy settings
+    'DisableTelemetry' = 'boolean'
+    'DisableDiagTrack' = 'boolean'
+    'DisableAppPrivacy' = 'boolean'
+    'DisablePersonalisedAdvertising' = 'boolean'
+    'DisableStartMenuTracking' = 'boolean'
+    'DisableActivityHistory' = 'boolean'
+    'DisableClipboardDataCollection' = 'boolean'
+    'DisableStartMenuSuggestions' = 'boolean'
+    'DisableDiagnosticData' = 'boolean'
+    
+    # Applications
+    'PackageManager' = @('Winget', 'Chocolatey')
+    'Install' = 'array'
+    'Uninstall' = 'array'
+    'RemoveBloatware' = 'boolean'
+    
+    # Security
+    'DisableMicrosoftDefender' = 'boolean'
+    'DisableAutoPlay' = 'boolean'
+    'UAC' = 'object'
+    
+    # Network
+    'AllowNetworkDiscovery' = 'boolean'
+    'AllowFileAndPrinterSharing' = 'boolean'
+    'MapNetworkDrive' = 'array'
+    
+    # Commands
+    'Run' = 'array'
+    'Cmd' = 'array'
+    'Powershell' = 'array'
+    
+    # Theme
+    'DarkMode' = 'boolean'
+    'DesktopIconSize' = @('Small', 'Medium', 'Large')
+    'WallpaperPath' = 'string'
+    'LockScreenPath' = 'string'
+    'DisableTransparencyEffects' = 'boolean'
+    'DisableWindowsAnimations' = 'boolean'
+    'DisableTransparency' = 'boolean'
+    
+    # Power
+    'PowerPlan' = 'string'
+    'AllowSleep' = 'boolean'
+    'AllowHibernate' = 'boolean'
+    'DisableFastStartup' = 'boolean'
+    'MonitorTimeout' = 'int'
+    'SleepTimeout' = 'int'
+    'HibernateTimeout' = 'int'
+    
+    # Windows Update
+    'EnableAutomaticUpdates' = 'boolean'
+    'AUOptions' = 'int'
+    'AutoInstallMinorUpdates' = 'boolean'
+    'ScheduledInstallDay' = 'int'
+    'ScheduledInstallTime' = 'int'
+    
+    # Windows Features
+    'Enable' = 'array'
+    'Disable' = 'array'
+    
+    # Office
+    'LicenseKey' = 'string'
+    'ProductID' = 'string'
+    'LanguageID' = 'string'
+    'DisplayLevel' = 'string'
+    'SetupReboot' = 'string'
+    'Channel' = 'string'
+    'OfficeClientEdition' = 'int'
+    'UpdatesEnabled' = 'boolean'
+    
+    # Google
+    'Drive' = 'array'
+    'Chrome' = 'array'
+    'GCPW' = 'array'
+    
+    # Fonts
+    'Font' = 'array'
+    
+    # Explorer
+    'ShowFileExtensions' = 'boolean'
+    'ShowHiddenFolders' = 'boolean'
+    
+    # Taskbar
+    'TaskbarAlignment' = @('Left', 'Center')
+    'DisableMeetNow' = 'boolean'
+    'DisableWidgets' = 'boolean'
+    'DisableTaskView' = 'boolean'
+    'DisableSearch' = 'boolean'
+    
+    # Tweaks
+    'ClassicRightClickMenu' = 'boolean'
+    'GodModeFolder' = 'boolean'
+    
+    # Activation
+    'ProductKey' = 'string'
+    'Version' = 'string'
+    
+    # Environment Variables
+    'User' = 'array'
+    'System' = 'array'
+    
+    # File Operations
+    'Copy' = 'array'
+    'Move' = 'array'
+    'Rename' = 'array'
+    'New' = 'array'
+    'Delete' = 'array'
+    'Shortcut' = 'array'
+}
+
+# Section-specific valid keys (for sections with duplicate keys)
+$script:SectionValidKeys = @{
+    'Registry' = @('Add', 'Remove')
+    'Tasks' = @('Add', 'Remove', 'AddRepository')
+    'WindowsDefender' = @('RealTimeProtection', 'CloudProtection', 'AutomaticSampleSubmission', 'NetworkProtection', 'ControlledFolderAccess', 'AttackSurfaceReduction', 'ExclusionPaths', 'ExclusionExtensions', 'ExclusionProcesses', 'ScanSettings', 'ThreatSettings')
+}
+
+function Validate-Config {
+    param([PSCustomObject]$Config)
+    
+    Write-SystemMessage -title "Validating Configuration"
+    
+    foreach ($section in $Config.PSObject.Properties.Name) {
+        foreach ($key in $Config.$section.PSObject.Properties.Name) {
+            $isValid = $false
+            
+            # Check if key is valid for this specific section
+            if ($script:SectionValidKeys.ContainsKey($section)) {
+                if ($key -in $script:SectionValidKeys[$section]) {
+                    $isValid = $true
+                }
+            }
+            # Check if key is valid in the general schema
+            elseif ($script:WinforgeSchema.ContainsKey($key)) {
+                $isValid = $true
+            }
+            
+            if (-not $isValid) {
+                $warning = "Unrecognized option: [$section].$key"
+                Write-Log $warning -Level Warning
+                $script:validationWarnings += $warning
+            }
+        }
+    }
+}
+
+function Show-ConfigurationSummary {
+    Write-SystemMessage -title "Configuration Summary"
+    
+    # Show sections that were processed
+    foreach ($section in $script:configStatus.GetEnumerator()) {
+        if ($section.Value -ne $null) {  # Only show if section was included
+            $successSymbol = [char]0x2713  # ✓
+            $failSymbol = [char]0x2717     # ✗
+            $status = if ($section.Value) { "$successSymbol Success" } else { "$failSymbol Failed" }
+            $color = if ($section.Value) { "Green" } else { "Red" }
+            Write-Host "$($section.Key): " -NoNewline
+            Write-Host $status -ForegroundColor $color
+        }
+    }
+    
+    # Show any validation warnings
+    if ($script:validationWarnings.Count -gt 0) {
+        Write-Host "`nValidation Warnings:" -ForegroundColor Yellow
+        foreach ($warning in $script:validationWarnings) {
+            $bulletSymbol = [char]0x2022  # •
+            Write-Host "  $bulletSymbol $warning" -ForegroundColor Yellow
+        }
+    }
+}
+
+function Invoke-ConfigurationFunction {
+    <#
+    .SYNOPSIS
+        Wrapper function to standardize configuration function execution and status tracking.
+    .DESCRIPTION
+        Executes a configuration function and tracks its success/failure status.
+    .PARAMETER FunctionName
+        The name of the configuration function to execute.
+    .PARAMETER SectionName
+        The name of the configuration section for status tracking.
+    .PARAMETER Parameters
+        Parameters to pass to the configuration function.
+    .OUTPUTS
+        Boolean. Returns the success status of the configuration function.
+    #>
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$FunctionName,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$SectionName,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Parameters = @{}
+    )
+    
+    try {
+        Write-Log "Executing configuration function: $FunctionName" -Level Info
+        
+        # Execute the function with parameters
+        $result = & $FunctionName @Parameters
+        
+        # Track the result
+        $script:configStatus[$SectionName] = $result
+        
+        if ($result) {
+            Write-Log "Configuration function $FunctionName completed successfully" -Level Info
+        } else {
+            Write-Log "Configuration function $FunctionName failed" -Level Error
+        }
+        
+        return $result
+    }
+    catch {
+        Write-Log "Unexpected error in configuration function $FunctionName`: $($_.Exception.Message)" -Level Error
+        $script:configStatus[$SectionName] = $false
+        return $false
+    }
+}
+
 # Main Execution Block
 try {
     Clear-Host
@@ -4426,7 +4853,7 @@ try {
     }
 
     # Initialize configuration status hashtable with counts
-    $configStatus = @{}
+    $script:configStatus = @{}
 
     # Load and validate configuration
     $configData = Read-ConfigFile -Path $ConfigPath
@@ -4436,126 +4863,125 @@ try {
 
     # System Configuration
     if ($configData.System) {
-        $configStatus['System'] = Set-SystemConfiguration -SystemConfig $configData.System
+        Invoke-ConfigurationFunction -FunctionName "Set-SystemConfiguration" -SectionName "System" -Parameters @{SystemConfig = $configData.System}
     }
 
     # Windows Activation
     if ($configData.Activation) {
-        $configStatus['Activation'] = Set-WindowsActivation -ActivationConfig $configData.Activation
+        Invoke-ConfigurationFunction -FunctionName "Set-WindowsActivation" -SectionName "Activation" -Parameters @{ActivationConfig = $configData.Activation}
     }
 
     # Environment Variables
     if ($configData.EnvironmentVariables) {
-        $configStatus['Environment'] = Set-EnvironmentVariables -EnvConfig $configData.EnvironmentVariables
+        Invoke-ConfigurationFunction -FunctionName "Set-EnvironmentVariables" -SectionName "Environment" -Parameters @{EnvConfig = $configData.EnvironmentVariables}
     }
 
     # Taskbar Configuration
     if ($configData.Taskbar) {
-        $configStatus['Taskbar'] = Set-TaskbarConfiguration -TaskbarConfig $configData.Taskbar
+        Invoke-ConfigurationFunction -FunctionName "Set-TaskbarConfiguration" -SectionName "Taskbar" -Parameters @{TaskbarConfig = $configData.Taskbar}
     }
 
     # Theme Configuration
     if ($configData.Theme) {
-        $configStatus['Theme'] = Set-ThemeConfiguration -ThemeConfig $configData.Theme
+        Invoke-ConfigurationFunction -FunctionName "Set-ThemeConfiguration" -SectionName "Theme" -Parameters @{ThemeConfig = $configData.Theme}
     }
 
     # System Tweaks
     if ($configData.Tweaks) {
-        $configStatus['Tweaks'] = Set-TweaksConfiguration -TweaksConfig $configData.Tweaks
+        Invoke-ConfigurationFunction -FunctionName "Set-TweaksConfiguration" -SectionName "Tweaks" -Parameters @{TweaksConfig = $configData.Tweaks}
     }
 
     # Power
     if ($configData.Power) {
-        $configStatus['Power'] = Set-PowerConfiguration -PowerConfig $configData.Power
+        Invoke-ConfigurationFunction -FunctionName "Set-PowerConfiguration" -SectionName "Power" -Parameters @{PowerConfig = $configData.Power}
     }
 
     # Network Configuration
     if ($configData.Network) {
-        $configStatus['Network'] = Set-NetworkConfiguration -NetworkConfig $configData.Network
+        Invoke-ConfigurationFunction -FunctionName "Set-NetworkConfiguration" -SectionName "Network" -Parameters @{NetworkConfig = $configData.Network}
     }
 
     # Privacy
     if ($configData.Privacy) {
-        $configStatus['Privacy'] = Set-PrivacyConfiguration -PrivacyConfig $configData.Privacy
+        Invoke-ConfigurationFunction -FunctionName "Set-PrivacyConfiguration" -SectionName "Privacy" -Parameters @{PrivacyConfig = $configData.Privacy}
     }
 
     # Security
     if ($configData.Security) {
-        $configStatus['Security'] = Set-SecurityConfiguration -SecurityConfig $configData.Security
+        Invoke-ConfigurationFunction -FunctionName "Set-SecurityConfiguration" -SectionName "Security" -Parameters @{SecurityConfig = $configData.Security}
+    }
+
+    # Windows Defender
+    if ($configData.WindowsDefender) {
+        Invoke-ConfigurationFunction -FunctionName "Set-WindowsDefenderConfiguration" -SectionName "WindowsDefender" -Parameters @{DefenderConfig = $configData.WindowsDefender}
     }
 
     # Windows Update
     if ($configData.WindowsUpdate) {
-        $configStatus['WindowsUpdate'] = Set-WindowsUpdateConfiguration -UpdateConfig $configData.WindowsUpdate
+        Invoke-ConfigurationFunction -FunctionName "Set-WindowsUpdateConfiguration" -SectionName "WindowsUpdate" -Parameters @{UpdateConfig = $configData.WindowsUpdate}
     }
 
     # Windows Features
     if ($configData.WindowsFeatures) {
-        $configStatus['WindowsFeatures'] = Set-WindowsFeaturesConfiguration -FeaturesConfig $configData.WindowsFeatures
+        Invoke-ConfigurationFunction -FunctionName "Set-WindowsFeaturesConfiguration" -SectionName "WindowsFeatures" -Parameters @{FeaturesConfig = $configData.WindowsFeatures}
     }
 
     # Fonts installation
     if ($configData.Fonts) {
-        $configStatus['Fonts'] = Install-Fonts -FontConfig $configData.Fonts
+        Invoke-ConfigurationFunction -FunctionName "Install-Fonts" -SectionName "Fonts" -Parameters @{FontConfig = $configData.Fonts}
     }
 
     # Application Management
     if ($configData.Applications) {
         if ($configData.Applications.Install) {
-            $configStatus['ApplicationInstall'] = Install-Applications -AppConfig $configData.Applications.Install
+            Invoke-ConfigurationFunction -FunctionName "Install-Applications" -SectionName "ApplicationInstall" -Parameters @{AppConfig = $configData.Applications.Install}
         }
         if ($configData.Applications.Uninstall) {
-            $configStatus['ApplicationUninstall'] = Remove-Applications -AppConfig $configData.Applications.Uninstall
+            Invoke-ConfigurationFunction -FunctionName "Remove-Applications" -SectionName "ApplicationUninstall" -Parameters @{AppConfig = $configData.Applications.Uninstall}
         }
 
         if ($configData.Applications.RemoveBloatware -eq $true) {
-            $configStatus['Bloatware'] = Remove-Bloatware
+            Invoke-ConfigurationFunction -FunctionName "Remove-Bloatware" -SectionName "Bloatware" -Parameters @{}
         }
     }
 
     # Google Configuration
     if ($configData.Google) {
-        $configStatus['Google'] = Set-GoogleConfiguration -GoogleConfig $configData.Google
+        Invoke-ConfigurationFunction -FunctionName "Set-GoogleConfiguration" -SectionName "Google" -Parameters @{GoogleConfig = $configData.Google}
     }
 
     # Office Configuration
     if ($configData.Office) {
-        $configStatus['Office'] = Set-OfficeConfiguration -OfficeConfig $configData.Office
+        Invoke-ConfigurationFunction -FunctionName "Set-OfficeConfiguration" -SectionName "Office" -Parameters @{OfficeConfig = $configData.Office}
     }
 
     # Registry modifications
     if ($configData.Registry) {
-        $configStatus['Registry'] = Set-RegistryItems -RegistryConfig $configData.Registry
+        Invoke-ConfigurationFunction -FunctionName "Set-RegistryItems" -SectionName "Registry" -Parameters @{RegistryConfig = $configData.Registry}
     }
 
     # Scheduled Tasks
     if ($configData.Tasks) {
-        $configStatus['Tasks'] = Set-ScheduledTasksConfiguration -TasksConfig $configData.Tasks
+        Invoke-ConfigurationFunction -FunctionName "Set-ScheduledTasksConfiguration" -SectionName "Tasks" -Parameters @{TasksConfig = $configData.Tasks}
     }
 
     # File Operations
     if ($configData.Files) {
-        $configStatus['Files'] = Set-FileOperations -FileConfig $configData.Files
+        Invoke-ConfigurationFunction -FunctionName "Set-FileOperations" -SectionName "Files" -Parameters @{FileConfig = $configData.Files}
     }
 
     # Shortcuts
     if ($configData.Shortcuts) {
-        $configStatus['Shortcuts'] = Set-Shortcuts -ShortcutConfig $configData.Shortcuts
+        Invoke-ConfigurationFunction -FunctionName "Set-Shortcuts" -SectionName "Shortcuts" -Parameters @{ShortcutConfig = $configData.Shortcuts}
     }
 
     Write-SystemMessage -title "Configuration Completed"
 
-    # Display configuration status
-    Write-SystemMessage -title "Configuration Status"
-    foreach ($item in $configStatus.GetEnumerator()) {
-        $status = if ($item.Value) { "Success" } else { "Failed" }
-        $color = if ($item.Value) { "Green" } else { "Red" }
-        Write-Host "$($item.Key): " -NoNewline
-        Write-Host $status -ForegroundColor $color
-    }
+    # Display configuration summary
+    Show-ConfigurationSummary
 
     # Check if any configurations failed
-    if ($configStatus.Values -contains $false) {
+    if ($script:configStatus.Values -contains $false) {
         Write-SystemMessage -msg "Some configurations failed. Please check the logs for details."
         Pause
         return 1
