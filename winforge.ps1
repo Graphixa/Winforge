@@ -1,20 +1,20 @@
 <#
 .SYNOPSIS
-    Windows configuration deployment tool using TOML configurations.
+    Windows configuration deployment tool using YAML configurations.
 .DESCRIPTION
-    Winforge automates Windows system configuration using TOML-based configuration files.
+    Winforge automates Windows system configuration using YAML-based configuration files.
     Supports local and remote configurations with validation.
 
 .PARAMETER ConfigPath
-    Path to the configuration file (local .toml file or URL)
+    Path to the configuration file (local .yaml/.yml file or URL)
 .PARAMETER LogPath
     Optional custom path for log file
 
 .EXAMPLE
-    .\winforge.ps1 -ConfigPath "myconfig.toml"
+    .\winforge.ps1 -ConfigPath "myconfig.yaml"
 
 .EXAMPLE
-    .\winforge.ps1 -ConfigPath "https://example.com/myconfig.toml" -LogPath "C:\Logs\winforge.log"
+    .\winforge.ps1 -ConfigPath "https://example.com/myconfig.yaml" -LogPath "C:\Logs\winforge.log"
 
 .NOTES
 
@@ -45,6 +45,28 @@ $ErrorActionPreference = "Stop"
 
 # Disable progress bar (Improves speed of)
 $ProgressPreference = 'SilentlyContinue'
+
+# Install and import YAML module if not available
+if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
+    Write-Host "Installing powershell-yaml module..." -ForegroundColor Yellow
+    try {
+        Install-Module -Name powershell-yaml -Force -Scope CurrentUser -AllowClobber
+        Write-Host "Successfully installed powershell-yaml module" -ForegroundColor Green
+    }
+    catch {
+        Write-Error "Failed to install powershell-yaml module: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+# Import YAML module
+try {
+    Import-Module powershell-yaml -Force
+}
+catch {
+    Write-Error "Failed to import powershell-yaml module: $($_.Exception.Message)"
+    exit 1
+}
 
 
 
@@ -246,7 +268,7 @@ function Test-RequiredModules {
     # Check for required modules and return list of missing ones
     Write-SystemMessage -title "Checking Dependencies"
 
-    $RequiredModules = @('PSToml')
+    $RequiredModules = @('powershell-yaml')
     $MissingModules = @()
 
     foreach ($module in $RequiredModules) {
@@ -289,9 +311,9 @@ function Install-RequiredModules {
     $moduleList = $ModulesToInstall -join ", "
     Write-SystemMessage -msg "The following modules from PSGallery need to be installed to run Winforge" -value $moduleList -msgColor Yellow
     
-    # Show GitHub link for PSToml
-    if ($ModulesToInstall -contains 'PSToml') {
-        Write-Host "`nMore information about PSToml: https://github.com/jborean93/PSToml" -ForegroundColor Cyan
+    # Show GitHub link for powershell-yaml
+    if ($ModulesToInstall -contains 'powershell-yaml') {
+        Write-Host "`nMore information about powershell-yaml: https://github.com/cloudbase/powershell-yaml" -ForegroundColor Cyan
     }
     
     Write-Host "`nWould you like to install them now? (Y/N)" -ForegroundColor Yellow
@@ -355,7 +377,7 @@ function Test-EncryptedConfig {
         Determines if a configuration file is encrypted by checking for the presence
         of required encryption fields in the JSON wrapper.
     .PARAMETER FilePath
-        The path to the configuration file to test (.toml or .config).
+        The path to the configuration file to test (.yaml or .yml).
     .OUTPUTS
         Boolean. Returns $true if the file is encrypted, $false otherwise.
     #>
@@ -372,8 +394,8 @@ function Test-EncryptedConfig {
         }
 
         # Validate file extension
-        if (-not ($FilePath -match '\.(toml|config)$')) {
-            Write-Log "Invalid file extension. Only .toml and .config files are supported." -Level Error
+        if (-not ($FilePath -match '\.(yaml|yml)$')) {
+            Write-Log "Invalid file extension. Only .yaml and .yml files are supported." -Level Error
             return $false
         }
 
@@ -405,7 +427,7 @@ function Convert-SecureConfig {
     .SYNOPSIS
         Encrypts or decrypts a configuration file.
     .DESCRIPTION
-        Handles the encryption and decryption of configuration files (.toml or .config).
+        Handles the encryption and decryption of configuration files (.yaml or .yml).
         Uses AES-256 encryption with PBKDF2 key derivation.
     .PARAMETER FilePath
         The path to the configuration file to encrypt/decrypt.
@@ -439,8 +461,8 @@ function Convert-SecureConfig {
         }
 
             # Validate file extension
-            if (-not ($FilePath -match '\.(toml|config)$')) {
-                throw "Invalid file extension. Only .toml and .config files are supported."
+            if (-not ($FilePath -match '\.(yaml|yml)$')) {
+                throw "Invalid file extension. Only .yaml and .yml files are supported."
             }
 
         # Get file content
@@ -642,7 +664,7 @@ function Get-ConfigFile {
     
     Write-Log "Downloading configuration from: $Path"
     Write-SystemMessage -msg "Downloading configuration from" -value $Path
-    $extension = if ($Path -match '\.toml$') { '.toml' } else { '.config' }
+    $extension = if ($Path -match '\.yml$') { '.yml' } else { '.yaml' }
     $tempPath = Join-Path $env:TEMP "winforge$extension"
     $script:tempFiles += $tempPath
    
@@ -684,8 +706,8 @@ function Decrypt-Config {
             if ($decryptResult) {
                 Write-SystemMessage -successMsg "Configuration decrypted successfully"
                 
-                # Parse decrypted TOML content
-                $config = Get-Content -Path $FilePath -Raw -ErrorAction Stop | ConvertFrom-Toml
+                # Parse decrypted YAML content
+                $config = Get-Content -Path $FilePath -Raw -ErrorAction Stop | ConvertFrom-Yaml
                 return $config
             }
             else {
@@ -733,9 +755,9 @@ function Read-ConfigFile {
         
         # Validate file extension
         $extension = [System.IO.Path]::GetExtension($Path)
-        if ($extension -notin @('.toml', '.config')) {
+        if ($extension -notin @('.yaml', '.yml')) {
             Write-SystemMessage -errorMsg -msg "Invalid file format"
-            throw "Configuration must have the extension .toml or .config and be in TOML format"
+            throw "Configuration must have the extension .yaml or .yml and be in YAML format"
         }
         
         $isEncrypted = Test-EncryptedConfig -FilePath $Path
@@ -798,7 +820,7 @@ function Read-ConfigFile {
         }
 
         try {
-            $config = Get-Content -Path $Path -Raw -ErrorAction Stop | ConvertFrom-Toml
+            $config = Get-Content -Path $Path -Raw -ErrorAction Stop | ConvertFrom-Yaml
             
             # Validate configuration
             Validate-Config -Config $config
@@ -806,7 +828,7 @@ function Read-ConfigFile {
             return $config
         }
         catch {
-            throw "Invalid TOML in configuration file: $($_.Exception.Message)"
+            throw "Invalid YAML in configuration file: $($_.Exception.Message)"
         }
     }
     catch {
@@ -1005,8 +1027,8 @@ function Set-SystemConfiguration {
     .SYNOPSIS
         Configures system settings based on the configuration file.
     .DESCRIPTION
-        TODO: Update for TOML Support
-        - Convert boolean handling from strings to native TOML booleans
+        TODO: Update for YAML Support
+        - Convert boolean handling from strings to native YAML booleans
         - Update naming conventions (Disable/Allow prefixes)
         - Add support for new settings (WindowsRecall, SetupDevicePrompt)
         - Convert EnableRemoteDesktop to DisableRemoteDesktop
@@ -1923,28 +1945,38 @@ function Install-Applications {
             Write-Log "Refreshed environment variables to include Chocolatey" -Level Info
 
             # Install Chocolatey Apps
-            foreach ($appItem in $AppConfig.Chocolatey) {
-                if ([string]::IsNullOrWhiteSpace($appItem.Name)) {
+            foreach ($appItem in $AppConfig) {
+                # Handle both string and object formats
+                if ($appItem -is [string]) {
+                    $appName = $appItem
+                    $appVersion = $null
+                } else {
+                    $appName = $appItem.App
+                    $appVersion = $appItem.Version
+                }
+
+                if ([string]::IsNullOrWhiteSpace($appName)) {
                     Write-Log "Empty application name found. Skipping" -Level Warning
                     continue
                 }
 
-                Write-SystemMessage -msg "Installing" -value $appItem.Name
-                Write-Log "Installing $($appItem.Name)" -Level Info
+                $displayValue = if ($appVersion) { "$appName (v$appVersion)" } else { $appName }
+                Write-SystemMessage -msg "Installing" -value $displayValue
+                Write-Log "Installing $($appName)$(if ($appVersion) { " version $appVersion" })" -Level Info
                 
                 try {
                     # Check if app is already installed
-                    $installedApp = choco list --local-only --exact $appItem.Name | Where-Object { $_ -match "^$($appItem.Name)\s" }
+                    $installedApp = choco list --local-only --exact $appName | Where-Object { $_ -match "^$($appName)\s" }
                     if ($installedApp) {
-                        Write-Log "$($appItem.Name) is already installed" -Level Warning
+                        Write-Log "$($appName) is already installed" -Level Warning
                         Write-SystemMessage -warningMsg -msg "App is already installed"
                         continue
                     }
 
-                    $chocoArgs = if ($appItem.Version) {
-                        "install `"$($appItem.Name)`" --version $($appItem.Version) -y -r --ignoredetectedreboot"
+                    $chocoArgs = if ($appVersion) {
+                        "install `"$($appName)`" --version $appVersion -y -r --ignoredetectedreboot"
                     } else {
-                        "install `"$($appItem.Name)`" -y -r --ignoredetectedreboot" 
+                        "install `"$($appName)`" -y -r --ignoredetectedreboot"
                     }
                     
                     $result = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command & { choco $chocoArgs }" -Wait -WindowStyle Hidden -PassThru
@@ -1952,12 +1984,12 @@ function Install-Applications {
                     if ($result.ExitCode -eq 0) {
                         Write-SystemMessage -successMsg
                     } else {
-                        Write-Log "Failed to install $($appItem.Name). Exit code: $($result.ExitCode)" -Level Error
+                        Write-Log "Failed to install $($appName). Exit code: $($result.ExitCode)" -Level Error
                         Write-SystemMessage -errorMsg
                     }
                 }
                 catch {
-                    Write-Log "Failed to install $($appItem.Name) : $($_.Exception.Message)" -Level Error
+                    Write-Log "Failed to install $($appName) : $($_.Exception.Message)" -Level Error
                     Write-SystemMessage -errorMsg
                 }
             }
@@ -1973,40 +2005,51 @@ function Install-Applications {
             }
 
             # Install Winget Apps
-            foreach ($appItem in $AppConfig.Winget) {
-                if ([string]::IsNullOrWhiteSpace($appItem.Name)) {
+            foreach ($appItem in $AppConfig) {
+                # Handle both string and object formats
+                if ($appItem -is [string]) {
+                    $appName = $appItem
+                    $appVersion = $null
+                } else {
+                    $appName = $appItem.App
+                    $appVersion = $appItem.Version
+                }
+
+                if ([string]::IsNullOrWhiteSpace($appName)) {
                     Write-Log "Empty application name found. Skipping" -Level Warning
                     continue
                 }
 
-                Write-SystemMessage -msg "Installing" -value $appItem.Name
-                Write-Log "Installing $($appItem.Name)" -Level Info
+                $displayValue = if ($appVersion) { "$appName (v$appVersion)" } else { $appName }
+                Write-SystemMessage -msg "Installing" -value $displayValue
+                Write-Log "Installing $($appName)$(if ($appVersion) { " version $appVersion" })" -Level Info
                 
                 try {
                     # Search for exact package first
-                    $searchResult = winget search --exact --query $appItem.Name --accept-source-agreements | Out-String
-                    if ($searchResult -notmatch $appItem.Name) {
-                        Write-Log "Package $($appItem.Name) not found in winget repository" -Level Warning
+                    $searchResult = winget search --exact --query $appName --accept-source-agreements | Out-String
+                    if ($searchResult -notmatch $appName) {
+                        Write-Log "Package $($appName) not found in winget repository" -Level Warning
                         Write-SystemMessage -warningMsg -msg "Package not found in repository"
                         continue
                     }
 
-                    if ($appItem.Version) {
-                        $result = Start-Process -FilePath "winget" -ArgumentList "install --exact --id $($appItem.Name) --version $($appItem.Version) --accept-source-agreements --accept-package-agreements" -Wait -NoNewWindow -PassThru
+                    $wingetArgs = if ($appVersion) {
+                        "install --exact --id $($appName) --version $appVersion --accept-source-agreements --accept-package-agreements"
+                    } else {
+                        "install --exact --id $($appName) --accept-source-agreements --accept-package-agreements"
                     }
-                    else {
-                        $result = Start-Process -FilePath "winget" -ArgumentList "install --exact --id $($appItem.Name) --accept-source-agreements --accept-package-agreements" -Wait -NoNewWindow -PassThru
-                    }
+                    
+                    $result = Start-Process -FilePath "winget" -ArgumentList $wingetArgs -Wait -NoNewWindow -PassThru
                     
                     if ($result.ExitCode -eq 0) {
                         Write-SystemMessage -successMsg
                     } else {
-                        Write-Log "Failed to install $($appItem.Name). Exit code: $($result.ExitCode)" -Level Error
+                        Write-Log "Failed to install $($appName). Exit code: $($result.ExitCode)" -Level Error
                         Write-SystemMessage -errorMsg
                     }
                 }
                 catch {
-                    Write-Log "Failed to install $($appItem.Name) : $($_.Exception.Message)" -Level Error
+                    Write-Log "Failed to install $($appName) : $($_.Exception.Message)" -Level Error
                     Write-SystemMessage -errorMsg
                 }
             }
@@ -2025,7 +2068,10 @@ function Install-Applications {
 function Remove-Applications {
     param (
         [Parameter(Mandatory = $true)]
-        [PSCustomObject]$AppConfig
+        [PSCustomObject]$AppConfig,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$packageManager = "Winget"
     )
 
     Write-SystemMessage -title "Removing Applications"
@@ -2034,15 +2080,14 @@ function Remove-Applications {
         # Debug logging
         Write-Log "Debug: AppConfig type: $($AppConfig.GetType().FullName)" -Level Info
         Write-Log "Debug: AppConfig content: $($AppConfig | Format-List | Out-String)" -Level Info
-        Write-Log "Debug: PackageManager value: $($AppConfig.PackageManager)" -Level Info
-        Write-Log "Debug: Number of apps: $($AppConfig.App.Count)" -Level Info
+        Write-Log "Debug: PackageManager value: $packageManager" -Level Info
+        Write-Log "Debug: Number of apps: $($AppConfig.Count)" -Level Info
 
-        if (-not $AppConfig) {
+        if (-not $AppConfig -or $AppConfig.Count -eq 0) {
             Write-Log "No applications to uninstall" -Level Info
             return $true
         }
 
-        $packageManager = $AppConfig.Attributes["PackageManager"].Value
         if (-not $packageManager) {
             Write-Log "No package manager specified for uninstallation" -Level Error
             Write-SystemMessage -errorMsg -msg "No package manager specified"
@@ -2060,9 +2105,13 @@ function Remove-Applications {
                 return $false
             }
 
-            foreach ($app in $AppConfig.ChildNodes) {
-                if ($app.Name -ne "App") { continue }
-                $appName = $app.InnerText.Trim()
+            foreach ($appItem in $AppConfig) {
+                # Handle both string and object formats
+                if ($appItem -is [string]) {
+                    $appName = $appItem
+                } else {
+                    $appName = $appItem.App
+                }
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
                     Write-Log "Empty application name found. Skipping" -Level Warning
@@ -2109,9 +2158,13 @@ function Remove-Applications {
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
             Write-Log "Refreshed environment variables to include Chocolatey" -Level Info
 
-            foreach ($app in $AppConfig.ChildNodes) {
-                if ($app.Name -ne "App") { continue }
-                $appName = $app.InnerText.Trim()
+            foreach ($appItem in $AppConfig) {
+                # Handle both string and object formats
+                if ($appItem -is [string]) {
+                    $appName = $appItem
+                } else {
+                    $appName = $appItem.App
+                }
 
                 if ([string]::IsNullOrWhiteSpace($appName)) {
                     Write-Log "Empty application name found. Skipping" -Level Warning
@@ -2331,13 +2384,13 @@ function Set-WindowsUpdateConfiguration {
 
     try {        
         # Auto Update Settings
-        if ($UpdateConfig.AutomaticUpdates) {
+        if ($UpdateConfig.EnableAutomaticUpdates) {
             Write-SystemMessage -msg "Configuring automatic updates"
-            Write-Log "Setting automatic updates to: $($UpdateConfig.AutomaticUpdates)"
+            Write-Log "Setting automatic updates to: $($UpdateConfig.EnableAutomaticUpdates)"
             try {
-                if ($UpdateConfig.AutomaticUpdates -eq $true) {
+                if ($UpdateConfig.EnableAutomaticUpdates -eq $true) {
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AutomaticUpdates" -Type DWord -Value 0
-                } elseif ($UpdateConfig.AutomaticUpdates -eq $false) {
+                } elseif ($UpdateConfig.EnableAutomaticUpdates -eq $false) {
                     Set-RegistryModification -Action add -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AutomaticUpdates" -Type DWord -Value 1
                 }
                 Write-SystemMessage -successMsg
@@ -2631,7 +2684,10 @@ function Install-Fonts {
         $tempDownloadFolder = "$env:TEMP\google_fonts"
         $script:tempFiles += $tempDownloadFolder
 
-        foreach ($fontName in $FontConfig.Font) {
+        # Support both new structure (direct array) and old structure (Font property)
+        $fontArray = if ($FontConfig.Font) { $FontConfig.Font } else { $FontConfig }
+        
+        foreach ($fontName in $fontArray) {
             # Correct the font names for the GitHub repository
             $correctFontName = $fontName -replace "\+", ""
 
@@ -2964,7 +3020,7 @@ function Set-RegistryItems {
         if ($RegistryConfig.Add) {
             Write-SystemMessage -title "Adding Registry Entries"
 
-            # In TOML, Add will be an array of objects
+            # In YAML, Add will be an array of objects
             foreach ($regItem in $RegistryConfig.Add) {
                 # Expand environment variables in the value
                 $expandedValue = $ExecutionContext.InvokeCommand.ExpandString($regItem.Value)
@@ -2993,7 +3049,7 @@ function Set-RegistryItems {
         if ($RegistryConfig.Remove) {
             Write-SystemMessage -title "Removing Registry Entries"
 
-            # In TOML, Remove will be an array of objects
+            # In YAML, Remove will be an array of objects
             foreach ($regItem in $RegistryConfig.Remove) {
                 Write-SystemMessage -msg "Removing registry entry" -value "Path=$($regItem.Path), Name=$($regItem.Name)"
                 Write-Log "Removing registry entry: Path=$($regItem.Path), Name=$($regItem.Name)" -Level Info
@@ -3759,7 +3815,7 @@ function Set-NetworkConfiguration {
 
     try {
         # Network Discovery
-        if ($NetworkConfig.NetworkDiscovery -eq $true) {
+        if ($NetworkConfig.EnableNetworkDiscovery -eq $true) {
             Write-Log "Enabling Network Discovery" -Level Info
             Write-SystemMessage -msg "Enabling Network Discovery"
             try {
@@ -3782,7 +3838,7 @@ function Set-NetworkConfiguration {
                 Write-SystemMessage -errorMsg
             }
         }
-        elseif ($NetworkConfig.NetworkDiscovery -eq $false) {
+        elseif ($NetworkConfig.EnableNetworkDiscovery -eq $false) {
             Write-Log "Disabling Network Discovery" -Level Info
             Write-SystemMessage -msg "Disabling Network Discovery"
             try {
@@ -3807,7 +3863,7 @@ function Set-NetworkConfiguration {
         }
 
         # File and Printer Sharing
-        if ($NetworkConfig.FileAndPrinterSharing -eq $true) {
+        if ($NetworkConfig.EnableFileAndPrinterSharing -eq $true) {
             Write-Log "Enabling File and Printer Sharing" -Level Info
             Write-SystemMessage -msg "Enabling File and Printer Sharing"
             try {
@@ -3826,7 +3882,7 @@ function Set-NetworkConfiguration {
                 Write-SystemMessage -errorMsg
             }
         }
-        elseif ($NetworkConfig.FileAndPrinterSharing -eq $false) {
+        elseif ($NetworkConfig.EnableFileAndPrinterSharing -eq $false) {
             Write-Log "Disabling File and Printer Sharing" -Level Info
             Write-SystemMessage -msg "Disabling File and Printer Sharing"
             try {
@@ -3847,17 +3903,21 @@ function Set-NetworkConfiguration {
         }
 
         # Network Drives
-        if ($NetworkConfig.Drives) {
+        if ($NetworkConfig.MapNetworkDrive) {
             Write-Log "Mapping network drives" -Level Info
             Write-SystemMessage -msg "Mapping network drives"
 
-            foreach ($driveItem in $NetworkConfig.Drives) {
-                if (-not $driveItem.Letter -or -not $driveItem.Path) {
-                    Write-Log "Invalid drive mapping: Missing Letter or Path" -Level Warning
+            foreach ($driveItem in $NetworkConfig.MapNetworkDrive) {
+                if (-not $driveItem.DriveLetter) {
+                    Write-Log "Invalid drive mapping: Missing DriveLetter" -Level Warning
+                    continue
+                }
+                if (-not $driveItem.Path) {
+                    Write-Log "Invalid drive mapping: Missing Path" -Level Warning
                     continue
                 }
 
-                $driveLetter = $driveItem.Letter + ":"
+                $driveLetter = $driveItem.DriveLetter + ":"
                 $drivePath = $ExecutionContext.InvokeCommand.ExpandString($driveItem.Path)
                 
                 Write-Log "Mapping drive $driveLetter to $drivePath" -Level Info
@@ -3866,12 +3926,10 @@ function Set-NetworkConfiguration {
                 try {
                     # Build credential object if provided
                     $connectionArgs = @{}
-                    if ($driveItem.Credentials) {
-                        if ($driveItem.Credentials.Username -and $driveItem.Credentials.Password) {
-                            $securePass = ConvertTo-SecureString $driveItem.Credentials.Password -AsPlainText -Force
-                            $cred = New-Object System.Management.Automation.PSCredential($driveItem.Credentials.Username, $securePass)
-                            $connectionArgs['Credential'] = $cred
-                        }
+                    if ($driveItem.Username -and $driveItem.Password) {
+                        $securePass = ConvertTo-SecureString $driveItem.Password -AsPlainText -Force
+                        $cred = New-Object System.Management.Automation.PSCredential($driveItem.Username, $securePass)
+                        $connectionArgs['Credential'] = $cred
                     }
 
                     # Test and establish network connection first
@@ -3880,8 +3938,8 @@ function Set-NetworkConfiguration {
                         Write-Log "Testing network share connection: $sharePath" -Level Info
                         
                         # Remove existing connection if present
-                        if (Get-PSDrive -Name $driveItem.Letter -ErrorAction SilentlyContinue) {
-                            Remove-PSDrive -Name $driveItem.Letter -Force -ErrorAction SilentlyContinue
+                        if (Get-PSDrive -Name $driveItem.DriveLetter -ErrorAction SilentlyContinue) {
+                            Remove-PSDrive -Name $driveItem.DriveLetter -Force -ErrorAction SilentlyContinue
                         }
                         net use $driveLetter /delete /y 2>$null
                         
@@ -3889,7 +3947,7 @@ function Set-NetworkConfiguration {
                         if (-not (Test-Path -Path $sharePath @connectionArgs)) {
                             # Try to establish connection
                             if ($connectionArgs['Credential']) {
-                                $netUseArgs = "/user:" + $driveItem.Credentials.Username + " " + $driveItem.Credentials.Password
+                                $netUseArgs = "/user:" + $driveItem.Username + " " + $driveItem.Password
                                 $result = net use $sharePath $netUseArgs 2>&1
                                 if ($LASTEXITCODE -ne 0) {
                                     throw "Failed to connect to network share: $result"
@@ -3905,7 +3963,7 @@ function Set-NetworkConfiguration {
 
                     # Now map the drive
                     Write-Log "Mapping drive $driveLetter" -Level Info
-                    New-PSDrive -PSProvider FileSystem -Name $driveItem.Letter -Root $drivePath -Persist -ErrorAction Stop @connectionArgs | Out-Null
+                    New-PSDrive -PSProvider FileSystem -Name $driveItem.DriveLetter -Root $drivePath -Persist -ErrorAction Stop @connectionArgs | Out-Null
                     Write-SystemMessage -successMsg
                 }
                 catch {
@@ -4846,12 +4904,6 @@ try {
         throw "This script requires administrative privileges"
     }
 
-    # Check for required modules
-    if (-not (Test-RequiredModules)) {
-        Write-Log "Required modules are not available. Attempting to install them now."
-        Install-RequiredModules
-    }
-
     # Initialize configuration status hashtable with counts
     $script:configStatus = @{}
 
@@ -4934,10 +4986,16 @@ try {
     # Application Management
     if ($configData.Applications) {
         if ($configData.Applications.Install) {
-            Invoke-ConfigurationFunction -FunctionName "Install-Applications" -SectionName "ApplicationInstall" -Parameters @{AppConfig = $configData.Applications.Install}
+            Invoke-ConfigurationFunction -FunctionName "Install-Applications" -SectionName "ApplicationInstall" -Parameters @{
+                AppConfig = $configData.Applications.Install
+                packageManager = $configData.Applications.PackageManager
+            }
         }
         if ($configData.Applications.Uninstall) {
-            Invoke-ConfigurationFunction -FunctionName "Remove-Applications" -SectionName "ApplicationUninstall" -Parameters @{AppConfig = $configData.Applications.Uninstall}
+            Invoke-ConfigurationFunction -FunctionName "Remove-Applications" -SectionName "ApplicationUninstall" -Parameters @{
+                AppConfig = $configData.Applications.Uninstall
+                packageManager = $configData.Applications.PackageManager
+            }
         }
 
         if ($configData.Applications.RemoveBloatware -eq $true) {
