@@ -63,9 +63,9 @@ PowerPlan = "Balanced"
 AllowSleep = true
 AllowHibernate = true
 DisableFastStartup = true
-MonitorTimeout = 15 # minutes
-SleepTimeout = 30 # minutes
-HibernateTimeout = 60 # minutes
+MonitorTimeout = 15 # minutes (integer)
+SleepTimeout = 30 # minutes (integer)
+HibernateTimeout = 60 # minutes (integer)
 
 [Network]
 AllowNetworkDiscovery = true
@@ -117,24 +117,40 @@ GCPW = [
     {DomainsAllowedToLogin = "example.com"}
 ]
 
-
-
 [Security]
-DisableMicrosoftDefender = false
 DisableAutoPlay = true
-Bitlocker = [
-  {Drive = "C:", EncryptionMethod = "XtsAes256", EncryptionType = "FullVolume", Password = "Password123", RecoveryKeyPath = "C:\\Bitlocker\\RecoveryKey.key"},
-  {Drive = "D:", EncryptionMethod = "XtsAes256", EncryptionType = "FullVolume", Password = "Password123", RecoveryKeyPath = "C:\\Bitlocker\\RecoveryKey.key"}
-]
 UAC = {Enable = true, Level = "NotifyChanges"}  # Options: "AlwaysNotify", "NotifyChanges", "NotifyNoDesktop", "NeverNotify"
 
+# Windows Defender Configuration - More granular control
+[WindowsDefender]
+RealTimeProtection = true
+CloudProtection = true
+AutomaticSampleSubmission = false
+NetworkProtection = true
+ControlledFolderAccess = false
+AttackSurfaceReduction = true
+ExclusionPaths = ["C:\\MyApp\\", "C:\\Temp\\"]
+ExclusionExtensions = [".tmp", ".log"]
+ExclusionProcesses = ["myapp.exe", "backup.exe"]
+ScanSettings = {
+    QuickScanTime = "02:00",  # 2 AM daily quick scan
+    FullScanDay = "Sunday",   # Weekly full scan on Sunday
+    ScanRemovableDrives = true,
+    ScanArchives = true,
+    ScanNetworkFiles = false
+}
+ThreatSettings = {
+    DefaultAction = "Quarantine",  # Options: "Clean", "Quarantine", "Remove", "Allow", "UserDefined", "Block"
+    SubmitSamplesConsent = "SendSafeSamples",  # Options: "AlwaysPrompt", "SendSafeSamples", "NeverSend", "SendAllSamples"
+    MAPSReporting = "Advanced"  # Options: "Disabled", "Basic", "Advanced"
+}
 
 [WindowsUpdate]
 EnableAutomaticUpdates = true
-AUOptions = 3
+AUOptions = 3 # 0 = Automatic, 1 = Notify, 2 = NotifyChanges, 3 = NotifyChangesAndRestart, 4 = NotifyChangesAndRestartIfRequired
 AutoInstallMinorUpdates = true
-ScheduledInstallDay = 1
-ScheduledInstallTime = 3
+ScheduledInstallDay = 1 # 1-7 (Monday-Sunday)
+ScheduledInstallTime = 3 # 0-23 (0 = 12:00 AM, 23 = 11:00 PM)
 
 [WindowsFeatures]
 Enable = [
@@ -152,12 +168,12 @@ Disable = [
 
 [Office]
 LicenseKey = "NMMKJ-6RK4F-KMJVX-8D9MJ-6MWKP"
-ProductID = "ProPlus2019Retail"
+ProductID = "ProPlus2019Retail" # ProPlus2019Retail, ProPlus2021Retail, ProPlus2021Volume, ProPlus2021VolumeRetail, ProPlus2021SemiAnnualRetail, ProPlus2021SemiAnnual
 LanguageID = "en-US"
 DisplayLevel = "None"
-SetupReboot = "Never"
-Channel = "SemiAnnual"
-OfficeClientEdition = 64
+SetupReboot = "Never" # Never, Always
+Channel = "SemiAnnual" # SemiAnnual, MonthlyEnterprise, Monthly, MonthlyRetail
+OfficeClientEdition = 64 # 32, 64
 UpdatesEnabled = true
 
 [Registry]
@@ -185,7 +201,7 @@ Remove = [
     {Name = "Task3", Description = "Task 3"}
 ]
 
-AddRepository = "https://github.com/Graphixa/WinforgeX/tree/main/Tasks/"
+AddRepository = "https://github.com/Graphixa/Winforge/tree/main/Tasks/"
 
 
 [Commands]
