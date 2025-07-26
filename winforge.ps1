@@ -294,7 +294,7 @@ function Test-RequiredModules {
             catch {
                 Write-Log "Failed to import $module module: $($_.Exception.Message)" -Level Error
                 Write-SystemMessage -msg "Failed to import module" -value $module -errorMsg
-                return $false
+                return
             }
         }
         else {
@@ -303,7 +303,7 @@ function Test-RequiredModules {
     }
     
     Write-SystemMessage -msg "All required modules are available and loaded" -successMsg
-    return $true
+    return
 }
 
 function Install-RequiredModules {
@@ -387,7 +387,7 @@ function Test-AdminPrivileges {
         throw "Please run PowerShell as Administrator explicitly."
     }
     
-    return $true
+    return
 }
 
 function Test-EncryptedConfig {
@@ -411,13 +411,13 @@ function Test-EncryptedConfig {
         # First check if file exists
         if (-not (Test-Path $FilePath)) {
             Write-Log "File not found: $FilePath" -Level Error
-            return $false
+            return
         }
 
         # Validate file extension
         if (-not ($FilePath -match '\.(yaml|yml)$')) {
             Write-Log "Invalid file extension. Only .yaml and .yml files are supported." -Level Error
-            return $false
+            return
         }
 
         # Read file content
@@ -433,12 +433,12 @@ function Test-EncryptedConfig {
         }
         catch {
             # If we can't parse as JSON, it's not encrypted
-                return $false
+                return
         }
     }
     catch {
         Write-Log "Error testing encrypted config: $($_.Exception.Message)" -Level Error
-        return $false
+        return
     }
 }
 
@@ -546,7 +546,7 @@ function Convert-SecureConfig {
                         Write-Host "File encrypted successfully: $outputPath"
                         Write-Log "File encrypted successfully: $outputPath"
                     
-                        return $true
+                        return
                 }
                 finally {
                     $aes.Dispose()
@@ -593,7 +593,7 @@ function Convert-SecureConfig {
                                 Write-SystemMessage -msg "File decrypted successfully" -value $outputPath -successMsg
                                 Write-Log "File decrypted successfully: $outputPath"
                                 
-                                return $true
+                                return
                         }
                         catch {
                                 throw "Failed to decrypt file. Please check the password and try again."
@@ -615,7 +615,7 @@ function Convert-SecureConfig {
             catch {
                     Write-Host "Decryption failed: $($_.Exception.Message)"
                     Write-Log "Decryption failed: $($_.Exception.Message)" -Level Error
-                    return $false
+                    return
                 }
             }
         }
@@ -633,7 +633,7 @@ function Convert-SecureConfig {
     catch {
         Write-Host "Operation failed: $($_.Exception.Message)"
         Write-Log "Operation failed: $($_.Exception.Message)" -Level Error
-        return $false
+        return
     }
 }
 
@@ -948,7 +948,7 @@ function Set-RegistryModification {
         }
         default {
             Write-Log "Unsupported registry hive in path: $Path" -Level Error
-            return $false
+            return
         }
     }
     
@@ -973,11 +973,11 @@ function Set-RegistryModification {
             throw "Invalid action: $Action"
         }
 
-        return $true
+        return
     }
     catch {
         Write-Log "Registry modification failed: $($_.Exception.Message)" -Level Error
-        return $false
+        return
     }
 }
 
@@ -1017,7 +1017,7 @@ function Set-SystemCheckpoint {
         if ($systemDrive.FreeSpace -lt 1GB) {
             Write-Log "Insufficient disk space for system restore point" -Level Error
             Write-SystemMessage -errorMsg -msg "Insufficient disk space for system restore point"
-            return $false
+            return
         }
 
         $date = Get-Date -Format "MM/dd/yyyy"
@@ -1031,12 +1031,12 @@ function Set-SystemCheckpoint {
         Checkpoint-Computer -Description $snapshotName -RestorePointType "MODIFY_SETTINGS" -WarningAction SilentlyContinue | Out-Null
         Write-SystemMessage -successMsg
             
-        return $true
+        return
     }
     catch {
         Write-Log "Error creating system restore point: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to create system restore point. Check Log for details."
-        return $false
+        return
     }
 }
 
@@ -1360,7 +1360,7 @@ function Set-SystemConfiguration {
     catch {
         Write-Log "Error configuring system settings: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure system settings"
-        return $false
+        return
     }
 }
 
@@ -1490,7 +1490,7 @@ function Set-SecurityConfiguration {
     catch {
         Write-Log "Error configuring security settings: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure security settings"
-        return $false
+        return
     }
 }
 
@@ -1508,7 +1508,7 @@ function Set-WindowsDefenderConfiguration {
         if (-not (Get-Command "Set-MpPreference" -ErrorAction SilentlyContinue)) {
             Write-Log "Windows Defender PowerShell module not available" -Level Warning
             Write-SystemMessage -warningMsg -msg "Windows Defender PowerShell module not available"
-            return $false
+            return
         }
 
         # Real-time Protection
@@ -1723,7 +1723,7 @@ function Set-WindowsDefenderConfiguration {
     catch {
         Write-Log "Error configuring Windows Defender: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure Windows Defender"
-        return $false
+        return
     }
 }
 
@@ -1916,12 +1916,12 @@ function Set-PrivacyConfiguration {
         }
 
         Write-Log "Privacy configuration completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error configuring privacy settings: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Error configuring privacy settings"
-        return $false
+        return
     }
 }
 
@@ -1957,7 +1957,7 @@ function Install-Applications {
                 catch {
                     Write-Log "Failed to install Chocolatey: $($_.Exception.Message)" -Level Error
                     Write-SystemMessage -errorMsg
-                    return $false
+                    return
                 }
             }
 
@@ -2022,7 +2022,7 @@ function Install-Applications {
             if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
                 Write-Log "Winget is not installed. Please install App Installer from the Microsoft Store." -Level Error
                 Write-SystemMessage -errorMsg -msg "Winget is not installed"
-                return $false
+                return
             }
 
             # Install Winget Apps
@@ -2077,12 +2077,12 @@ function Install-Applications {
         }
 
         Write-Log "Application installation completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error installing applications: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to install applications. Check the log for details."
-        return $false
+        return
     }
 }
 
@@ -2106,13 +2106,13 @@ function Remove-Applications {
 
         if (-not $AppConfig -or $AppConfig.Count -eq 0) {
             Write-Log "No applications to uninstall" -Level Info
-            return $true
+            return
         }
 
         if (-not $packageManager) {
             Write-Log "No package manager specified for uninstallation" -Level Error
             Write-SystemMessage -errorMsg -msg "No package manager specified"
-            return $false
+            return
         }
 
         Write-Log "Uninstalling applications using $packageManager" -Level Info
@@ -2123,7 +2123,7 @@ function Remove-Applications {
             if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
                 Write-Log "Winget is not installed. Please install App Installer from the Microsoft Store." -Level Error
                 Write-SystemMessage -errorMsg -msg "Winget is not installed"
-                return $false
+                return
             }
 
             foreach ($appItem in $AppConfig) {
@@ -2172,7 +2172,7 @@ function Remove-Applications {
             if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
                 Write-Log "Chocolatey is not installed" -Level Error
                 Write-SystemMessage -errorMsg -msg "Chocolatey is not installed"
-                return $false
+                return
             }
 
             # Refresh environment variables to ensure choco command is available
@@ -2220,13 +2220,13 @@ function Remove-Applications {
         }
 
         Write-Log "Application removal completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error removing applications: $($_.Exception.Message)" -Level Error
         Write-Log "Error removing applications: $($_.ScriptStackTrace)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to remove applications. Check the log for details."
-        return $false
+        return
     }
 }
 
@@ -2356,12 +2356,12 @@ function Set-EnvironmentVariables {
         }
 
         Write-Log "Environment variables configuration completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error setting environment variables: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to set environment variables. Check the log for details."
-        return $false
+        return
     }
 }
 
@@ -2386,12 +2386,12 @@ function Set-WindowsActivation {
             slmgr.vbs /ato
             Write-SystemMessage -successMsg
         }
-        return $true
+        return
     }
     catch {
         Write-Log "Error activating Windows: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg
-        return $false
+        return
     }
 }
 
@@ -2473,12 +2473,12 @@ function Set-WindowsUpdateConfiguration {
 
         Write-Log "Windows Update configuration completed successfully"
 
-        return $true
+        return
     }
     catch {
         Write-Log "Error configuring Windows Update: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure Windows Update. Check the log for details."
-        return $false
+        return
     }
 }
 
@@ -2621,12 +2621,12 @@ function Set-ScheduledTasksConfiguration {
         }
 
         Write-Log "Scheduled tasks configuration completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error configuring scheduled tasks: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure scheduled tasks. Check the log for details."
-        return $false
+        return
     }
 
 }
@@ -2747,12 +2747,12 @@ function Install-Fonts {
         }
 
         Write-Log "Font installation completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error installing fonts: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to install fonts. Check the log for details."
-        return $false
+        return
     }
     finally {
         if (Test-Path $tempDownloadFolder) {
@@ -2890,12 +2890,12 @@ function Set-TaskbarConfiguration {
         Start-Process explorer
 
         Write-Log "Taskbar configuration completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error configuring taskbar: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure taskbar. Check the logs for more details."
-        return $false
+        return
     }
 }
 
@@ -2922,7 +2922,7 @@ function Set-PowerConfiguration {
                 default {
                     Write-Log "Invalid power plan specified: $($PowerConfig.PowerPlan)" -Level Warning
                     Write-SystemMessage -errorMsg -msg "Invalid power plan specified"
-                    return $false
+                    return
                 }
             }
             
@@ -2932,7 +2932,7 @@ function Set-PowerConfiguration {
             } catch {
                 Write-Log "Failed to set power plan: $($_.Exception.Message)" -Level Error
                 Write-SystemMessage -errorMsg
-                return $false
+                return
             }
         }
 
@@ -3020,12 +3020,12 @@ function Set-PowerConfiguration {
         }
 
         Write-Log "Power configuration completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error configuring power settings: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure power settings. Check the logs for more details."
-        return $false
+        return
     }
 }
 
@@ -3093,12 +3093,12 @@ function Set-RegistryItems {
         }
 
         Write-Log "Registry modifications completed successfully" -Level Info
-        return $true
+        return
     }
     catch {
         Write-Log "Error applying registry modifications: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to apply registry modifications. Check the log for details."
-        return $false
+        return
     }
 }
 
@@ -3175,12 +3175,12 @@ function Set-WindowsFeaturesConfiguration {
         }
 
         Write-Log "Windows features configuration completed successfully" -Level Info
-        return $true
+        return
     }
     catch {
         Write-Log "Error configuring Windows features: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure Windows features. Check the logs for more details."
-        return $false
+        return
     }
 }
 
@@ -3322,7 +3322,7 @@ function Set-GoogleConfiguration {
                 if (-not $GoogleConfig.GCPW.EnrollmentToken) {
                     Write-Log "GCPW installation skipped - EnrollmentToken is required but was not provided" -Level Error
                     Write-SystemMessage -errorMsg -msg "GCPW installation requires an EnrollmentToken in the configuration"
-                    return $false
+                    return
                 }
 
                 Write-Log "Installing Google Credential Provider for Windows" -Level Info
@@ -3355,7 +3355,7 @@ function Set-GoogleConfiguration {
                 } catch {
                     Write-Log "Failed to install/configure GCPW: $($_.Exception.Message)" -Level Error
                     Write-SystemMessage -errorMsg
-                    return $false
+                    return
                 } finally {
                     Remove-Item -Path $gcpwPath -Force -ErrorAction SilentlyContinue | Out-Null
                 }
@@ -3380,11 +3380,11 @@ function Set-GoogleConfiguration {
         }
 
         Write-Log "Google configuration completed successfully" -Level Info
-        return $true
+        return
     } catch {
         Write-Log "Error configuring Google products: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure Google products. Check the logs for more details."
-        return $false
+        return
     }
 }
 
@@ -3404,7 +3404,7 @@ function Set-OfficeConfiguration {
             if (-not $OfficeConfig.$param) {
                 Write-Log "Missing required Office parameter: $param" -Level Error
                 Write-SystemMessage -errorMsg -msg "Missing required Office parameter" -value $param
-                return $false
+                return
             }
         }
         
@@ -3440,7 +3440,7 @@ function Set-OfficeConfiguration {
         } catch {
             Write-Log "Failed to download Office Deployment Tool: $($_.Exception.Message)" -Level Error
             Write-SystemMessage -errorMsg
-            return $false
+            return
         }
 
         # Extract ODT
@@ -3453,7 +3453,7 @@ function Set-OfficeConfiguration {
         } catch {
             Write-Log "Failed to extract Office Deployment Tool: $($_.Exception.Message)" -Level Error
             Write-SystemMessage -errorMsg
-            return $false
+            return
         }
 
         # Install Office
@@ -3472,7 +3472,7 @@ function Set-OfficeConfiguration {
         } catch {
             Write-Log "Failed to install Microsoft Office: $($_.Exception.Message)" -Level Error
             Write-SystemMessage -errorMsg
-            return $false
+            return
         }
 
         # Activate Office if license key provided
@@ -3503,12 +3503,12 @@ function Set-OfficeConfiguration {
         }
 
         Write-Log "Office configuration completed successfully" -Level Info
-        return $true
+        return
     }
     catch {
         Write-Log "Error configuring Office: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure Microsoft Office. Check the log for more details."
-        return $false
+        return
     }
 }
 
@@ -3607,7 +3607,7 @@ function Set-ThemeConfiguration {
                     catch {
                         Write-Log "Failed to download wallpaper from: $wallpaperPath" -Level Error
                         Write-SystemMessage -errorMsg -msg "Failed to download wallpaper from" -value $wallpaperPath
-                        return $false
+                        return
                     }
                 }
 
@@ -3664,7 +3664,7 @@ public class Wallpaper
                     catch {
                         Write-Log "Failed to download lock screen from: $lockScreenPath" -Level Error
                         Write-SystemMessage -errorMsg -msg "Failed to download lock screen from" -value $lockScreenPath
-                        return $false
+                        return
                     }
                 }
 
@@ -3742,13 +3742,13 @@ public class Wallpaper
         Start-Process explorer
 
         Write-Log "Theme configuration completed successfully"
-        return $true
+        return
     
 }
     catch {
         Write-Log "Error configuring theme settings: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure theme settings. Check the log for more details."
-        return $false
+        return
     }
 }
 
@@ -3816,12 +3816,12 @@ function Set-TweaksConfiguration {
         }
 
         Write-Log "System tweaks applied successfully" -Level Info
-        return $true
+        return
     }
     catch {
         Write-Log "Error applying system tweaks: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to apply system tweaks. Check the log for more details."
-        return $false
+        return
     }
 }
 
@@ -3995,12 +3995,12 @@ function Set-NetworkConfiguration {
         }
 
         Write-Log "Network configuration completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error configuring network settings: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to configure network settings. Check the log for details."
-        return $false
+        return
     }
 }
 
@@ -4168,12 +4168,12 @@ function Set-FileOperations {
         }
 
         Write-Log "File operations completed successfully" -Level Info
-        return $true
+        return
     }
     catch {
         Write-Log "Error performing file operations: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to perform file operations"
-        return $false
+        return
     }
 }
 
@@ -4304,12 +4304,12 @@ function Set-Shortcuts {
         }
 
         Write-Log "Shortcuts creation completed successfully"
-        return $true
+        return
     }
     catch {
         Write-Log "Error creating shortcuts: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to create shortcuts. Check the logs for details."
-        return $false
+        return
     }
 }
 
@@ -4497,13 +4497,13 @@ function Remove-Bloatware {
         }
 
         Write-Log "Bloatware removal process completed" -Level Info
-        return $true
+        return
 
     } catch {
         $errorMessage = "An error occurred during bloatware removal: $($_.Exception.Message)"
         Write-Log $errorMessage -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to remove bloatware. Check the logs for details."
-        return $false
+        return
     }
 }
 
@@ -4668,7 +4668,7 @@ function Set-Commands {
     catch {
         Write-Log "Error executing commands: $($_.Exception.Message)" -Level Error
         Write-SystemMessage -errorMsg -msg "Failed to execute commands. Check the logs for details."
-        return $false
+        return
     }
 }
 
@@ -4904,7 +4904,7 @@ function Invoke-ConfigurationFunction {
     catch {
         Write-Log "Unexpected error in configuration function $FunctionName`: $($_.Exception.Message)" -Level Error
         $script:configStatus[$SectionName] = $false
-        return $false
+        return
     }
 }
 
