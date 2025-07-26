@@ -268,8 +268,6 @@ function Test-RequiredModules {
 
     # Check for each required module
     foreach ($module in $RequiredModules) {
-        Write-Host "Checking for module" -ForegroundColor White -NoNewline
-        Write-Host " $module" -ForegroundColor White
         
         if (-not (Get-Module -ListAvailable -Name $module)) {
             Write-Log "Module '$module' not found" -Level Info
@@ -330,10 +328,11 @@ function Install-RequiredModules {
     
     # Display each module with its PowerShell Gallery link
     foreach ($module in $ModulesToInstall) {
-        Write-Host "  - " -NoNewline -ForegroundColor White
+        Write-Host " - " -NoNewline -ForegroundColor White
         Write-Host $module -NoNewline -ForegroundColor White
         Write-Host " | " -NoNewline -ForegroundColor Gray
         Write-Host "https://www.powershellgallery.com/packages/$module" -NoNewline -ForegroundColor Cyan
+        Write-Host ""
     }
     
     Write-Host "`nDo you wish to install the following modules? (Y/N)" -ForegroundColor Yellow
