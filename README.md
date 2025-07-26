@@ -1,8 +1,8 @@
 # About
-Winforge is a tool that can automate Windows system configuration for deployment using a TOML-based configuration files.
+Winforge is a tool that can automate Windows system configuration for deployment using a YAML-based configuration files.
 
 ## Overview
-This PowerShell script automates the configuration of a Windows system using parameters specified in an INI file. It supports a wide range of configuration options, including:
+This PowerShell script automates the configuration of a Windows system using parameters specified in an YAML file. It supports a wide range of configuration options, including:
 - Setting the computer name,
 - Locale,
 - Timezone,
