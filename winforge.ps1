@@ -46,13 +46,6 @@ $ErrorActionPreference = "Stop"
 # Disable progress bar (Improves speed of)
 $ProgressPreference = 'SilentlyContinue'
 
-# Test and install required modules
-if (-not (Test-RequiredModules)) {
-    Write-Error "Failed to install required modules. Exiting."
-    exit 1
-}
-
-
 
 # HELPER FUNCTIONS
 function Write-Log {
@@ -249,24 +242,50 @@ function Write-SystemMessage {
 }
 
 function Test-RequiredModules {
-    # Check for required modules and return list of missing ones
+    <#
+    .SYNOPSIS
+        Checks for required PowerShell modules and installs missing ones.
+    .DESCRIPTION
+        Verifies that all required modules are available and loaded.
+        If modules are missing, prompts user to install them.
+    .OUTPUTS
+        Boolean. Returns $true if all modules are available, $false otherwise.
+    #>
+    
     Write-SystemMessage -title "Checking Dependencies"
 
-    $RequiredModules = @('powershell-yaml', 'PSMenu')
+    # Define required modules - easy to add new dependencies here
+    # To add a new dependency:
+    # 1. Add the module name to this array
+    # 2. The script will automatically check for it and prompt to install if missing
+    $RequiredModules = @(
+        'powershell-yaml'  # For YAML config parsing
+        # 'PSMenu'         # Uncomment if needed for interactive menus
+        # Add new modules here as needed
+    )
+    
     $MissingModules = @()
 
+    # Check for each required module
     foreach ($module in $RequiredModules) {
         Write-SystemMessage -msg "Checking for module" -value $module
+        
         if (-not (Get-Module -ListAvailable -Name $module)) {
+            Write-Log "Module '$module' not found" -Level Info
             $MissingModules += $module
+        }
+        else {
+            Write-Log "Module '$module' found" -Level Info
         }
     }
 
+    # Handle missing modules
     if ($MissingModules.Count -gt 0) {
+        Write-Log "Found $($MissingModules.Count) missing modules" -Level Info
         return Install-RequiredModules -ModulesToInstall $MissingModules
     }
     
-    # Import modules if they exist but aren't loaded
+    # Import all required modules that aren't already loaded
     foreach ($module in $RequiredModules) {
         if (-not (Get-Module -Name $module)) {
             try {
@@ -275,61 +294,79 @@ function Test-RequiredModules {
             }
             catch {
                 Write-Log "Failed to import $module module: $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -msg "Failed to import module" -value $module -errorMsg
                 return $false
             }
         }
+        else {
+            Write-Log "Module '$module' already loaded" -Level Info
+        }
     }
     
-    Write-SystemMessage -msg "All required modules are available" -successMsg
+    Write-SystemMessage -msg "All required modules are available and loaded" -successMsg
     return $true
 }
 
 function Install-RequiredModules {
+    <#
+    .SYNOPSIS
+        Installs missing PowerShell modules from PSGallery.
+    .DESCRIPTION
+        Prompts user to install missing modules and handles the installation process.
+    .PARAMETER ModulesToInstall
+        Array of module names to install.
+    .OUTPUTS
+        Boolean. Returns $true if all modules installed successfully, $false otherwise.
+    #>
     param (
         [Parameter(Mandatory = $true)]
         [string[]]$ModulesToInstall
     )
 
-    Write-Log "Required modules are not available. Attempting to install them now." -Level Info
+    Write-Log "Installing required modules: $($ModulesToInstall -join ', ')" -Level Info
 
-    $moduleList = $ModulesToInstall -join ", "
-    Write-SystemMessage -msg "The following modules from PSGallery need to be installed to run Winforge" -value $moduleList -msgColor Yellow
+    Write-SystemMessage -msg "The following modules need to be installed from PSGallery" -msgColor Yellow
     
-    # Show GitHub link for powershell-yaml
-    if ($ModulesToInstall -contains 'powershell-yaml') {
-        Write-Host "`nMore information about powershell-yaml: https://github.com/cloudbase/powershell-yaml" -ForegroundColor Cyan
+    # Display each module with its PowerShell Gallery link
+    foreach ($module in $ModulesToInstall) {
+        Write-Host "  - " -NoNewline -ForegroundColor White
+        Write-Host $module -NoNewline -ForegroundColor White
+        Write-Host " | " -NoNewline -ForegroundColor Gray
+        Write-Host "https://www.powershellgallery.com/packages/$module" -NoNewline -ForegroundColor Cyan
     }
     
-    Write-Host "`nWould you like to install them now? (Y/N)" -ForegroundColor Yellow
+    Write-Host "`nDo you wish to install the following modules? (Y/N)" -ForegroundColor Yellow
     $response = Read-Host
     
-    switch -regex ($response.Trim()) {
-        '^[Yy]$' {
-            $success = $true
-            foreach ($module in $ModulesToInstall) {
-                try {
-                    Install-Module -Name $module -Scope CurrentUser -Force -ErrorAction Stop
-                    Import-Module $module -ErrorAction Stop
-                    Write-Log "$module module installed and imported successfully." -Level Info
-                    Write-SystemMessage -msg "Module installed successfully" -value $module -successMsg
-                }
-                catch {
-                    Write-Log "Failed to install/import $module module: $($_.Exception.Message)" -Level Error
-                    Write-SystemMessage -msg "Failed to install module" -value "$module - $($_.Exception.Message)" -errorMsg
-                    $success = $false
-                }
+    if ($response -match '^[Yy]$') {
+        $success = $true
+        foreach ($module in $ModulesToInstall) {
+            Write-SystemMessage -msg "Installing module" -value $module
+            try {
+                # Install and import in one go
+                Install-Module -Name $module -Scope CurrentUser -Force -ErrorAction Stop
+                Import-Module $module -ErrorAction Stop
+                
+                Write-Log "Module '$module' installed and imported successfully" -Level Info
+                Write-SystemMessage -msg "Module installed and loaded" -value $module -successMsg
             }
-            return $success
+            catch {
+                Write-Log "Failed to install/import module '$module': $($_.Exception.Message)" -Level Error
+                Write-SystemMessage -msg "Installation failed" -value "$module - $($_.Exception.Message)" -errorMsg
+                $success = $false
+            }
         }
-        '^[Nn]$' {
-            Write-SystemMessage -msg "Required modules must be installed to continue" -errorMsg
-            Write-Log "User declined to install required modules. Exiting.." -Level Error
-            exit 1
-        }
-        default {
-            Write-SystemMessage -msg "Invalid response. Please enter Y or N" -warningMsg
-            return Install-RequiredModules -ModulesToInstall $ModulesToInstall # Recurse on invalid input
-        }
+        return $success
+    }
+    elseif ($response -match '^[Nn]$') {
+        Write-SystemMessage -msg "Required modules must be installed to continue" -errorMsg
+        Write-Log "User declined module installation - exiting" -Level Error
+        exit 1
+    }
+    else {
+        Write-SystemMessage -msg "Invalid response. Please enter Y or N" -warningMsg
+        # Simple retry instead of recursive call
+        return Install-RequiredModules -ModulesToInstall $ModulesToInstall
     }
 }
 
@@ -4886,6 +4923,11 @@ try {
     # Verify running as administrator
     if (-not (Test-AdminPrivileges)) {
         throw "This script requires administrative privileges"
+    }
+
+    # Check and install required modules
+    if (-not (Test-RequiredModules)) {
+        throw "Required modules could not be installed. Please check the logs and try again."
     }
 
     # Initialize configuration status hashtable with counts
