@@ -268,7 +268,8 @@ function Test-RequiredModules {
 
     # Check for each required module
     foreach ($module in $RequiredModules) {
-        Write-SystemMessage -msg "Checking for module" -value $module
+        Write-Host "Checking for module" -ForegroundColor White -NoNewline
+        Write-Host " $module" -ForegroundColor White
         
         if (-not (Get-Module -ListAvailable -Name $module)) {
             Write-Log "Module '$module' not found" -Level Info
@@ -325,7 +326,7 @@ function Install-RequiredModules {
 
     Write-Log "Installing required modules: $($ModulesToInstall -join ', ')" -Level Info
 
-    Write-SystemMessage -msg "The following modules need to be installed from PSGallery" -msgColor Yellow
+    Write-Host "The following modules need to be installed from PSGallery" -ForegroundColor Yellow
     
     # Display each module with its PowerShell Gallery link
     foreach ($module in $ModulesToInstall) {
