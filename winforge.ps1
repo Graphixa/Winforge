@@ -46,25 +46,9 @@ $ErrorActionPreference = "Stop"
 # Disable progress bar (Improves speed of)
 $ProgressPreference = 'SilentlyContinue'
 
-# Install and import YAML module if not available
-if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
-    Write-Host "Installing powershell-yaml module..." -ForegroundColor Yellow
-    try {
-        Install-Module -Name powershell-yaml -Force -Scope CurrentUser -AllowClobber
-        Write-Host "Successfully installed powershell-yaml module" -ForegroundColor Green
-    }
-    catch {
-        Write-Error "Failed to install powershell-yaml module: $($_.Exception.Message)"
-        exit 1
-    }
-}
-
-# Import YAML module
-try {
-    Import-Module powershell-yaml -Force
-}
-catch {
-    Write-Error "Failed to import powershell-yaml module: $($_.Exception.Message)"
+# Test and install required modules
+if (-not (Test-RequiredModules)) {
+    Write-Error "Failed to install required modules. Exiting."
     exit 1
 }
 
@@ -268,7 +252,7 @@ function Test-RequiredModules {
     # Check for required modules and return list of missing ones
     Write-SystemMessage -title "Checking Dependencies"
 
-    $RequiredModules = @('powershell-yaml')
+    $RequiredModules = @('powershell-yaml', 'PSMenu')
     $MissingModules = @()
 
     foreach ($module in $RequiredModules) {
