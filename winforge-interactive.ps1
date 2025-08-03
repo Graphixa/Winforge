@@ -53,14 +53,20 @@ function Invoke-WinforgeScript {
     try {
         Write-Host "Downloading and executing script..." -ForegroundColor Cyan
         
-        if ($Parameters) {
-            $command = "& ([scriptblock]::Create((irm '$ScriptUrl'))) $Parameters"
-        } else {
-            $command = "& ([scriptblock]::Create((irm '$ScriptUrl')))"
-        }
+        # Download the script content
+        $scriptContent = Invoke-RestMethod -Uri $ScriptUrl
         
-        Write-Host "Executing: $command" -ForegroundColor Gray
-        Invoke-Expression $command
+        # Create a temporary script block
+        $scriptBlock = [ScriptBlock]::Create($scriptContent)
+        
+        # Execute with parameters if provided
+        if ($Parameters) {
+            Write-Host "Executing with parameters: $Parameters" -ForegroundColor Gray
+            & $scriptBlock $Parameters
+        } else {
+            Write-Host "Executing without parameters (will prompt interactively)" -ForegroundColor Gray
+            & $scriptBlock
+        }
         
         Write-Host "Script execution completed." -ForegroundColor Green
     }
