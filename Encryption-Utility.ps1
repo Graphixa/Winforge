@@ -28,6 +28,7 @@
 [CmdletBinding()]
 param (
     [Parameter(Mandatory = $false)]
+    [Alias("config")]
     [string]$ConfigPath,
 
     [Parameter(Mandatory = $false)]
