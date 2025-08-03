@@ -24,8 +24,8 @@ if (Get-Module -ListAvailable -Name PSMenu) {
 }
 
 # GitHub repository URLs
-$script:WinforgeUrl = "https://raw.githubusercontent.com/Graphixa/Winforge/main/winforge.ps1"
-$script:EncryptionUrl = "https://raw.githubusercontent.com/Graphixa/Winforge/main/encryption-utility.ps1"
+$script:WinforgeUrl = "https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.ps1"
+$script:EncryptionUrl = "https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/encryption-utility.ps1"
 
 function Show-FilePicker {
     param(
