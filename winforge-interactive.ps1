@@ -53,19 +53,16 @@ function Invoke-WinforgeScript {
     try {
         Write-Host "Downloading and executing script..." -ForegroundColor Cyan
         
-        # Download the script
-        $script = Invoke-RestMethod -Uri $ScriptUrl -UseBasicParsing
-        
-        # Create script block and execute with parameters
-        $scriptBlock = [ScriptBlock]::Create($script)
-        
         if ($Parameters) {
-            # Execute with parameters
-            $paramArray = $Parameters -split ' '
-            & $scriptBlock @paramArray
+            # Execute with parameters using the same pattern as WinUtil
+            $command = "&([ScriptBlock]::Create((irm '$ScriptUrl'))) $Parameters"
+            Write-Host "Executing: $command" -ForegroundColor Gray
+            Invoke-Expression $command
         } else {
             # Execute without parameters (will prompt interactively)
-            & $scriptBlock
+            $command = "&([ScriptBlock]::Create((irm '$ScriptUrl')))"
+            Write-Host "Executing: $command" -ForegroundColor Gray
+            Invoke-Expression $command
         }
         
         Write-Host "Script execution completed." -ForegroundColor Green
