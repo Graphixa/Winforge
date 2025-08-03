@@ -1,58 +1,87 @@
-# Winforge Refactor Implementation Framework
+# Winforge Refactor Plan
 
 ## Overview
-Improve Winforge's configuration validation and error handling while maintaining its flexible, non-blocking philosophy.
 
-## 1. Configuration Validation
+Separate Winforge into CLI and GUI components while maintaining backward compatibility.
 
-### Core Philosophy
-- **Non-blocking**: Never fail for extra/missing/invalid options
-- **Best-effort**: Apply what's valid, skip what's not
-- **Informative**: Log all unrecognized or problematic options
+## Architecture
 
-### Implementation
-1. **Simple Schema**: Define valid keys and types in a readable format
-2. **Validation Function**: 
-   - `Validate-Config` - Check for unrecognized keys and log warnings
-3. **Integration**: Add validation to `Read-ConfigFile` after TOML parsing
-4. **Configuration Summary**: Show sections/items modified, failures, omit unincluded sections
+### 1. winforge.ps1 (CLI Only)
+- **With parameters**: `irm method with winforge.ps1 -ConfigPath "config.yaml"` → Direct execution
+- **Without parameters**: `irm method with winforge.ps1` → CLI prompts via Read-Host
 
-## 2. Error Handling Standardization
+### 2. Encryption-Utility.ps1 (CLI Only)
+- **With parameters**: `irm method with -Encrypt "config.yaml"` → Direct execution
+- **Without parameters**: `irm method with Encryption-Utility.ps1` → CLI prompts via Read-Host
 
-### Philosophy
-- **Keep it simple**: No unnecessary wrapper functions
-- **Inline validation**: Each function validates its own inputs
-- **Graceful degradation**: Continue with valid options, skip invalid ones
+### 3. winforge-interactive.ps1 (GUI Launcher - New)
+- **Always GUI**: Creates a user menu with the following options
+  - Run Winforge (prompts using windows file picker to select a .yaml or .yml file)
+  - Encrypt Configuration File
+  - Decrypt Configuration File
+- **Calls other scripts**: Executes winforge.ps1 and Encryption-Utility.ps1 with selected files
 
-### Implementation
-1. **Update Key Functions** with inline validation:
-   - `Set-SystemConfiguration` - ComputerName, Timezone, Locale validation
-   - `Set-PrivacyConfiguration` - Boolean and service validation
-   - `Set-SecurityConfiguration` - UAC, Defender validation
-   - `Install-Applications` - Package manager and app validation
-2. **Simplify `Set-RegistryModification`** - Remove unnecessary parameters
-3. **Standardize Error Logging** - Consistent `Write-Log` and `Write-SystemMessage` usage
+## Implementation
 
-## 3. Implementation Phases
+### Phase 1: Modify winforge.ps1
+- Ensure Read-Host prompts when no ConfigPath provided (can support URL or local path)
 
-### Phase 1: Configuration Validation
-- Implement simple schema definition
-- Create validation function
-- Integrate into Read-ConfigFile
-- Add configuration summary display
+### Phase 2: Modify Encryption-Utility.ps1
+- Ensure Read-Host prompts when no ConfigPath provided (change name of FilePath parameter to ConfigPath to match)
+- Ensure operation detection (Encrypt/Decrypt) prompt for choice when not detected.
 
-### Phase 2: Error Handling
-- Update functions with inline validation
-- Standardize error logging patterns
-- Test with invalid configurations
+### Phase 3: Create winforge-interactive.ps1
+- Interactive Powershell menu using PSMenu module.
+- Windows File picker for .yaml/.yml files
+- Error handling with user-friendly messages
 
-### Phase 3: Testing & Documentation
-- Comprehensive testing
-- Performance validation
-- Documentation updates
+## User Experience
 
-## 4. Success Metrics
-- Zero blocking errors from configuration issues
-- Clear feedback on applied vs. ignored options
-- Simple, maintainable code
-- Consistent error handling across functions 
+### CLI Users
+```powershell
+# Direct execution
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.ps1))) -ConfigPath "https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.yaml"
+```
+
+```powershell
+# Interactive CLI
+irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge.ps1
+# → Prompts: "Enter path or URL to configuration file"
+```
+
+
+### Winforge Interactive
+```powershell
+# Download and run GUI launcher
+irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/winforge-interactive.ps1
+# → Opens Windows Forms menu with file pickers
+```
+
+
+### Encryption Utility
+```powershell
+# CLI
+irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/encryption-utility.ps1
+# → Prompts: "Enter path to configuration file if no parameter is set"
+```
+
+```powershell
+# Direct execution of Encryption
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/encryption-utility.ps1))) -ConfigPath "C:\winforge.yaml" -Encrypt 
+# → Prompts: "Enter path to configuration file if no parameter is set for config file (supports local files only).
+# → Prompts: "Enter prompts to select (Decrypt or Encrypt) if no parameter is set
+```
+
+```powershell
+# Direct execution of Decryption
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/refs/heads/main/encryption-utility.ps1))) -ConfigPath "C:\winforge.yaml" -Decrypt
+# → Prompts: "Enter path to configuration file if no parameter is set for config file (supports local files only).
+# → Prompts: "Enter prompts to select (Decrypt or Encrypt) if no parameter is set
+```
+
+## Success Criteria
+
+- [ ] All existing functionality preserved
+- [ ] CLI and GUI separation complete
+- [ ] No breaking changes for existing users
+- [ ] Improved user experience for both CLI and GUI users 

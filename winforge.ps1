@@ -22,12 +22,24 @@
 
 [CmdletBinding()]
 param (
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$ConfigPath,
 
     [Parameter(Mandatory = $false)]
     [string]$LogPath = "$env:SystemDrive\Winforge.log"
 )
+
+# Parameter validation for interactive mode
+if (-not $ConfigPath) {
+    Write-Host "No configuration file specified."
+    Write-Host "You can provide a local file path or URL to a configuration file."
+    $ConfigPath = Read-Host "Enter path or URL to configuration file"
+    
+    if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+        Write-Error "No configuration file provided. Exiting."
+        exit 1
+    }
+}
 
 # Script Variables
 $script:logFile = $LogPath
@@ -259,8 +271,8 @@ function Test-RequiredModules {
     # 1. Add the module name to this array
     # 2. The script will automatically check for it and prompt to install if missing
     $RequiredModules = @(
-        'powershell-yaml'  # For YAML config parsing
-        # 'PSMenu'         # Uncomment if needed for interactive menus
+        'powershell-yaml',  # For YAML config parsing
+        'PSMenu'         # For interactive menus
         # Add new modules here as needed
     )
     

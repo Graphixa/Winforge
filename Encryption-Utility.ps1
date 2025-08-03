@@ -1,27 +1,87 @@
+<#
+.SYNOPSIS
+    Encryption utility for YAML files.
+.DESCRIPTION
+    Encryption utility for YAML files.
+    Supports local and remote configurations with validation.
+
+.PARAMETER ConfigPath
+    Path to the configuration file (local .yaml/.yml file only)
+
+.PARAMETER Encrypt
+    Encrypt the file.
+
+.PARAMETER Decrypt
+    Decrypt the file.
+
+.EXAMPLE
+    .\Encryption-Utility.ps1 -ConfigPath "myconfig.yaml" -Encrypt
+
+.EXAMPLE
+    .\Encryption-Utility.ps1 -ConfigPath "myconfig.yaml" -Decrypt
+
+.NOTES
+    Password can't be parsed as a parameter, so it's not included in the parameter set always prompts for password via read-host secure
+#>
+
+
 [CmdletBinding()]
 param (
-    [Parameter(Mandatory = $true)]
-    [string]$FilePath,
+    [Parameter(Mandatory = $false)]
+    [string]$ConfigPath,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "Encrypt")]
+    [Parameter(Mandatory = $false)]
     [switch]$Encrypt,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "Decrypt")] 
+    [Parameter(Mandatory = $false)]
     [switch]$Decrypt,
 
     [Parameter(Mandatory = $false)]
     [System.Security.SecureString]$Password
 )
 
+# Parameter validation for interactive mode
+if (-not $ConfigPath) {
+    Write-Host "No configuration file specified." -ForegroundColor Yellow
+    Write-Host
+    Write-Host "Please provide a local file path to a YAML configuration file."
+    $ConfigPath = Read-Host "Enter path to configuration file"
+    
+    if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+        Write-Error "No configuration file provided. Exiting."
+        exit 1
+    }
+}
+
+# Operation detection when neither Encrypt nor Decrypt is specified
+if (-not $Encrypt -and -not $Decrypt) {
+    Write-Host "No operation specified."
+    $operation = Read-Host "Enter operation (encrypt/decrypt)"
+    switch ($operation.ToLower()) {
+        'encrypt' { $Encrypt = $true }
+        'decrypt' { $Decrypt = $true }
+        default { 
+            Write-Error "Invalid operation. Please enter 'encrypt' or 'decrypt'. Exiting."
+            exit 1 
+        }
+    }
+}
+
+# Validate that only one operation is specified
+if ($Encrypt -and $Decrypt) {
+    Write-Error "Cannot specify both Encrypt and Decrypt operations. Please choose one."
+    exit 1
+}
+
 function Test-EncryptedConfig {
     param (
         [Parameter(Mandatory = $true)]
-        [string]$FilePath
+        [string]$ConfigPath
     )
     
     try {
         # Try to parse the content as JSON
-        $content = Get-Content $FilePath -Raw
+        $content = Get-Content $ConfigPath -Raw
         $package = $content | ConvertFrom-Json
 
         # Check if it has our expected structure
@@ -37,19 +97,19 @@ function Test-EncryptedConfig {
 function Test-YAMLFile {
     param (
         [Parameter(Mandatory = $true)]
-        [string]$FilePath
+        [string]$ConfigPath
     )
     
     try {
         # Check file extension
-        $extension = [System.IO.Path]::GetExtension($FilePath).ToLower()
+        $extension = [System.IO.Path]::GetExtension($ConfigPath).ToLower()
         if ($extension -notin @('.yaml', '.yml')) {
             Write-Warning "File extension '$extension' is not a standard YAML extension (.yaml/.yml)"
             return $false
         }
         
         # Basic YAML syntax validation
-        $content = Get-Content $FilePath -Raw
+        $content = Get-Content $ConfigPath -Raw
         if ([string]::IsNullOrWhiteSpace($content)) {
             Write-Warning "File is empty"
             return $false
@@ -70,16 +130,16 @@ function Test-YAMLFile {
 }
 
 # First check if file exists
-if (-not (Test-Path $FilePath)) {
-    Write-Error "File not found: $FilePath"
+if (-not (Test-Path $ConfigPath)) {
+    Write-Error "File not found: $ConfigPath"
     exit 1
 }
 
 # Validate YAML file format for non-encrypted files
 if ($Encrypt) {
-    $isEncrypted = Test-EncryptedConfig -FilePath $FilePath
+    $isEncrypted = Test-EncryptedConfig -ConfigPath $ConfigPath
     if (-not $isEncrypted) {
-        $isValidYAML = Test-YAMLFile -FilePath $FilePath
+        $isValidYAML = Test-YAMLFile -ConfigPath $ConfigPath
         if (-not $isValidYAML) {
             $continue = Read-Host "File may not be valid YAML. Continue anyway? (y/N)"
             if ($continue -ne 'y' -and $continue -ne 'Y') {
@@ -92,14 +152,14 @@ if ($Encrypt) {
 
 # Check encryption status based on operation
 if ($Decrypt) {
-    $isEncrypted = Test-EncryptedConfig -FilePath $FilePath
+    $isEncrypted = Test-EncryptedConfig -ConfigPath $ConfigPath
     if (-not $isEncrypted) {
         Write-Host "File is not encrypted. Skipping decryption."
         exit 0
     }
 }
 elseif ($Encrypt) {
-    $isEncrypted = Test-EncryptedConfig -FilePath $FilePath
+    $isEncrypted = Test-EncryptedConfig -ConfigPath $ConfigPath
     if ($isEncrypted) {
         Write-Error "File is already encrypted. Decrypt it first if you want to re-encrypt."
         exit 1
@@ -175,7 +235,7 @@ if (-not $Password) {
 function Convert-SecureConfig {
     param (
         [Parameter(Mandatory = $true)]
-        [string]$FilePath,
+        [string]$ConfigPath,
         [Parameter(Mandatory = $true)]
         [bool]$IsEncrypting,
         [Parameter(Mandatory = $true)]
@@ -184,19 +244,19 @@ function Convert-SecureConfig {
 
     try {
         # Verify file exists
-        if (-not (Test-Path $FilePath)) {
-            throw "File not found: $FilePath"
+        if (-not (Test-Path $ConfigPath)) {
+            throw "File not found: $ConfigPath"
         }
 
         # Get file content
-        $configContent = Get-Content $FilePath -Raw
+        $configContent = Get-Content $ConfigPath -Raw
 
         # Generate output path (keep original extension)
-        $outputPath = $FilePath
+        $outputPath = $ConfigPath
 
         if ($IsEncrypting) {
             # Check if already encrypted
-            if (Test-EncryptedConfig -FilePath $FilePath) {
+            if (Test-EncryptedConfig -ConfigPath $ConfigPath) {
                 throw "File is already encrypted. Decrypt it first if you want to re-encrypt."
             }
 
@@ -293,7 +353,7 @@ function Convert-SecureConfig {
                 Write-Host "Attempting to decrypt file..." -ForegroundColor Yellow
                 
                 # Parse the encrypted package
-                $package = Get-Content $FilePath -Raw | ConvertFrom-Json
+                $package = Get-Content $ConfigPath -Raw | ConvertFrom-Json
                 
                 if (-not $package.Salt -or -not $package.Data -or -not $package.IV) {
                     throw "Invalid encrypted file format. Required fields (Salt, Data, IV) are missing."
@@ -389,10 +449,10 @@ function Convert-SecureConfig {
 # Execute based on parameter
 try {
     if ($Encrypt) {
-        Convert-SecureConfig -FilePath $FilePath -IsEncrypting $true -Password $Password
+        Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $true -Password $Password
     }
     else {
-        Convert-SecureConfig -FilePath $FilePath -IsEncrypting $false -Password $Password
+        Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password
     }
 }
 finally {

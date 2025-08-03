@@ -1,19 +1,19 @@
 # Winforge
 
-Winforge is a powerful Windows configuration deployment tool that uses TOML-based configuration files to automate system setup and configuration. Whether you're a developer setting up your coding environment, a power user customizing your home setup, an IT professional managing multiple machines, or anyone looking to automate Windows configuration, Winforge makes it easy to deploy and maintain your perfect Windows setup.
+Winforge is a powerful Windows configuration deployment tool that uses YAML-based configuration files to automate system setup and configuration. Whether you're a developer setting up your coding environment, a power user customizing your home setup, an IT professional managing multiple machines, or anyone looking to automate Windows configuration, Winforge makes it easy to deploy and maintain your perfect Windows setup.
 
 ## Quick Start
 
 ### Remote Execution (Recommended)
 ```powershell
 # Run directly from GitHub with your configuration
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/main/winforge.ps1))) -config "https://raw.githubusercontent.com/yourdomain/config.toml"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Graphixa/Winforge/main/winforge.ps1))) -config "https://raw.githubusercontent.com/yourdomain/config.yaml"
 ```
 
 ### Local Execution
 ```powershell
 # Run locally with a configuration file
-.\winforge.ps1 -config="path\to\config.toml"
+.\winforge.ps1 -config="path\to\config.yaml"
 ```
 
 ## Requirements
@@ -21,7 +21,7 @@ Winforge is a powerful Windows configuration deployment tool that uses TOML-base
 - Windows PowerShell 5.1 or later
 - Administrator privileges
 - Internet connection (for remote execution and package management)
-- PSToml module (automatically installed if missing)
+- PSYaml module (automatically installed if missing)
 
 ## Documentation
 
@@ -31,17 +31,17 @@ Winforge is a powerful Windows configuration deployment tool that uses TOML-base
    - Remote vs Local execution
    - First configuration
 
-2. **[TOML Configuration Guide](/docs/Configuration-Guide.md)**
+2. **[YAML Configuration Guide](/docs/Configuration-Guide.md)**
    - Complete configuration reference
    - All available options
    - Configuration examples
    - Best practices
 
 3. **Common Use Cases**
-   - [Developer Setup](/examples/Developer-Configuration.toml) - Development environments and tools
-   - [Home Lab](/examples/Home-Lab-Configuration.toml) - Personal server and network configuration
-   - [Gaming Setup](/examples/Gaming-Configuration.toml) - Gaming optimizations and tools
-   - [Work Environment](/examples/Work-Environment-Configuration.toml) - Professional workspace configuration
+   - [Developer Setup](/examples/Developer-Configuration.yaml) - Development environments and tools
+   - [Home Lab](/examples/Home-Lab-Configuration.yaml) - Personal server and network configuration
+   - [Gaming Setup](/examples/Gaming-Configuration.yaml) - Gaming optimizations and tools
+   - [Work Environment](/examples/Work-Environment-Configuration.yaml) - Professional workspace configuration
 
 4. **[Troubleshooting Guide](/docs/Troubleshooting.md)**
    - Common issues and solutions
