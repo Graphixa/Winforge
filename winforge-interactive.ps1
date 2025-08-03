@@ -54,16 +54,13 @@ function Invoke-WinforgeScript {
         Write-Host "Downloading and executing script..." -ForegroundColor Cyan
         
         if ($Parameters) {
-            # Execute with parameters using the same pattern as WinUtil
-            $command = "&([ScriptBlock]::Create((irm '$ScriptUrl'))) $Parameters"
-            Write-Host "Executing: $command" -ForegroundColor Gray
-            Invoke-Expression $command
+            $command = "& ([scriptblock]::Create((irm '$ScriptUrl'))) $Parameters"
         } else {
-            # Execute without parameters (will prompt interactively)
-            $command = "&([ScriptBlock]::Create((irm '$ScriptUrl')))"
-            Write-Host "Executing: $command" -ForegroundColor Gray
-            Invoke-Expression $command
+            $command = "& ([scriptblock]::Create((irm '$ScriptUrl')))"
         }
+        
+        Write-Host "Executing: $command" -ForegroundColor Gray
+        Invoke-Expression $command
         
         Write-Host "Script execution completed." -ForegroundColor Green
     }
