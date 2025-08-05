@@ -447,7 +447,8 @@ function Convert-SecureConfig {
                                 $decrypted = $decryptor.TransformFinalBlock($encrypted, 0, $encrypted.Length)
                             }
                             catch [System.Security.Cryptography.CryptographicException] {
-                                throw "Decryption failed. This typically indicates an incorrect password."
+                                $decryptionSuccess = $false
+                                return $false
                             }
                             catch {
                                 throw "Decryption error: $($_.Exception.Message)"
@@ -493,13 +494,13 @@ function Convert-SecureConfig {
                 }
             }
             catch {
-                # Always return false for wrong password, never exit
+                # Catch any exceptions and return false
                 $decryptionSuccess = $false
             }
         }
     }
     catch {
-        # Always return false for errors, never exit
+        # Catch any other errors and return false
         $decryptionSuccess = $false
     }
 
