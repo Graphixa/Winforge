@@ -340,7 +340,7 @@ function Convert-SecureConfig {
                 }
 
                 # Create key and IV using PBKDF2
-                $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($plainPassword, $salt, 100000)
+                $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($plainPassword, $salt, 1000)
                 try {
                     $key = $rfc.GetBytes(32) # 256 bits
                     $iv = $rfc.GetBytes(16)  # 128 bits
@@ -370,14 +370,12 @@ function Convert-SecureConfig {
                             Salt = [Convert]::ToBase64String($salt)
                             Data = [Convert]::ToBase64String($encrypted)
                             IV = [Convert]::ToBase64String($iv)
-                            Iterations = 100000  # Store iteration count for future compatibility
-                            Algorithm = "AES-256-CBC"  # Document the algorithm used
-                        } | ConvertTo-Json -Depth 5
+                        } | ConvertTo-Json
                         
                         # Save encrypted content
-                        $package | Set-Content $outputPath -Encoding UTF8
-                        Write-Host "File encrypted successfully to: $outputPath" -ForegroundColor Green
-                        Write-Host "Using AES-256-CBC with PBKDF2 (100,000 iterations)" -ForegroundColor Yellow
+                        $package | Set-Content $outputPath
+                        Write-Host "File encrypted successfully: $outputPath"
+                        Write-Log "File encrypted successfully: $outputPath"
                         
                         return $true
                     }
@@ -386,35 +384,24 @@ function Convert-SecureConfig {
                         # Securely clear sensitive data from memory
                         for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
                         for ($i = 0; $i -lt $iv.Length; $i++) { $iv[$i] = 0 }
-                        for ($i = 0; $i -lt $bytes.Length; $i++) { $bytes[$i] = 0 }
                     }
                 }
                 finally {
                     $rfc.Dispose()
-                    # Clear salt from memory
-                    for ($i = 0; $i -lt $salt.Length; $i++) { $salt[$i] = 0 }
                 }
             }
             else {
                 try {
-                    Write-Host "Attempting to decrypt file..." -ForegroundColor Yellow
+                    Write-Log "Attempting to decrypt file"
                     
                     # Parse the encrypted package
                     $package = Get-Content $ConfigPath -Raw | ConvertFrom-Json
-                    
-                    if (-not $package.Salt -or -not $package.Data -or -not $package.IV) {
-                        throw "Invalid encrypted file format. Required fields (Salt, Data, IV) are missing."
-                    }
-                    
                     $salt = [Convert]::FromBase64String($package.Salt)
                     $encrypted = [Convert]::FromBase64String($package.Data)
                     $iv = [Convert]::FromBase64String($package.IV)
 
-                    # Use stored iteration count if available, otherwise default to new standard
-                    $iterations = if ($package.Iterations) { $package.Iterations } else { 100000 }
-                    
                     # Recreate key from password and stored salt
-                    $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($plainPassword, $salt, $iterations)
+                    $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($plainPassword, $salt, 1000)
                     try {
                         $key = $rfc.GetBytes(32)
 
@@ -430,17 +417,17 @@ function Convert-SecureConfig {
                             $decryptor = $aes.CreateDecryptor()
                             try {
                                 $decrypted = $decryptor.TransformFinalBlock($encrypted, 0, $encrypted.Length)
-                                $decryptedText = [System.Text.Encoding]::UTF8.GetString($decrypted)
+                                $decryptedContent = [System.Text.Encoding]::UTF8.GetString($decrypted)
                                 
                                 # Save decrypted content
-                                $decryptedText | Set-Content $outputPath -Encoding UTF8
-                                Write-Host "File decrypted successfully to: $outputPath" -ForegroundColor Green
+                                $decryptedContent | Set-Content $outputPath -NoNewline
+                                Write-SystemMessage -msg "File decrypted successfully" -value $outputPath -successMsg
+                                Write-Log "File decrypted successfully: $outputPath"
                                 
                                 return $true
                             }
-                            catch [System.Security.Cryptography.CryptographicException] {
-                                Write-Host "Failed to decrypt file. Please check the password and try again." -ForegroundColor Red
-                                return $false
+                            catch {
+                                throw "Failed to decrypt file. Please check the password and try again."
                             }
                             finally {
                                 $decryptor.Dispose()
@@ -448,11 +435,8 @@ function Convert-SecureConfig {
                         }
                         finally {
                             $aes.Dispose()
-                            # Securely clear sensitive data from memory
+                            # Securely clear key from memory
                             for ($i = 0; $i -lt $key.Length; $i++) { $key[$i] = 0 }
-                            if ($decrypted) {
-                                for ($i = 0; $i -lt $decrypted.Length; $i++) { $decrypted[$i] = 0 }
-                            }
                         }
                     }
                     finally {
@@ -460,22 +444,26 @@ function Convert-SecureConfig {
                     }
                 }
                 catch {
-                    Write-Host "Decryption failed: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Host "Decryption failed: $($_.Exception.Message)"
+                    Write-Log "Decryption failed: $($_.Exception.Message)" -Level Error
                     return $false
                 }
             }
         }
         finally {
-            # Securely clear plaintext password from memory
-            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-            if ($plainPassword) { 
-                $plainPassword = "0" * $plainPassword.Length 
-                Remove-Variable -Name plainPassword -ErrorAction SilentlyContinue
+            # Clear the plain text password from memory
+            if ($plainPassword) {
+                $plainPassword = "0" * $plainPassword.Length
+                Remove-Variable plainPassword
+            }
+            if ($BSTR) {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
             }
         }
     }
     catch {
-        Write-Host "Operation failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Operation failed: $($_.Exception.Message)"
+        Write-Log "Operation failed: $($_.Exception.Message)" -Level Error
         return $false
     }
 }
