@@ -245,12 +245,13 @@ if (-not $Password) {
             }
             
             try {
-                # Try to decrypt with this password
-                $decryptionSuccess = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $securePassword
+                # Test the password by attempting decryption
+                $testResult = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $securePassword
                 
-                if ($decryptionSuccess) {
-                    Write-Host "Decryption completed successfully!" -ForegroundColor Green
-                    # Exit the loop since decryption succeeded
+                if ($testResult) {
+                    $Password = $securePassword
+                    Write-Host "Password verified successfully!" -ForegroundColor Green
+                    # Exit the loop since password is verified
                     break
                 } else {
                     Write-Host "Incorrect password. Please try again." -ForegroundColor Red
@@ -516,9 +517,14 @@ try {
         }
     }
     else {
-        # For decryption, the actual decryption is done in the password verification loop above
-        # So we just need to handle the case where no password was provided
-        if (-not $Password) {
+        # For decryption, we need to call Convert-SecureConfig
+        if ($Password) {
+            $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password
+            if (-not $result) {
+                Write-Host "Decryption failed." -ForegroundColor Red
+                exit 0
+            }
+        } else {
             Write-Host "No password provided for decryption." -ForegroundColor Red
             exit 0
         }
