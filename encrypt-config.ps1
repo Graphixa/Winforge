@@ -222,8 +222,8 @@ if (-not $Password) {
         }
         
         if (-not $passwordsMatch) {
-            Write-Error "Failed to set password after 3 attempts. Operation cancelled."
-            exit 1
+            Write-Host "Failed to set password after 3 attempts. Operation cancelled." -ForegroundColor Red
+            exit 0
         }
     }
     else {
@@ -272,8 +272,8 @@ if (-not $Password) {
         }
         
         if (-not $decryptionSuccess) {
-            Write-Error "Failed to decrypt after $maxAttempts attempts. Operation cancelled."
-            exit 1
+            Write-Host "Failed to decrypt after $maxAttempts attempts. Operation cancelled." -ForegroundColor Red
+            exit 0
         }
     }
 }
@@ -516,15 +516,15 @@ try {
     if ($Encrypt) {
         $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $true -Password $Password
         if (-not $result) {
-            Write-Error "Encryption failed."
-            exit 1
+            Write-Host "Encryption failed." -ForegroundColor Red
+            exit 0
         }
     }
     else {
         $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password
         if (-not $result) {
-            Write-Error "Decryption failed."
-            exit 1
+            Write-Host "Decryption failed." -ForegroundColor Red
+            exit 0
         }
     }
 }
