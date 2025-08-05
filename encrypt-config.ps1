@@ -293,6 +293,9 @@ function Convert-SecureConfig {
     )
 
     try {
+        # Initialize decryption success flag
+        $decryptionSuccess = $false
+        
         # Verify file exists
         if (-not (Test-Path $ConfigPath)) {
             throw "File not found: $ConfigPath"
@@ -402,7 +405,6 @@ function Convert-SecureConfig {
             }
         }
         else {
-            $decryptionSuccess = $false
             try {
                 if (-not $TestOnly) {
                     Write-Host "Attempting to decrypt file..." -ForegroundColor Yellow
