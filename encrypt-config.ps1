@@ -251,6 +251,8 @@ if (-not $Password) {
                 if ($decryptionSuccess) {
                     $Password = $securePassword
                     Write-Host "Password verified successfully!" -ForegroundColor Green
+                    # Exit the loop since password is verified
+                    break
                 } else {
                     Write-Host "Incorrect password. Please try again." -ForegroundColor Red
                     if ($attemptCount -lt $maxAttempts) {
@@ -525,9 +527,16 @@ try {
         }
     }
     else {
-        $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password
-        if (-not $result) {
-            Write-Host "Decryption failed." -ForegroundColor Red
+        # For decryption, we already verified the password in the interactive section
+        # So we can proceed directly with the actual decryption
+        if ($Password) {
+            $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password -TestOnly $false
+            if (-not $result) {
+                Write-Host "Decryption failed." -ForegroundColor Red
+                exit 0
+            }
+        } else {
+            Write-Host "No password provided for decryption." -ForegroundColor Red
             exit 0
         }
     }
