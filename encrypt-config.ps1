@@ -41,39 +41,7 @@ param (
     [System.Security.SecureString]$Password
 )
 
-# Parameter validation for interactive mode
-if (-not $ConfigPath) {
-    Write-Host "No configuration file specified." -ForegroundColor Yellow
-    Write-Host # Spacing
-    $ConfigPath = Read-Host "Enter path to a YAML configuration file"
-    
-    if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
-        Write-Error "No configuration file provided. Exiting."
-        exit 1
-    }
-}
-
-# Operation detection when neither Encrypt nor Decrypt is specified
-if (-not $Encrypt -and -not $Decrypt) {
-    Write-Host "No operation specified." -ForegroundColor Yellow
-    Write-Host # Spacing
-    $operation = Read-Host "Type `"Encrypt`" to encrypt or `"Decrypt`" to decrypt"
-    switch ($operation.ToLower()) {
-        'encrypt' { $Encrypt = $true }
-        'decrypt' { $Decrypt = $true }
-        default { 
-            Write-Error "Invalid operation. Please enter 'encrypt' or 'decrypt'. Exiting."
-            exit 1 
-        }
-    }
-}
-
-# Validate that only one operation is specified
-if ($Encrypt -and $Decrypt) {
-    Write-Error "Cannot specify both Encrypt and Decrypt operations. Please choose one."
-    exit 1
-}
-
+# Function to test if a file is encrypted
 function Test-EncryptedConfig {
     param (
         [Parameter(Mandatory = $true)]
@@ -81,222 +49,25 @@ function Test-EncryptedConfig {
     )
     
     try {
-        # Try to parse the content as JSON
-        $content = Get-Content $ConfigPath -Raw
-        $package = $content | ConvertFrom-Json
-
-        # Check if it has our expected structure
-        return ($null -ne $package.Salt -and 
-                $null -ne $package.Data -and 
-                $null -ne $package.IV)
+        if (-not (Test-Path $ConfigPath)) { return $false }
+        $content = Get-Content $ConfigPath -Raw -ErrorAction Stop
+        try {
+            $package = $content | ConvertFrom-Json
+            return ($null -ne $package.Salt -and 
+                   $null -ne $package.Data -and 
+                   $null -ne $package.IV)
+        }
+        catch {
+            return $false
+        }
     }
     catch {
         return $false
     }
 }
 
-function Test-YAMLFile {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$ConfigPath
-    )
-    
-    try {
-        # Check file extension
-        $extension = [System.IO.Path]::GetExtension($ConfigPath).ToLower()
-        if ($extension -notin @('.yaml', '.yml')) {
-            Write-Warning "File extension '$extension' is not a standard YAML extension (.yaml/.yml)"
-            return $false
-        }
-        
-        # Basic YAML syntax validation
-        $content = Get-Content $ConfigPath -Raw
-        if ([string]::IsNullOrWhiteSpace($content)) {
-            Write-Warning "File is empty"
-            return $false
-        }
-        
-        # Check for basic YAML structure indicators
-        if ($content -match '^[\s]*[\w\-]+[\s]*:' -or $content -match '^[\s]*-[\s]+') {
-            return $true
-        }
-        
-        Write-Warning "File does not appear to contain valid YAML structure"
-        return $false
-    }
-    catch {
-        Write-Warning "Error validating YAML file: $($_.Exception.Message)"
-        return $false
-    }
-}
-
-# First check if file exists
-if (-not (Test-Path $ConfigPath)) {
-    Write-Error "File not found: $ConfigPath"
-    exit 1
-}
-
-# Validate YAML file format for non-encrypted files
-if ($Encrypt) {
-    $isEncrypted = Test-EncryptedConfig -ConfigPath $ConfigPath
-    if (-not $isEncrypted) {
-        $isValidYAML = Test-YAMLFile -ConfigPath $ConfigPath
-        if (-not $isValidYAML) {
-            $continue = Read-Host "File may not be valid YAML. Continue anyway? (y/N)"
-            if ($continue -ne 'y' -and $continue -ne 'Y') {
-                Write-Host "Operation cancelled by user"
-                exit 0
-            }
-        }
-    }
-}
-
-# Check encryption status based on operation
-if ($Decrypt) {
-    $isEncrypted = Test-EncryptedConfig -ConfigPath $ConfigPath
-    if (-not $isEncrypted) {
-        Write-Host "File is not encrypted. Skipping decryption."
-        exit 0
-    }
-}
-elseif ($Encrypt) {
-    $isEncrypted = Test-EncryptedConfig -ConfigPath $ConfigPath
-    if ($isEncrypted) {
-        Write-Error "File is already encrypted. Decrypt it first if you want to re-encrypt."
-        exit 1
-    }
-}
-
-# Only prompt for password if not provided
-if (-not $Password) {
-    if ($Encrypt) {
-        # For encryption, ask for password twice
-        $passwordsMatch = $false
-        $attemptCount = 0
-        while (-not $passwordsMatch -and $attemptCount -lt 3) {
-            $attemptCount++
-            $securePassword1 = Read-Host -Prompt "Enter password" -AsSecureString
-            $securePassword2 = Read-Host -Prompt "Re-enter password" -AsSecureString
-            
-            # Check if passwords are empty/null
-            if (-not $securePassword1 -or $securePassword1.Length -eq 0) {
-                Write-Host "Password cannot be empty. Please enter a valid password." -ForegroundColor Red
-                continue
-            }
-            
-            if (-not $securePassword2 -or $securePassword2.Length -eq 0) {
-                Write-Host "Password confirmation cannot be empty. Please enter a valid password." -ForegroundColor Red
-                continue
-            }
-            
-            $BSTR1 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword1)
-            $BSTR2 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword2)
-            
-            try {
-                $pass1 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR1)
-                $pass2 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR2)
-                
-                # Validate password strength
-                if ($pass1.Length -lt 8) {
-                    Write-Host "Password must be at least 8 characters long. Please try again."
-                    continue
-                }
-                
-                if ($pass1 -eq $pass2) {
-                    $Password = $securePassword1
-                    $passwordsMatch = $true
-                }
-                else {
-                    Write-Host "Passwords do not match. Please try again."
-                }
-            }
-            finally {
-                # Clean up the passwords from memory
-                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR1)
-                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR2)
-                if ($pass1) { $pass1 = "0" * $pass1.Length }
-                if ($pass2) { $pass2 = "0" * $pass2.Length }
-                Remove-Variable -Name pass1 -ErrorAction SilentlyContinue
-                Remove-Variable -Name pass2 -ErrorAction SilentlyContinue
-            }
-        }
-        
-        if (-not $passwordsMatch) {
-            Write-Host
-            Write-Host "Failed to set password after 3 attempts. Exiting Script." -ForegroundColor Red
-            exit 0
-        }
-    }
-    else {
-        # For decryption, implement retry logic with actual decryption attempts
-        $attemptCount = 0
-        $maxAttempts = 3
-        $decryptionSuccess = $false
-        
-        while ($attemptCount -lt $maxAttempts -and -not $decryptionSuccess) {
-            $attemptCount++
-            Write-Host "Attempt $attemptCount of $maxAttempts" -ForegroundColor Yellow
-            $securePassword = Read-Host -Prompt "Enter password" -AsSecureString
-            
-            # Check if password is empty/null
-            if (-not $securePassword -or $securePassword.Length -eq 0) {
-                Write-Host "Password cannot be empty. Please enter a valid password." -ForegroundColor Red
-                continue
-            }
-            
-            try {
-                # Test the password by attempting decryption
-                $testResult = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $securePassword
-                
-                if ($testResult) {
-                    $Password = $securePassword
-                    Write-Host "Password verified successfully!" -ForegroundColor Green
-                    # Exit the loop since password is verified
-                    break
-                } else {
-                    Write-Host "Incorrect password. Please try again." -ForegroundColor Red
-                    if ($attemptCount -lt $maxAttempts) {
-                        Write-Host "Remaining attempts: $($maxAttempts - $attemptCount)" -ForegroundColor Yellow
-                    }
-                }
-            }
-            catch {
-                Write-Host "Incorrect password. Please try again." -ForegroundColor Red
-                if ($attemptCount -lt $maxAttempts) {
-                    Write-Host "Remaining attempts: $($maxAttempts - $attemptCount)" -ForegroundColor Yellow
-                }
-            }
-            finally {
-                # Clear the test password from memory
-                if ($securePassword) {
-                    $securePassword.Dispose()
-                }
-            }
-        }
-        
-        if (-not $decryptionSuccess) {
-            Write-Host 
-            Write-Host "Failed to decrypt after $maxAttempts attempts. Exiting Script." -ForegroundColor Red
-            exit 0
-        }
-    }
-}
-
-# Encrypts or decrypts a configuration file.
+# Function to encrypt/decrypt files
 function Convert-SecureConfig {
-    <#
-    .SYNOPSIS
-        Encrypts or decrypts a configuration file.
-    .DESCRIPTION
-        Handles the encryption and decryption of configuration files (.yaml or .yml).
-        Uses AES-256 encryption with PBKDF2 key derivation.
-    .PARAMETER ConfigPath
-        The path to the configuration file to encrypt/decrypt.
-    .PARAMETER IsEncrypting
-        Boolean indicating whether to encrypt ($true) or decrypt ($false).
-    .PARAMETER Password
-        The password to use for encryption/decryption.
-    #>
     param (
         [Parameter(Mandatory = $true)]
         [string]$ConfigPath,
@@ -320,8 +91,8 @@ function Convert-SecureConfig {
             # Get file content
             $configContent = Get-Content $ConfigPath -Raw
 
-            # Generate output path (keep original extension)
-            $outputPath = $ConfigPath
+            # Use a temporary file for encrypted content
+            $tempFile = "$ConfigPath.tmp"
 
             if ($IsEncrypting) {
                 # Check if already encrypted
@@ -372,9 +143,12 @@ function Convert-SecureConfig {
                             IV = [Convert]::ToBase64String($iv)
                         } | ConvertTo-Json
                         
-                        # Save encrypted content
-                        $package | Set-Content $outputPath
-                        Write-Host "File encrypted successfully: $outputPath"
+                        # Save encrypted content to temp file first
+                        $package | Set-Content $tempFile
+                        
+                        # Move temp file to final location
+                        Move-Item -Path $tempFile -Destination $ConfigPath -Force
+                        Write-Host "File encrypted successfully: $ConfigPath"
                         
                         return $true
                     }
@@ -399,7 +173,7 @@ function Convert-SecureConfig {
                     $encrypted = [Convert]::FromBase64String($package.Data)
                     $iv = [Convert]::FromBase64String($package.IV)
 
-                    # Recreate key from password and stored salt
+                    # Recreate key from password and salt
                     $rfc = New-Object System.Security.Cryptography.Rfc2898DeriveBytes($plainPassword, $salt, 1000)
                     try {
                         $key = $rfc.GetBytes(32)
@@ -418,9 +192,12 @@ function Convert-SecureConfig {
                                 $decrypted = $decryptor.TransformFinalBlock($encrypted, 0, $encrypted.Length)
                                 $decryptedContent = [System.Text.Encoding]::UTF8.GetString($decrypted)
                                 
-                                # Save decrypted content
-                                $decryptedContent | Set-Content $outputPath -NoNewline
-                                Write-Host "File decrypted successfully: $outputPath"
+                                # Save decrypted content to temp file first
+                                $decryptedContent | Set-Content $tempFile -NoNewline
+                                
+                                # Move temp file to final location
+                                Move-Item -Path $tempFile -Destination $ConfigPath -Force
+                                Write-Host "File decrypted successfully: $ConfigPath"
                                 
                                 return $true
                             }
@@ -448,6 +225,11 @@ function Convert-SecureConfig {
             }
         }
         finally {
+            # Clean up temp file if it exists
+            if (Test-Path $tempFile) {
+                Remove-Item $tempFile -Force
+            }
+            
             # Clear the plain text password from memory
             if ($plainPassword) {
                 $plainPassword = "0" * $plainPassword.Length
@@ -464,33 +246,60 @@ function Convert-SecureConfig {
     }
 }
 
-# Execute based on parameter
-try {
-    if ($Encrypt) {
-        $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $true -Password $Password
-        if (-not $result) {
-            Write-Host "Encryption failed." -ForegroundColor Red
-            exit 0
-        }
-    }
-    else {
-        # For decryption, we need to call Convert-SecureConfig
-        if ($Password) {
-            $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password
-            if (-not $result) {
-                Write-Host "Decryption failed." -ForegroundColor Red
-                exit 0
-            }
-        } else {
-            Write-Host "No password provided for decryption." -ForegroundColor Red
+# If no parameters provided, prompt for them
+if (-not $ConfigPath) {
+    $ConfigPath = Read-Host "Enter path to a YAML configuration file"
+}
+
+if (-not $Encrypt -and -not $Decrypt) {
+    $operation = Read-Host "Type 'Encrypt' to encrypt or 'Decrypt' to decrypt"
+    switch ($operation.ToLower()) {
+        "encrypt" { $Encrypt = $true }
+        "decrypt" { $Decrypt = $true }
+        default {
+            Write-Host "Invalid operation. Please specify either 'Encrypt' or 'Decrypt'"
             exit 0
         }
     }
 }
-finally {
-    # Clear SecureString password from memory
-    if ($Password) {
-        $Password.Dispose()
-        Remove-Variable -Name Password -ErrorAction SilentlyContinue
+
+if ($Encrypt) {
+    Write-Host "Enter password to encrypt the file:"
+    $password = Read-Host -AsSecureString
+    Write-Host "Re-enter password to confirm:"
+    $confirmPassword = Read-Host -AsSecureString
+    
+    # Convert SecureString to plain text for comparison
+    $BSTR1 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+    $BSTR2 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($confirmPassword)
+    $pass1 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR1)
+    $pass2 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR2)
+    
+    # Clean up BSTR objects
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR1)
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR2)
+    
+    if ($pass1 -ne $pass2) {
+        Write-Host "Passwords do not match"
+        exit 0
+    }
+    
+    # Clean up plain text passwords
+    $pass1 = "0" * $pass1.Length
+    $pass2 = "0" * $pass2.Length
+    Remove-Variable pass1, pass2
+    
+    $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $true -Password $password
+    if (-not $result) {
+        exit 0
+    }
+}
+elseif ($Decrypt) {
+    Write-Host "Enter password to decrypt the file:"
+    $password = Read-Host -AsSecureString
+    
+    $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $password
+    if (-not $result) {
+        exit 0
     }
 }
