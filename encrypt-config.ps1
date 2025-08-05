@@ -375,7 +375,6 @@ function Convert-SecureConfig {
                         # Save encrypted content
                         $package | Set-Content $outputPath
                         Write-Host "File encrypted successfully: $outputPath"
-                        Write-Log "File encrypted successfully: $outputPath"
                         
                         return $true
                     }
@@ -392,7 +391,7 @@ function Convert-SecureConfig {
             }
             else {
                 try {
-                    Write-Log "Attempting to decrypt file"
+                    Write-Host "Attempting to decrypt file..."
                     
                     # Parse the encrypted package
                     $package = Get-Content $ConfigPath -Raw | ConvertFrom-Json
@@ -421,8 +420,7 @@ function Convert-SecureConfig {
                                 
                                 # Save decrypted content
                                 $decryptedContent | Set-Content $outputPath -NoNewline
-                                Write-SystemMessage -msg "File decrypted successfully" -value $outputPath -successMsg
-                                Write-Log "File decrypted successfully: $outputPath"
+                                Write-Host "File decrypted successfully: $outputPath"
                                 
                                 return $true
                             }
@@ -445,7 +443,6 @@ function Convert-SecureConfig {
                 }
                 catch {
                     Write-Host "Decryption failed: $($_.Exception.Message)"
-                    Write-Log "Decryption failed: $($_.Exception.Message)" -Level Error
                     return $false
                 }
             }
@@ -463,7 +460,6 @@ function Convert-SecureConfig {
     }
     catch {
         Write-Host "Operation failed: $($_.Exception.Message)"
-        Write-Log "Operation failed: $($_.Exception.Message)" -Level Error
         return $false
     }
 }
