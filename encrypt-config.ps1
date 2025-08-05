@@ -222,7 +222,8 @@ if (-not $Password) {
         }
         
         if (-not $passwordsMatch) {
-            Write-Host "Failed to set password after 3 attempts. Operation cancelled." -ForegroundColor Red
+            Write-Host
+            Write-Host "Failed to set password after 3 attempts. Exiting Script." -ForegroundColor Red
             exit 0
         }
     }
@@ -272,7 +273,8 @@ if (-not $Password) {
         }
         
         if (-not $decryptionSuccess) {
-            Write-Host "Failed to decrypt after $maxAttempts attempts. Operation cancelled." -ForegroundColor Red
+            Write-Host 
+            Write-Host "Failed to decrypt after $maxAttempts attempts. Exiting Script." -ForegroundColor Red
             exit 0
         }
     }
