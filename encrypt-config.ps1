@@ -246,12 +246,11 @@ if (-not $Password) {
             
             try {
                 # Try to decrypt with this password
-                $decryptionSuccess = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $securePassword -TestOnly $true
+                $decryptionSuccess = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $securePassword
                 
                 if ($decryptionSuccess) {
-                    $Password = $securePassword
-                    Write-Host "Password verified successfully!" -ForegroundColor Green
-                    # Exit the loop since password is verified
+                    Write-Host "Decryption completed successfully!" -ForegroundColor Green
+                    # Exit the loop since decryption succeeded
                     break
                 } else {
                     Write-Host "Incorrect password. Please try again." -ForegroundColor Red
@@ -289,9 +288,7 @@ function Convert-SecureConfig {
         [Parameter(Mandatory = $true)]
         [bool]$IsEncrypting,
         [Parameter(Mandatory = $true)]
-        [System.Security.SecureString]$Password,
-        [Parameter(Mandatory = $false)]
-        [switch]$TestOnly # Added parameter for testing decryption without saving
+        [System.Security.SecureString]$Password
     )
 
     try {
@@ -408,9 +405,7 @@ function Convert-SecureConfig {
         }
         else {
             try {
-                if (-not $TestOnly) {
-                    Write-Host "Attempting to decrypt file..." -ForegroundColor Yellow
-                }
+                Write-Host "Attempting to decrypt file..." -ForegroundColor Yellow
                 
                 # Parse the encrypted package
                 $package = Get-Content $ConfigPath -Raw | ConvertFrom-Json
@@ -465,20 +460,14 @@ function Convert-SecureConfig {
                             
                             # Validate decrypted content appears to be YAML
                             if ($decryptedText -match '^[\s]*[\w\-]+[\s]*:' -or $decryptedText -match '^[\s]*-[\s]+') {
-                                if (-not $TestOnly) {
-                                    Write-Host "Decrypted content appears to be valid YAML" -ForegroundColor Green
-                                }
+                                Write-Host "Decrypted content appears to be valid YAML" -ForegroundColor Green
                             } else {
-                                if (-not $TestOnly) {
-                                    Write-Warning "Decrypted content may not be valid YAML format"
-                                }
+                                Write-Warning "Decrypted content may not be valid YAML format"
                             }
                             
-                            # Only save if not in test mode
-                            if (-not $TestOnly) {
-                                $decryptedText | Set-Content $outputPath -Encoding UTF8
-                                Write-Host "File decrypted successfully to: $outputPath" -ForegroundColor Green
-                            }
+                            # Save the decrypted content
+                            $decryptedText | Set-Content $outputPath -Encoding UTF8
+                            Write-Host "File decrypted successfully to: $outputPath" -ForegroundColor Green
                             
                             $decryptionSuccess = $true
                         }
@@ -527,15 +516,9 @@ try {
         }
     }
     else {
-        # For decryption, we already verified the password in the interactive section
-        # So we can proceed directly with the actual decryption
-        if ($Password) {
-            $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password -TestOnly $false
-            if (-not $result) {
-                Write-Host "Decryption failed." -ForegroundColor Red
-                exit 0
-            }
-        } else {
+        # For decryption, the actual decryption is done in the password verification loop above
+        # So we just need to handle the case where no password was provided
+        if (-not $Password) {
             Write-Host "No password provided for decryption." -ForegroundColor Red
             exit 0
         }
