@@ -44,9 +44,8 @@ param (
 # Parameter validation for interactive mode
 if (-not $ConfigPath) {
     Write-Host "No configuration file specified." -ForegroundColor Yellow
-    Write-Host
-    Write-Host "Please provide a local file path to a YAML configuration file."
-    $ConfigPath = Read-Host "Enter path to configuration file"
+    Write-Host # Spacing
+    $ConfigPath = Read-Host "Enter path to a YAML configuration file"
     
     if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
         Write-Error "No configuration file provided. Exiting."
@@ -56,8 +55,9 @@ if (-not $ConfigPath) {
 
 # Operation detection when neither Encrypt nor Decrypt is specified
 if (-not $Encrypt -and -not $Decrypt) {
-    Write-Host "No operation specified."
-    $operation = Read-Host "Enter operation (encrypt/decrypt)"
+    Write-Host "No operation specified." -ForegroundColor Yellow
+    Write-Host # Spacing
+    $operation = Read-Host "Type `"Encrypt`" to encrypt or `"Decrypt`" to decrypt"
     switch ($operation.ToLower()) {
         'encrypt' { $Encrypt = $true }
         'decrypt' { $Decrypt = $true }
@@ -178,6 +178,17 @@ if (-not $Password) {
             $securePassword1 = Read-Host -Prompt "Enter password" -AsSecureString
             $securePassword2 = Read-Host -Prompt "Re-enter password" -AsSecureString
             
+            # Check if passwords are empty/null
+            if (-not $securePassword1 -or $securePassword1.Length -eq 0) {
+                Write-Host "Password cannot be empty. Please enter a valid password." -ForegroundColor Red
+                continue
+            }
+            
+            if (-not $securePassword2 -or $securePassword2.Length -eq 0) {
+                Write-Host "Password confirmation cannot be empty. Please enter a valid password." -ForegroundColor Red
+                continue
+            }
+            
             $BSTR1 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword1)
             $BSTR2 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword2)
             
@@ -216,18 +227,52 @@ if (-not $Password) {
         }
     }
     else {
-        # For decryption, just ask once with retry logic
+        # For decryption, implement retry logic with actual decryption attempts
         $attemptCount = 0
         $maxAttempts = 3
-        while ($attemptCount -lt $maxAttempts) {
+        $decryptionSuccess = $false
+        
+        while ($attemptCount -lt $maxAttempts -and -not $decryptionSuccess) {
             $attemptCount++
-            $securePassword = Read-Host -Prompt "Enter password (Attempt $attemptCount of $maxAttempts)" -AsSecureString
-            $Password = $securePassword
-            break
+            Write-Host "Attempt $attemptCount of $maxAttempts" -ForegroundColor Yellow
+            $securePassword = Read-Host -Prompt "Enter password" -AsSecureString
+            
+            # Check if password is empty/null
+            if (-not $securePassword -or $securePassword.Length -eq 0) {
+                Write-Host "Password cannot be empty. Please enter a valid password." -ForegroundColor Red
+                continue
+            }
+            
+            try {
+                # Try to decrypt with this password
+                $decryptionSuccess = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $securePassword -TestOnly $true
+                
+                if ($decryptionSuccess) {
+                    $Password = $securePassword
+                    Write-Host "Password verified successfully!" -ForegroundColor Green
+                } else {
+                    Write-Host "Incorrect password. Please try again." -ForegroundColor Red
+                    if ($attemptCount -lt $maxAttempts) {
+                        Write-Host "Remaining attempts: $($maxAttempts - $attemptCount)" -ForegroundColor Yellow
+                    }
+                }
+            }
+            catch {
+                Write-Host "Incorrect password. Please try again." -ForegroundColor Red
+                if ($attemptCount -lt $maxAttempts) {
+                    Write-Host "Remaining attempts: $($maxAttempts - $attemptCount)" -ForegroundColor Yellow
+                }
+            }
+            finally {
+                # Clear the test password from memory
+                if ($securePassword) {
+                    $securePassword.Dispose()
+                }
+            }
         }
         
-        if ($attemptCount -eq $maxAttempts -and [string]::IsNullOrEmpty($Password)) {
-            Write-Error "Failed to provide password after $maxAttempts attempts. Operation cancelled."
+        if (-not $decryptionSuccess) {
+            Write-Error "Failed to decrypt after $maxAttempts attempts. Operation cancelled."
             exit 1
         }
     }
@@ -240,7 +285,9 @@ function Convert-SecureConfig {
         [Parameter(Mandatory = $true)]
         [bool]$IsEncrypting,
         [Parameter(Mandatory = $true)]
-        [System.Security.SecureString]$Password
+        [System.Security.SecureString]$Password,
+        [Parameter(Mandatory = $false)]
+        [switch]$TestOnly # Added parameter for testing decryption without saving
     )
 
     try {
@@ -325,6 +372,9 @@ function Convert-SecureConfig {
                         $package | Set-Content $outputPath -Encoding UTF8
                         Write-Host "File encrypted successfully to: $outputPath" -ForegroundColor Green
                         Write-Host "Using AES-256-CBC with PBKDF2 (100,000 iterations)" -ForegroundColor Yellow
+                        
+                        # Return success for encryption
+                        return $true
                     }
                     finally {
                         $aes.Dispose()
@@ -350,8 +400,11 @@ function Convert-SecureConfig {
             }
         }
         else {
+            $decryptionSuccess = $false
             try {
-                Write-Host "Attempting to decrypt file..." -ForegroundColor Yellow
+                if (-not $TestOnly) {
+                    Write-Host "Attempting to decrypt file..." -ForegroundColor Yellow
+                }
                 
                 # Parse the encrypted package
                 $package = Get-Content $ConfigPath -Raw | ConvertFrom-Json
@@ -406,14 +459,22 @@ function Convert-SecureConfig {
                             
                             # Validate decrypted content appears to be YAML
                             if ($decryptedText -match '^[\s]*[\w\-]+[\s]*:' -or $decryptedText -match '^[\s]*-[\s]+') {
-                                Write-Host "Decrypted content appears to be valid YAML" -ForegroundColor Green
+                                if (-not $TestOnly) {
+                                    Write-Host "Decrypted content appears to be valid YAML" -ForegroundColor Green
+                                }
                             } else {
-                                Write-Warning "Decrypted content may not be valid YAML format"
+                                if (-not $TestOnly) {
+                                    Write-Warning "Decrypted content may not be valid YAML format"
+                                }
                             }
                             
-                            # Save decrypted content
-                            $decryptedText | Set-Content $outputPath -Encoding UTF8
-                            Write-Host "File decrypted successfully to: $outputPath" -ForegroundColor Green
+                            # Only save if not in test mode
+                            if (-not $TestOnly) {
+                                $decryptedText | Set-Content $outputPath -Encoding UTF8
+                                Write-Host "File decrypted successfully to: $outputPath" -ForegroundColor Green
+                            }
+                            
+                            $decryptionSuccess = $true
                         }
                         finally {
                             $aes.Dispose()
@@ -436,24 +497,35 @@ function Convert-SecureConfig {
                 }
             }
             catch {
-                Write-Error "Decryption failed: $($_.Exception.Message)"
-                exit 1
+                # Always return false for wrong password, never exit
+                $decryptionSuccess = $false
             }
         }
     }
     catch {
-        Write-Error "Error processing file: $($_.Exception.Message)"
-        exit 1
+        # Always return false for errors, never exit
+        $decryptionSuccess = $false
     }
+
+    # Return true if decryption was successful (either for test or actual decryption)
+    return $decryptionSuccess
 }
 
 # Execute based on parameter
 try {
     if ($Encrypt) {
-        Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $true -Password $Password
+        $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $true -Password $Password
+        if (-not $result) {
+            Write-Error "Encryption failed."
+            exit 1
+        }
     }
     else {
-        Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password
+        $result = Convert-SecureConfig -ConfigPath $ConfigPath -IsEncrypting $false -Password $Password
+        if (-not $result) {
+            Write-Error "Decryption failed."
+            exit 1
+        }
     }
 }
 finally {
