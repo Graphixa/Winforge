@@ -1,0 +1,293 @@
+# yaml-language-server: $schema=./winforge.schema.json
+# WinForge schema v1 — design draft 1, 1 October 2026.
+# REFERENCE ONLY: this is not a production deployment profile, and the current
+# WinForge runtime does not yet implement this schema. Local example sources,
+# package IDs and secret references must be supplied/resolved before deployment.
+# Delete every option you do not want WinForge to manage. No option below is a default.
+# {} is a valid no-op config. All sections and scalar settings are optional.
+# Once a list entry is supplied, its identity and necessary data are required.
+# Values: enable/disable, allow/block, show/hide. Resource collections: add/remove.
+# Use literal Windows paths in single quotes. %NAME% expansion is restricted to
+# explicitly documented path/value fields; PowerShell expressions never execute there.
+
+schemaVersion: 1
+
+system:
+  hostname: WINFORGE-PC
+  locale: en-AU
+  timeZone: E. Australia Standard Time
+  deviceSetupPrompts: hide
+  languages:
+    add: [en-AU, en-US]
+    remove: [fr-FR]
+
+activation:
+  edition: pro
+  productKeyRef: windowsProductKey
+
+apps:
+  provider: winget                 # winget | chocolatey; per-entry override supported
+  storeAccess: allow
+  oneDrive: block                  # Usage policy, not uninstall
+  add:
+    - id: Mozilla.Firefox          # Omitted version: check newest; upgrade if outdated
+    - id: 7zip.7zip
+      version: '24.09'             # Exact version; compare before changing anything
+    - id: vscode
+      provider: chocolatey
+      version: latest             # Same policy as omitting version
+  remove:
+    - id: Example.ObsoleteApp
+  removeProfiles:
+    - legacyBloatwareV1            # Fixed reviewed removal manifest; preview every item
+
+environment:
+  add:
+    - name: Department
+      scope: machine
+      value: Administration
+    - name: PythonPath
+      scope: user
+      value: 'C:\Python312'
+  remove:
+    - name: ObsoleteVariable
+      scope: user
+
+path:
+  add:
+    - value: 'C:\Tools'
+      scope: machine
+  remove:
+    - value: 'C:\OldTools'
+      scope: user
+
+explorer:                         # Independent top-level section
+  fileExtensions: show
+  hiddenItems: show
+  contextMenu: classic
+  allTasksFolder: add             # Former GodModeFolder; add | remove
+
+taskbar:                          # Independent top-level section
+  alignment: left                 # left | centre
+  meetNow: hide
+  widgets: hide
+  taskView: show
+  search: show
+
+startMenu:
+  appLaunchTracking: disable
+  recentlyAddedApps: hide
+  suggestions: hide
+
+theme:                            # Independent top-level section
+  mode: dark                      # light | dark
+  desktopIconSize: medium          # small | medium | large
+  wallpaper: './assets/wallpaper.jpg'
+  lockScreen: './assets/lock-screen.jpg'
+  transparency: disable
+  animations: disable
+
+power:
+  plan: balanced                  # balanced | highPerformance | powerSaver
+  sleep: enable
+  hibernate: enable
+  fastStartup: disable
+  displayTimeout: 15m              # Positive Nm/Nh, or never; applies to AC and battery
+  sleepTimeout: 30m
+  hibernateTimeout: 1h
+
+network:
+  discovery: enable
+  fileAndPrinterSharing: disable
+  drives:
+    add:
+      - letter: S
+        path: '\\server\media'
+        username: 'EXAMPLE\deployment'
+        passwordRef: networkSharePassword
+    remove:
+      - letter: T
+
+privacy:
+  diagnosticData: required         # disable | required | optional; check Windows support
+  diagnosticTracking: disable
+  location: block                  # Split from the old DisableAppPrivacy switch
+  microphone: allow
+  camera: allow
+  personalisedAdvertising: block
+  activityHistory: disable
+  clipboardHistory: disable        # Actual effect of old DisableClipboardDataCollection
+  recall: disable
+  copilot: disable
+
+fonts:
+  add: [roboto, opensans, lato, firasans]
+  remove: [example-retired-font]
+
+googleDrive:                      # Products are independent, not under a Google umbrella
+  install: add                     # add | remove; omission leaves installation unmanaged
+  browserPath: 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+  onboardingDialog: hide
+  photosSync: disable
+  startAtLogin: enable
+  officeFiles: googleDocs          # googleDocs | desktopApp
+
+googleChrome:
+  install: add
+  enrolmentTokenRef: chromeEnrolmentToken
+  pdfHandling: external            # browser | external
+  signIn: required                 # disable | optional | required
+
+googleGcpw:
+  install: add
+  enrolmentTokenRef: gcpwEnrolmentToken
+  allowedDomains: [example.com]
+
+security:
+  autoPlay: disable
+  remoteDesktop: disable
+  uac:
+    state: enable
+    prompt: notifyChanges         # alwaysNotify | notifyChanges | notifyWithoutDimming | neverNotify
+
+defender:                         # Independent top-level section
+  realTimeProtection: enable
+  cloudProtection: advanced        # disable | basic | advanced; replaces overlapping MAPS options
+  sampleSubmission: safeSamples    # prompt | safeSamples | allSamples | never
+  networkProtection: block         # disable | audit | block
+  controlledFolderAccess: audit    # disable | audit | block
+  attackSurfaceReduction: enable   # Fixed rule profile must be defined before runtime support
+  exclusions:
+    paths:
+      add: ['C:\Example\Cache']
+      remove: ['C:\Retired\Cache']
+    extensions:
+      add: ['.examplecache']
+      remove: ['.obsoletecache']
+    processes:
+      add: [example-process.exe]
+      remove: [retired-process.exe]
+  scans:
+    quickTime: '02:00'
+    fullDay: sunday
+    fullTime: '03:00'
+    removableDrives: enable
+    archives: enable
+    networkFiles: disable
+  defaultThreatAction: quarantine  # clean | quarantine | remove | allow | userDefined | block
+
+updates:
+  mode: scheduledInstall           # disable | notifyBeforeDownload | downloadAndNotify | scheduledInstall
+  minorUpdates: automatic          # automatic | manual
+  day: sunday                      # daily, or a named day
+  time: '03:00'                    # Local target time; '00:00' is valid
+
+features:
+  enable: [Microsoft-Hyper-V-All, VirtualMachinePlatform]
+  disable: [Containers-DisposableClientVM]
+
+office:
+  productId: ProPlus2021Volume
+  productKeyRef: officeProductKey
+  languages: [en-AU]
+  channel: PerpetualVL2021          # Native ID; validate product/channel/language compatibility
+  architecture: x64                # x86 | x64
+  installerUi: hide                # show | hide
+  restart: never                   # never | ifRequired | always
+  updates: enable
+
+registry:
+  add:
+    - path: 'HKLM:\SOFTWARE\Example\WinForge'
+      name: UpdateChannel
+      type: string                 # string | expandString | dword | qword | binary | multiString
+      value: stable
+      description: Example application update channel
+      # Create all missing parent keys, then create/update value and type.
+      # If key, value and type already match: no write.
+    - path: 'HKCU:\SOFTWARE\Example\WinForge'
+      name: RetryCount
+      type: dword
+      value: 3
+  remove:
+    - path: 'HKLM:\SOFTWARE\Example\WinForge'
+      name: ObsoleteValue
+      description: Remove an obsolete value only
+      # Missing value/key: no-op. Never create keys during removal.
+      # name is required; omission can never delete an entire key.
+
+tasks:
+  add:
+    - name: AutoShutdown
+      folder: '\WinForge\'
+      source: './tasks/AutoShutdown.xml'
+      description: Scheduled shutdown
+      state: enable
+      # sha256: '<64-hex trusted digest>'  # Optional for local assets; remote trust verified separately
+  remove:
+    - name: RetiredTask
+      folder: '\WinForge\'
+  # Repository-import syntax; supply a real immutable commit before use:
+  # repositories:
+  #   - url: 'https://github.com/Graphixa/Winforge.git'
+  #     revision: '<40-hex commit SHA>'
+  #     path: Tasks
+
+files:
+  add:
+    - path: 'C:\ProgramData\Example\settings.json'
+      type: file
+      source: './files/settings.json'    # Copy/converge by content, not just existence
+      # sha256: '<64-hex trusted digest>'
+    - path: 'C:\ProgramData\Example\message.txt'
+      type: file
+      content: Hello from WinForge
+    - path: 'C:\ProgramData\Example\logs'
+      type: directory
+    - path: 'C:\ProgramData\Example\assets'
+      type: directory
+      source: './files/assets'          # Merge specified source contents; preserve extra destination files
+  remove:
+    - path: 'C:\ProgramData\Example\obsolete.txt'
+      type: file
+  move:
+    - source: 'C:\Temp\example.txt'
+      destination: 'C:\ProgramData\Example\moved.txt'
+      type: file
+      # expectedSha256: '<64-hex digest>' # Or require a matching persisted migration record
+  rename:
+    - path: 'C:\ProgramData\Example\old-name.txt'
+      newName: new-name.txt             # Basename only; use move for a different directory
+      type: file
+      # expectedSha256: '<64-hex digest>'
+
+shortcuts:
+  add:
+    - name: Notepad
+      location: desktop
+      target: '%SystemRoot%\System32\notepad.exe'
+      arguments: ['C:\ProgramData\Example\message.txt']
+      icon:
+        path: '%SystemRoot%\System32\notepad.exe'
+        index: 0
+      workingDirectory: 'C:\ProgramData\Example'
+  remove:
+    - name: Retired shortcut
+      location: startMenu
+
+commands:
+  # Intentional custom commands require a read-only detection test. Test exit 0:
+  # already compliant; 1: apply; any other code: fail. Retest after applying.
+  - id: create-example-marker
+    shell: powershell              # process | powershell | cmd
+    script: |
+      New-Item -Path 'C:\ProgramData\Example' -ItemType Directory -Force | Out-Null
+      Set-Content -LiteralPath 'C:\ProgramData\Example\marker.txt' -Value 'ready' -NoNewline
+    test:
+      shell: powershell
+      script: |
+        $p = 'C:\ProgramData\Example\marker.txt'
+        if ((Test-Path -LiteralPath $p -PathType Leaf) -and ((Get-Content -LiteralPath $p -Raw) -eq 'ready')) { exit 0 }
+        exit 1
+  # For shell: process use program: 'tool.exe' and arguments: ['argument'].
+  # For shell: cmd use script: 'command text'. Both require the same test object.

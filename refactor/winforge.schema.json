@@ -1,0 +1,2040 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WinForge configuration v1 \u2014 design draft 1",
+  "description": "Proposed contract, not implemented by the reviewed runtime. Strict structural validation; semantic and target compatibility validation are also required.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Optional in v1; omitted selects v1. The completely empty object is valid."
+    },
+    "system": {
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "type": "string",
+          "minLength": 1,
+          "description": ""
+        },
+        "locale": {
+          "type": "string",
+          "minLength": 1,
+          "description": ""
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Validated against target Windows time-zone IDs."
+        },
+        "deviceSetupPrompts": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "languages": {
+          "type": "object",
+          "properties": {
+            "add": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Language tag."
+              },
+              "uniqueItems": true,
+              "description": ""
+            },
+            "remove": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Language tag."
+              },
+              "uniqueItems": true,
+              "description": ""
+            }
+          },
+          "additionalProperties": false,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "activation": {
+      "type": "object",
+      "properties": {
+        "edition": {
+          "type": "string",
+          "enum": [
+            "home",
+            "pro",
+            "education",
+            "enterprise"
+          ],
+          "description": ""
+        },
+        "productKeyRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference resolved by the runner/secret provider, not a literal password or token."
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "apps": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": [
+            "winget",
+            "chocolatey"
+          ],
+          "description": "Omitted uses winget; entry-level provider overrides it."
+        },
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Exact provider-specific package ID."
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "winget",
+                  "chocolatey"
+                ],
+                "description": ""
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Quoted exact version or latest. Omitted means check latest and upgrade if outdated."
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "id"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Exact provider-specific package ID."
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "winget",
+                  "chocolatey"
+                ],
+                "description": ""
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "id"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "storeAccess": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "block"
+          ],
+          "description": ""
+        },
+        "oneDrive": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "block"
+          ],
+          "description": "Allow/block usage; does not install/uninstall OneDrive."
+        },
+        "removeProfiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "legacyBloatwareV1"
+            ],
+            "description": "Explicit fixed manifest carried from the reviewed commit; preview every removal."
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "machine"
+                ],
+                "description": "User is the explicitly resolved deployment user; machine is system-wide."
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "name",
+              "scope",
+              "value"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "machine"
+                ],
+                "description": "User is the explicitly resolved deployment user; machine is system-wide."
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "name",
+              "scope"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "path": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "machine"
+                ],
+                "description": "User is the explicitly resolved deployment user; machine is system-wide."
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "value",
+              "scope"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "machine"
+                ],
+                "description": "User is the explicitly resolved deployment user; machine is system-wide."
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "value",
+              "scope"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "explorer": {
+      "type": "object",
+      "properties": {
+        "fileExtensions": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "hiddenItems": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "contextMenu": {
+          "type": "string",
+          "enum": [
+            "classic",
+            "modern"
+          ],
+          "description": ""
+        },
+        "allTasksFolder": {
+          "type": "string",
+          "enum": [
+            "add",
+            "remove"
+          ],
+          "description": "The former God Mode folder; omitted leaves it alone."
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "taskbar": {
+      "type": "object",
+      "properties": {
+        "alignment": {
+          "type": "string",
+          "enum": [
+            "left",
+            "centre"
+          ],
+          "description": ""
+        },
+        "meetNow": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "widgets": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "taskView": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "search": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "startMenu": {
+      "type": "object",
+      "properties": {
+        "appLaunchTracking": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "recentlyAddedApps": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "suggestions": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark"
+          ],
+          "description": ""
+        },
+        "desktopIconSize": {
+          "type": "string",
+          "enum": [
+            "small",
+            "medium",
+            "large"
+          ],
+          "description": ""
+        },
+        "wallpaper": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Local path relative to the config origin, absolute path, or HTTPS URL. Never evaluate PowerShell expressions."
+        },
+        "lockScreen": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Local path relative to the config origin, absolute path, or HTTPS URL. Never evaluate PowerShell expressions."
+        },
+        "transparency": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "animations": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "power": {
+      "type": "object",
+      "properties": {
+        "plan": {
+          "type": "string",
+          "enum": [
+            "balanced",
+            "highPerformance",
+            "powerSaver"
+          ],
+          "description": ""
+        },
+        "sleep": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "hibernate": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "fastStartup": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "displayTimeout": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Positive whole duration in minutes/hours, or never. Never is a managed value, not omission.",
+          "pattern": "^(never|[1-9][0-9]*[mh])$"
+        },
+        "sleepTimeout": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Positive whole duration in minutes/hours, or never. Never is a managed value, not omission.",
+          "pattern": "^(never|[1-9][0-9]*[mh])$"
+        },
+        "hibernateTimeout": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Positive whole duration in minutes/hours, or never. Never is a managed value, not omission.",
+          "pattern": "^(never|[1-9][0-9]*[mh])$"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Timeouts apply to both AC and battery in this v1 design, matching the existing broad scope."
+    },
+    "network": {
+      "type": "object",
+      "properties": {
+        "discovery": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "fileAndPrinterSharing": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "drives": {
+          "type": "object",
+          "properties": {
+            "add": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "letter": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "",
+                    "pattern": "^[A-Z]$"
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "username": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "passwordRef": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Reference resolved by the runner/secret provider, not a literal password or token."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "",
+                "required": [
+                  "letter",
+                  "path"
+                ]
+              },
+              "uniqueItems": true,
+              "description": ""
+            },
+            "remove": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "letter": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "",
+                    "pattern": "^[A-Z]$"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "",
+                "required": [
+                  "letter"
+                ]
+              },
+              "uniqueItems": true,
+              "description": ""
+            }
+          },
+          "additionalProperties": false,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "privacy": {
+      "type": "object",
+      "properties": {
+        "diagnosticData": {
+          "type": "string",
+          "enum": [
+            "disable",
+            "required",
+            "optional"
+          ],
+          "description": "Intent; validate edition/build support. Never promise zero telemetry from the token alone."
+        },
+        "diagnosticTracking": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "location": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "block"
+          ],
+          "description": ""
+        },
+        "microphone": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "block"
+          ],
+          "description": ""
+        },
+        "camera": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "block"
+          ],
+          "description": ""
+        },
+        "personalisedAdvertising": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "block"
+          ],
+          "description": ""
+        },
+        "activityHistory": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "clipboardHistory": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "recall": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "copilot": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "fonts": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Font ID resolved through the documented font catalogue."
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Font ID resolved through the documented font catalogue."
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "googleDrive": {
+      "type": "object",
+      "properties": {
+        "install": {
+          "type": "string",
+          "enum": [
+            "add",
+            "remove"
+          ],
+          "description": "Omitted means do not manage installation. Policy-only declarations do not install software."
+        },
+        "browserPath": {
+          "type": "string",
+          "minLength": 1,
+          "description": ""
+        },
+        "onboardingDialog": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "photosSync": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "startAtLogin": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "officeFiles": {
+          "type": "string",
+          "enum": [
+            "googleDocs",
+            "desktopApp"
+          ],
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "googleChrome": {
+      "type": "object",
+      "properties": {
+        "install": {
+          "type": "string",
+          "enum": [
+            "add",
+            "remove"
+          ],
+          "description": "Omitted means do not manage installation. Policy-only declarations do not install software."
+        },
+        "enrolmentTokenRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference resolved by the runner/secret provider, not a literal password or token."
+        },
+        "pdfHandling": {
+          "type": "string",
+          "enum": [
+            "browser",
+            "external"
+          ],
+          "description": ""
+        },
+        "signIn": {
+          "type": "string",
+          "enum": [
+            "disable",
+            "optional",
+            "required"
+          ],
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "googleGcpw": {
+      "type": "object",
+      "properties": {
+        "install": {
+          "type": "string",
+          "enum": [
+            "add",
+            "remove"
+          ],
+          "description": "Omitted means do not manage installation. Policy-only declarations do not install software."
+        },
+        "enrolmentTokenRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference resolved by the runner/secret provider, not a literal password or token."
+        },
+        "allowedDomains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": ""
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "autoPlay": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "remoteDesktop": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "uac": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "enable",
+                "disable"
+              ],
+              "description": ""
+            },
+            "prompt": {
+              "type": "string",
+              "enum": [
+                "alwaysNotify",
+                "notifyChanges",
+                "notifyWithoutDimming",
+                "neverNotify"
+              ],
+              "description": "User-facing policy requiring verified consent and secure-desktop mappings."
+            }
+          },
+          "additionalProperties": false,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "defender": {
+      "type": "object",
+      "properties": {
+        "realTimeProtection": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        },
+        "cloudProtection": {
+          "type": "string",
+          "enum": [
+            "disable",
+            "basic",
+            "advanced"
+          ],
+          "description": "Consolidates CloudProtection and MAPSReporting, which currently write the same preference."
+        },
+        "sampleSubmission": {
+          "type": "string",
+          "enum": [
+            "prompt",
+            "safeSamples",
+            "allSamples",
+            "never"
+          ],
+          "description": ""
+        },
+        "networkProtection": {
+          "type": "string",
+          "enum": [
+            "disable",
+            "audit",
+            "block"
+          ],
+          "description": ""
+        },
+        "controlledFolderAccess": {
+          "type": "string",
+          "enum": [
+            "disable",
+            "audit",
+            "block"
+          ],
+          "description": ""
+        },
+        "attackSurfaceReduction": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": "Uses a fixed, reviewed rule profile; never enable an unspecified changing rule set."
+        },
+        "exclusions": {
+          "type": "object",
+          "properties": {
+            "paths": {
+              "type": "object",
+              "properties": {
+                "add": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "uniqueItems": true,
+                  "description": ""
+                },
+                "remove": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "uniqueItems": true,
+                  "description": ""
+                }
+              },
+              "additionalProperties": false,
+              "description": ""
+            },
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "add": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "uniqueItems": true,
+                  "description": ""
+                },
+                "remove": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "uniqueItems": true,
+                  "description": ""
+                }
+              },
+              "additionalProperties": false,
+              "description": ""
+            },
+            "processes": {
+              "type": "object",
+              "properties": {
+                "add": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "uniqueItems": true,
+                  "description": ""
+                },
+                "remove": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "uniqueItems": true,
+                  "description": ""
+                }
+              },
+              "additionalProperties": false,
+              "description": ""
+            }
+          },
+          "additionalProperties": false,
+          "description": ""
+        },
+        "scans": {
+          "type": "object",
+          "properties": {
+            "quickTime": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Local target-machine time, HH:mm.",
+              "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+            },
+            "fullDay": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+                "sunday"
+              ],
+              "description": ""
+            },
+            "fullTime": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Local target-machine time, HH:mm.",
+              "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+            },
+            "removableDrives": {
+              "type": "string",
+              "enum": [
+                "enable",
+                "disable"
+              ],
+              "description": ""
+            },
+            "archives": {
+              "type": "string",
+              "enum": [
+                "enable",
+                "disable"
+              ],
+              "description": ""
+            },
+            "networkFiles": {
+              "type": "string",
+              "enum": [
+                "enable",
+                "disable"
+              ],
+              "description": ""
+            }
+          },
+          "additionalProperties": false,
+          "description": ""
+        },
+        "defaultThreatAction": {
+          "type": "string",
+          "enum": [
+            "clean",
+            "quarantine",
+            "remove",
+            "allow",
+            "userDefined",
+            "block"
+          ],
+          "description": "Validate supported actions and define severity coverage before application."
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "updates": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "disable",
+            "notifyBeforeDownload",
+            "downloadAndNotify",
+            "scheduledInstall"
+          ],
+          "description": ""
+        },
+        "minorUpdates": {
+          "type": "string",
+          "enum": [
+            "automatic",
+            "manual"
+          ],
+          "description": ""
+        },
+        "day": {
+          "type": "string",
+          "enum": [
+            "daily",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday"
+          ],
+          "description": ""
+        },
+        "time": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Local target-machine time, HH:mm.",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "enable": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Windows optional-feature ID."
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "disable": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Windows optional-feature ID."
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "office": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "minLength": 1,
+          "description": ""
+        },
+        "productKeyRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference resolved by the runner/secret provider, not a literal password or token."
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": ""
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "channel": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Native Office channel ID; validate against supported provider values."
+        },
+        "architecture": {
+          "type": "string",
+          "enum": [
+            "x86",
+            "x64"
+          ],
+          "description": ""
+        },
+        "installerUi": {
+          "type": "string",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "description": ""
+        },
+        "restart": {
+          "type": "string",
+          "enum": [
+            "never",
+            "ifRequired",
+            "always"
+          ],
+          "description": ""
+        },
+        "updates": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ],
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "registry": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registry key path. Add creates missing parent keys. Remove never creates keys.",
+                "pattern": "^(HKLM|HKCU|HKCR|HKU|HKCC):\\\\.+$"
+              },
+              "name": {
+                "type": "string",
+                "description": "Empty string identifies the default value."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "expandString",
+                  "dword",
+                  "qword",
+                  "binary",
+                  "multiString"
+                ],
+                "description": ""
+              },
+              "value": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 255
+                    },
+                    "minItems": 1
+                  }
+                ]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "path",
+              "name",
+              "type",
+              "value"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "string"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "expandString"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "dword"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 4294967295
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "qword"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 18446744073709551615
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "binary"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "multiString"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registry key path. Add creates missing parent keys. Remove never creates keys.",
+                "pattern": "^(HKLM|HKCU|HKCR|HKU|HKCC):\\\\.+$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "path",
+              "name"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "tasks": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "folder": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Task Scheduler folder; omitted uses root."
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Local path relative to the config origin, absolute path, or HTTPS URL. Never evaluate PowerShell expressions."
+              },
+              "sha256": {
+                "type": "string",
+                "minLength": 1,
+                "description": "SHA-256 digest in hexadecimal.",
+                "pattern": "^[a-fA-F0-9]{64}$"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "enable",
+                  "disable"
+                ],
+                "description": ""
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "name",
+              "source"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "folder": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "name"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "HTTPS Git repository URL."
+              },
+              "revision": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Immutable commit SHA.",
+                "pattern": "^[a-fA-F0-9]{40}$"
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Directory of task XML files; root if omitted."
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "url",
+              "revision"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "files": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "file",
+                  "directory"
+                ],
+                "description": ""
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Local path relative to the config origin, absolute path, or HTTPS URL. Never evaluate PowerShell expressions."
+              },
+              "content": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "minLength": 1,
+                "description": "SHA-256 digest in hexadecimal.",
+                "pattern": "^[a-fA-F0-9]{64}$"
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "path",
+              "type"
+            ],
+            "not": {
+              "required": [
+                "source",
+                "content"
+              ]
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "directory"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "content"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "sha256"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "file",
+                  "directory"
+                ],
+                "description": ""
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "path",
+              "type"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "move": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "destination": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "file",
+                  "directory"
+                ],
+                "description": ""
+              },
+              "expectedSha256": {
+                "type": "string",
+                "minLength": 1,
+                "description": "SHA-256 digest in hexadecimal.",
+                "pattern": "^[a-fA-F0-9]{64}$"
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "source",
+              "destination",
+              "type"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "rename": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "newName": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Basename only, in the same directory.",
+                "pattern": "^[^\\\\/:*?\"<>|]+$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "file",
+                  "directory"
+                ],
+                "description": ""
+              },
+              "expectedSha256": {
+                "type": "string",
+                "minLength": 1,
+                "description": "SHA-256 digest in hexadecimal.",
+                "pattern": "^[a-fA-F0-9]{64}$"
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "path",
+              "newName",
+              "type"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "shortcuts": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "description": "desktop, startMenu, programs, startup; commonDesktop/commonStartMenu/commonPrograms/commonStartup; or an explicit directory path. QuickLaunch requires an explicit path."
+              },
+              "target": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "arguments": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true,
+                "description": ""
+              },
+              "icon": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": ""
+                  },
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false,
+                "description": "",
+                "required": [
+                  "path"
+                ]
+              },
+              "workingDirectory": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "name",
+              "location",
+              "target"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": ""
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "description": "desktop, startMenu, programs, startup; commonDesktop/commonStartMenu/commonPrograms/commonStartup; or an explicit directory path. QuickLaunch requires an explicit path."
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "name",
+              "location"
+            ]
+          },
+          "uniqueItems": true,
+          "description": ""
+        }
+      },
+      "additionalProperties": false,
+      "description": ""
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique stable command identity."
+          },
+          "shell": {
+            "type": "string",
+            "enum": [
+              "process",
+              "powershell",
+              "cmd"
+            ],
+            "description": ""
+          },
+          "program": {
+            "type": "string",
+            "minLength": 1,
+            "description": ""
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true,
+            "description": ""
+          },
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "description": ""
+          },
+          "test": {
+            "type": "object",
+            "properties": {
+              "shell": {
+                "type": "string",
+                "enum": [
+                  "powershell",
+                  "cmd"
+                ],
+                "description": ""
+              },
+              "script": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Read-only detection script; exit 0 means already compliant, 1 means apply, other codes mean error."
+              }
+            },
+            "additionalProperties": false,
+            "description": "",
+            "required": [
+              "shell",
+              "script"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "description": "",
+        "required": [
+          "id",
+          "shell",
+          "test"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "shell": {
+                  "const": "process"
+                }
+              },
+              "required": [
+                "shell"
+              ]
+            },
+            "then": {
+              "required": [
+                "program"
+              ],
+              "not": {
+                "required": [
+                  "script"
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "script"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "program"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "arguments"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Intentional code execution with a mandatory read-only compliance test. Verify again after apply."
+    }
+  },
+  "additionalProperties": false
+}
